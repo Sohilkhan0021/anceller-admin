@@ -2,6 +2,7 @@ import { PropsWithChildren } from 'react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 
 import { AuthProvider } from '@/auth/providers/JWTProvider';
+import { DashboardProvider } from "./DashboardProvider";
 import {
   LayoutProvider,
   LoadersProvider,
@@ -23,7 +24,9 @@ const ProvidersWrapper = ({ children }: PropsWithChildren) => {
             <HelmetProvider>
               <LayoutProvider>
                 <LoadersProvider>
+                  <DashboardProvider>
                   <MenusProvider>{children}</MenusProvider>
+                  </DashboardProvider>
                 </LoadersProvider>
               </LayoutProvider>
             </HelmetProvider>

@@ -6,3 +6,4 @@ export * from './SettingsProvider';
 export * from './SnackbarProvider';
 export * from './TranslationProvider';
 export * from './ProvidersWrapper';
+export * from './DashboardProvider';
