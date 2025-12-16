@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,84 +15,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface IUser {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  totalBookings: number;
-  status: 'active' | 'blocked';
-  joinDate: string;
-  lastActive: string;
-  totalSpent: number;
-}
+import { IUser, IPaginationMeta } from '@/services/user.types';
+import { ContentLoader } from '@/components/loaders';
 
 interface IUserManagementTableProps {
+  users: IUser[];
+  pagination: IPaginationMeta | null;
+  isLoading?: boolean;
   onUserSelect: (user: IUser) => void;
   onEditUser?: (user: IUser) => void;
+  onPageChange?: (page: number) => void;
 }
 
-const UserManagementTable = ({ onUserSelect, onEditUser }: IUserManagementTableProps) => {
-
-  // Mock data - in real app, this would come from API
-  const users: IUser[] = [
-    {
-      id: 'USR001',
-      name: 'John Doe',
-      email: 'john.doe@email.com',
-      phone: '+1 234-567-8900',
-      totalBookings: 12,
-      status: 'active',
-      joinDate: '2024-01-15',
-      lastActive: '2024-01-20',
-      totalSpent: 2500
-    },
-    {
-      id: 'USR002',
-      name: 'Jane Smith',
-      email: 'jane.smith@email.com',
-      phone: '+1 234-567-8901',
-      totalBookings: 8,
-      status: 'active',
-      joinDate: '2024-01-10',
-      lastActive: '2024-01-19',
-      totalSpent: 1800
-    },
-    {
-      id: 'USR003',
-      name: 'Mike Johnson',
-      email: 'mike.johnson@email.com',
-      phone: '+1 234-567-8902',
-      totalBookings: 3,
-      status: 'blocked',
-      joinDate: '2024-01-05',
-      lastActive: '2024-01-18',
-      totalSpent: 450
-    },
-    {
-      id: 'USR004',
-      name: 'Sarah Wilson',
-      email: 'sarah.wilson@email.com',
-      phone: '+1 234-567-8903',
-      totalBookings: 15,
-      status: 'active',
-      joinDate: '2024-01-12',
-      lastActive: '2024-01-20',
-      totalSpent: 3200
-    },
-    {
-      id: 'USR005',
-      name: 'David Brown',
-      email: 'david.brown@email.com',
-      phone: '+1 234-567-8904',
-      totalBookings: 5,
-      status: 'active',
-      joinDate: '2024-01-08',
-      lastActive: '2024-01-17',
-      totalSpent: 1200
-    }
-  ];
+const UserManagementTable = ({ 
+  users, 
+  pagination,
+  isLoading = false,
+  onUserSelect, 
+  onEditUser,
+  onPageChange
+}: IUserManagementTableProps) => {
 
   const handleViewUser = (user: IUser) => {
     onUserSelect(user);
@@ -117,28 +58,66 @@ const UserManagementTable = ({ onUserSelect, onEditUser }: IUserManagementTableP
     );
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">Users ({users.length})</h3>
+        <h3 className="card-title">
+          Users {pagination ? `(${pagination.total})` : `(${users.length})`}
+        </h3>
       </div>
       
       <div className="card-body p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="hidden sm:table-cell">User ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Phone</TableHead>
-                <TableHead className="hidden sm:table-cell">Bookings</TableHead>
-                <TableHead className="hidden md:table-cell">Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
+        {isLoading ? (
+          <div className="p-8">
+            <ContentLoader />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="p-8 text-center">
+            <KeenIcon icon="user" className="text-gray-400 text-4xl mx-auto mb-4" />
+            <p className="text-gray-600">No users found</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="hidden sm:table-cell">User ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                    <TableHead className="hidden sm:table-cell">Bookings</TableHead>
+                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell>
                   <TableCell>
@@ -147,22 +126,26 @@ const UserManagementTable = ({ onUserSelect, onEditUser }: IUserManagementTableP
                         <KeenIcon icon="user" className="text-primary text-sm" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{user.name}</div>
-                        <div className="text-sm text-gray-500 hidden sm:block">Joined {user.joinDate}</div>
-                        <div className="text-xs text-gray-500 sm:hidden">{user.email}</div>
+                        <div className="font-medium truncate">{user.name || 'N/A'}</div>
+                        <div className="text-sm text-gray-500 hidden sm:block">
+                          Joined {formatDate(user.joinDate)}
+                        </div>
+                        <div className="text-xs text-gray-500 sm:hidden">{user.email || 'N/A'}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="truncate max-w-[200px]" title={user.email}>
-                      {user.email}
+                      {user.email || 'N/A'}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">{user.phone}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{user.phone || 'N/A'}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="text-center">
-                      <div className="font-semibold">{user.totalBookings}</div>
-                      <div className="text-sm text-gray-500">₹{user.totalSpent}</div>
+                      <div className="font-semibold">{user.totalBookings || 0}</div>
+                      <div className="text-sm text-gray-500">
+                        {formatCurrency(user.totalSpent || 0)}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{getStatusBadge(user.status)}</TableCell>
@@ -210,10 +193,48 @@ const UserManagementTable = ({ onUserSelect, onEditUser }: IUserManagementTableP
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && onPageChange && (
+              <div className="card-footer">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} users
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isLoading}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isLoading}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,7 @@
 import { createContext, useContext, PropsWithChildren } from "react";
 import axios from "axios";
 import { useQuery } from "react-query";
-
-const API_URL = import.meta.env.VITE_APP_API_URL;
+import { API_URL } from "@/config/api.config";
 
 // ROUTES
 const DASHBOARD_STATS_URL = `${API_URL}/admin/dashboard/stats`;

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,89 +15,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface IProvider {
-  id: string;
-  name: string;
-  serviceCategory: string;
-  kycStatus: 'pending' | 'approved' | 'rejected' | 'under-review';
-  rating: number;
-  jobsCompleted: number;
-  earnings: number;
-  status: 'active' | 'blocked' | 'suspended';
-  joinDate: string;
-  lastActive: string;
-}
+import { IProvider, IPaginationMeta } from '@/services/provider.types';
+import { ContentLoader } from '@/components/loaders';
 
 interface IProviderManagementTableProps {
+  providers: IProvider[];
+  pagination: IPaginationMeta | null;
+  isLoading?: boolean;
   onProviderSelect: (provider: IProvider) => void;
   onEditProvider?: (provider: IProvider) => void;
+  onPageChange?: (page: number) => void;
 }
 
-const ProviderManagementTable = ({ onProviderSelect, onEditProvider }: IProviderManagementTableProps) => {
-  // Mock data - in real app, this would come from API
-  const providers: IProvider[] = [
-    {
-      id: 'PRV001',
-      name: 'Rajesh Kumar',
-      serviceCategory: 'Electrical',
-      kycStatus: 'approved',
-      rating: 4.8,
-      jobsCompleted: 45,
-      earnings: 12500,
-      status: 'active',
-      joinDate: '2024-01-10',
-      lastActive: '2024-01-20'
-    },
-    {
-      id: 'PRV002',
-      name: 'Priya Sharma',
-      serviceCategory: 'AC',
-      kycStatus: 'pending',
-      rating: 4.5,
-      jobsCompleted: 23,
-      earnings: 8500,
-      status: 'active',
-      joinDate: '2024-01-15',
-      lastActive: '2024-01-19'
-    },
-    {
-      id: 'PRV003',
-      name: 'Amit Singh',
-      serviceCategory: 'Plumbing',
-      kycStatus: 'approved',
-      rating: 4.9,
-      jobsCompleted: 67,
-      earnings: 18900,
-      status: 'active',
-      joinDate: '2024-01-05',
-      lastActive: '2024-01-20'
-    },
-    {
-      id: 'PRV004',
-      name: 'Sunita Patel',
-      serviceCategory: 'Cleaning',
-      kycStatus: 'under-review',
-      rating: 4.2,
-      jobsCompleted: 12,
-      earnings: 3200,
-      status: 'active',
-      joinDate: '2024-01-18',
-      lastActive: '2024-01-19'
-    },
-    {
-      id: 'PRV005',
-      name: 'Vikram Gupta',
-      serviceCategory: 'Carpentry',
-      kycStatus: 'rejected',
-      rating: 3.8,
-      jobsCompleted: 8,
-      earnings: 2400,
-      status: 'blocked',
-      joinDate: '2024-01-12',
-      lastActive: '2024-01-15'
-    }
-  ];
+const ProviderManagementTable = ({ 
+  providers,
+  pagination,
+  isLoading = false,
+  onProviderSelect, 
+  onEditProvider,
+  onPageChange
+}: IProviderManagementTableProps) => {
 
   const handleViewProfile = (provider: IProvider) => {
     onProviderSelect(provider);
@@ -147,6 +83,28 @@ const ProviderManagementTable = ({ onProviderSelect, onEditProvider }: IProvider
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const renderStars = (rating: number) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -168,7 +126,7 @@ const ProviderManagementTable = ({ onProviderSelect, onEditProvider }: IProvider
     return (
       <div className="flex items-center gap-1">
         {stars}
-        <span className="text-sm text-gray-600 ml-1">({rating})</span>
+        <span className="text-sm text-gray-600 ml-1">({rating.toFixed(1)})</span>
       </div>
     );
   };
@@ -176,27 +134,43 @@ const ProviderManagementTable = ({ onProviderSelect, onEditProvider }: IProvider
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">Service Providers ({providers.length})</h3>
+        <h3 className="card-title">
+          Service Providers {pagination ? `(${pagination.total})` : `(${providers.length})`}
+        </h3>
       </div>
       
       <div className="card-body p-0">
-        <div className="overflow-x-auto">
-          <Table className="min-w-full">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="hidden sm:table-cell">Provider ID</TableHead>
-                <TableHead className="max-w-[200px]">Name</TableHead>
-                <TableHead className="hidden md:table-cell">Service Category</TableHead>
-                <TableHead className="hidden lg:table-cell">KYC Status</TableHead>
-                <TableHead className="hidden md:table-cell">Rating</TableHead>
-                <TableHead className="hidden sm:table-cell">Jobs</TableHead>
-                <TableHead className="hidden lg:table-cell">Earnings</TableHead>
-                <TableHead className="hidden md:table-cell">Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {providers.map((provider) => (
+        {isLoading ? (
+          <div className="p-8">
+            <ContentLoader />
+          </div>
+        ) : providers.length === 0 ? (
+          <div className="p-8 text-center">
+            <KeenIcon icon="shop" className="text-gray-400 text-4xl mx-auto mb-4" />
+            <p className="text-gray-600">No providers found</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="hidden sm:table-cell">Provider ID</TableHead>
+                    <TableHead className="max-w-[200px]">Name</TableHead>
+                    <TableHead className="hidden md:table-cell">Service Category</TableHead>
+                    <TableHead className="hidden lg:table-cell">KYC Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Rating</TableHead>
+                    <TableHead className="hidden sm:table-cell">Jobs</TableHead>
+                    <TableHead className="hidden lg:table-cell">Earnings</TableHead>
+                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {providers.map((provider) => (
                 <TableRow key={provider.id}>
                   <TableCell className="hidden sm:table-cell font-medium">{provider.id}</TableCell>
                   <TableCell className="max-w-[200px]">
@@ -205,28 +179,36 @@ const ProviderManagementTable = ({ onProviderSelect, onEditProvider }: IProvider
                         <KeenIcon icon="shop" className="text-primary text-sm" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{provider.name}</div>
-                        <div className="text-sm text-gray-500 hidden sm:block">Joined {provider.joinDate}</div>
-                        <div className="text-xs text-gray-500 sm:hidden">{provider.id}</div>
+                        <div className="font-medium truncate">{provider.name || 'N/A'}</div>
+                        <div className="text-sm text-gray-500 hidden sm:block">
+                          Joined {formatDate(provider.joinDate)}
+                        </div>
+                        <div className="text-xs text-gray-500 sm:hidden">{provider.id || 'N/A'}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Badge variant="outline" className="badge-outline">
-                      {provider.serviceCategory}
+                      {provider.serviceCategory || 'N/A'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">{getKYCStatusBadge(provider.kycStatus)}</TableCell>
-                  <TableCell className="hidden md:table-cell">{renderStars(provider.rating)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {getKYCStatusBadge(provider.kycStatus)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {renderStars(provider.rating || 0)}
+                  </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="text-center">
-                      <div className="font-semibold">{provider.jobsCompleted}</div>
+                      <div className="font-semibold">{provider.jobsCompleted || 0}</div>
                       <div className="text-sm text-gray-500">jobs</div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <div className="text-center">
-                      <div className="font-semibold">₹{provider.earnings.toLocaleString()}</div>
+                      <div className="font-semibold">
+                        {formatCurrency(provider.earnings || 0)}
+                      </div>
                       <div className="text-sm text-gray-500">total</div>
                     </div>
                   </TableCell>
@@ -299,10 +281,48 @@ const ProviderManagementTable = ({ onProviderSelect, onEditProvider }: IProvider
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && onPageChange && (
+              <div className="card-footer">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} providers
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isLoading}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isLoading}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import { CommonRating } from '@/partials/common';
 import { Team, QueryApiResponse } from './teams-types';
 import axios from 'axios';
 import { formatIsoDate } from '@/utils/Date';
+import { API_URL } from '@/config/api.config';
 import { TeamUsers } from './TeamUsers';
 import { Input } from '@/components/ui/input';
 
@@ -159,7 +160,7 @@ const Teams = () => {
       }
 
       const response = await axios.get<TeamsQueryApiResponse>(
-        `${import.meta.env.VITE_APP_API_URL}/teams/query?${queryParams.toString()}`
+        `${API_URL}/teams/query?${queryParams.toString()}`
       );
 
       return {

@@ -18,91 +18,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface IBooking {
-  id: string;
-  userName: string;
-  providerName: string;
-  service: string;
-  dateTime: string;
-  status: 'pending' | 'accepted' | 'completed' | 'cancelled' | 'in-progress';
-  amount: number;
-  paymentType: string;
-  address: string;
-  phone: string;
-}
+import { IBooking, IPaginationMeta } from '@/services/booking.types';
+import { ContentLoader } from '@/components/loaders';
 
 interface IBookingManagementTableProps {
+  bookings: IBooking[];
+  pagination: IPaginationMeta | null;
+  isLoading?: boolean;
   onEditBooking?: (booking: IBooking) => void;
+  onPageChange?: (page: number) => void;
 }
 
-const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps) => {
+const BookingManagementTable = ({ 
+  bookings,
+  pagination,
+  isLoading = false,
+  onEditBooking,
+  onPageChange
+}: IBookingManagementTableProps) => {
   const navigate = useNavigate();
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
-
-  // Mock data - in real app, this would come from API
-  const bookings: IBooking[] = [
-    {
-      id: 'BK001',
-      userName: 'John Doe',
-      providerName: 'Rajesh Kumar',
-      service: 'Electrical Repair',
-      dateTime: '2024-01-20 10:00 AM',
-      status: 'completed',
-      amount: 500,
-      paymentType: 'Credit Card',
-      address: '123 Main St, Delhi',
-      phone: '+91 98765 43210'
-    },
-    {
-      id: 'BK002',
-      userName: 'Jane Smith',
-      providerName: 'Priya Sharma',
-      service: 'AC Service',
-      dateTime: '2024-01-21 2:00 PM',
-      status: 'in-progress',
-      amount: 800,
-      paymentType: 'UPI',
-      address: '456 Park Ave, Mumbai',
-      phone: '+91 98765 43211'
-    },
-    {
-      id: 'BK003',
-      userName: 'Mike Johnson',
-      providerName: 'Amit Singh',
-      service: 'Plumbing Repair',
-      dateTime: '2024-01-22 9:00 AM',
-      status: 'pending',
-      amount: 1200,
-      paymentType: 'Net Banking',
-      address: '789 Garden Rd, Bangalore',
-      phone: '+91 98765 43212'
-    },
-    {
-      id: 'BK004',
-      userName: 'Sarah Wilson',
-      providerName: 'Sunita Patel',
-      service: 'Home Cleaning',
-      dateTime: '2024-01-23 11:00 AM',
-      status: 'accepted',
-      amount: 300,
-      paymentType: 'Wallet',
-      address: '321 Oak St, Chennai',
-      phone: '+91 98765 43213'
-    },
-    {
-      id: 'BK005',
-      userName: 'David Brown',
-      providerName: 'Vikram Gupta',
-      service: 'Carpentry Work',
-      dateTime: '2024-01-24 3:00 PM',
-      status: 'cancelled',
-      amount: 1500,
-      paymentType: 'Cash',
-      address: '654 Pine St, Kolkata',
-      phone: '+91 98765 43214'
-    }
-  ];
 
   const handleSelectBooking = (bookingId: string, checked: boolean) => {
     if (checked) {
@@ -157,7 +92,32 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
-  const getPaymentTypeIcon = (paymentType: string) => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    if (!dateTime) return 'N/A';
+    try {
+      const date = new Date(dateTime);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateTime;
+    }
+  };
+
+  const getPaymentTypeIcon = (paymentType?: string) => {
+    if (!paymentType) return 'money';
     const iconMap = {
       'Credit Card': 'credit-card',
       'Debit Card': 'credit-card',
@@ -174,7 +134,9 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
     <div className="card">
       <div className="card-header">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h3 className="card-title">Bookings ({bookings.length})</h3>
+          <h3 className="card-title">
+            Bookings {pagination ? `(${pagination.total})` : `(${bookings.length})`}
+          </h3>
           {selectedBookings.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
@@ -190,16 +152,30 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
       </div>
       
       <div className="card-body p-0">
-        <div className="overflow-x-auto">
-          <Table className="min-w-full table-fixed">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12 hidden sm:table-cell">
-                  <Checkbox
-                    checked={selectedBookings.length === bookings.length}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
+        {isLoading ? (
+          <div className="p-8">
+            <ContentLoader />
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="p-8 text-center">
+            <KeenIcon icon="calendar-8" className="text-gray-400 text-4xl mx-auto mb-4" />
+            <p className="text-gray-600">No bookings found</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12 hidden sm:table-cell">
+                      <Checkbox
+                        checked={selectedBookings.length === bookings.length && bookings.length > 0}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
                 <TableHead className="hidden sm:table-cell">Booking ID</TableHead>
                 <TableHead className="w-[180px] sm:w-[200px]">Booking</TableHead>
                 <TableHead className="hidden md:table-cell w-[150px]">Provider</TableHead>
@@ -227,9 +203,9 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
                         <KeenIcon icon="user" className="text-primary text-xs" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate text-sm">{booking.userName}</div>
-                        <div className="text-xs text-gray-500 hidden sm:block">{booking.phone}</div>
-                        <div className="text-xs text-gray-500 sm:hidden">{booking.id}</div>
+                        <div className="font-medium truncate text-sm">{booking.userName || 'N/A'}</div>
+                        <div className="text-xs text-gray-500 hidden sm:block">{booking.phone || 'N/A'}</div>
+                        <div className="text-xs text-gray-500 sm:hidden">{booking.id || 'N/A'}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -239,34 +215,34 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
                         <KeenIcon icon="shop" className="text-success text-sm" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{booking.providerName}</div>
+                        <div className="font-medium truncate">{booking.providerName || 'N/A'}</div>
                         <div className="text-sm text-gray-500">Provider</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <Badge variant="outline" className="badge-outline">
-                      {booking.service}
+                      {booking.service || 'N/A'}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div>
-                      <div className="font-medium">{booking.dateTime}</div>
+                      <div className="font-medium">{formatDateTime(booking.dateTime)}</div>
                       <div className="text-sm text-gray-500 truncate max-w-[200px]" title={booking.address}>
-                        {booking.address}
+                        {booking.address || 'N/A'}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">{getStatusBadge(booking.status)}</TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <div className="text-center">
-                      <div className="font-semibold">₹{booking.amount.toLocaleString()}</div>
+                      <div className="font-semibold">{formatCurrency(booking.amount || 0)}</div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center gap-2">
                       <KeenIcon icon={getPaymentTypeIcon(booking.paymentType)} className="text-gray-500 text-sm" />
-                      <span className="text-sm">{booking.paymentType}</span>
+                      <span className="text-sm">{booking.paymentType || 'N/A'}</span>
                     </div>
                   </TableCell>
                   <TableCell className="w-[80px]">
@@ -274,7 +250,9 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
                       <div className="flex flex-col gap-1 sm:hidden mr-1">
                         <div className="md:hidden">
                           <Badge variant="outline" className="badge-outline text-xs px-1 py-0">
-                            {booking.service.length > 8 ? booking.service.substring(0, 8) + '...' : booking.service}
+                            {booking.service && booking.service.length > 8 
+                              ? booking.service.substring(0, 8) + '...' 
+                              : booking.service || 'N/A'}
                           </Badge>
                         </div>
                         <div className="sm:hidden">
@@ -320,9 +298,47 @@ const BookingManagementTable = ({ onEditBooking }: IBookingManagementTableProps)
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && onPageChange && (
+              <div className="card-footer">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} bookings
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isLoading}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isLoading}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

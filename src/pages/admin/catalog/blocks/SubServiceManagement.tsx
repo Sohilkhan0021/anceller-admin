@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,10 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { useSubServices } from '@/services';
+import { ISubService } from '@/services/subservice.types';
+import { ContentLoader } from '@/components/loaders';
+import { Alert } from '@/components/alert';
 
 interface ISubService {
   id: string;
@@ -55,14 +59,17 @@ const SubServiceManagement = ({
 }: ISubServiceManagementProps) => {
   const { enqueueSnackbar } = useSnackbar();
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSubService, setEditingSubService] = useState<ISubService | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subServiceToDelete, setSubServiceToDelete] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Mock categories
+  // Mock categories (for backward compatibility)
   const mockCategories = [
     { id: '1', name: 'Electrical' },
     { id: '2', name: 'Plumbing' },
@@ -74,99 +81,43 @@ const SubServiceManagement = ({
 
   const availableCategories = categories.length > 0 ? categories : mockCategories;
 
-  // Mock data - in real app, this would come from API
-  const [subServices, setSubServices] = useState<ISubService[]>([
-    {
-      id: '1',
-      name: 'Fan Installation',
-      categoryId: '1',
-      icon: 'fan',
-      image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 1
-    },
-    {
-      id: '2',
-      name: 'Electrical Wiring',
-      categoryId: '1',
-      icon: 'wire',
-      image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 2
-    },
-    {
-      id: '3',
-      name: 'Switch Board Repair',
-      categoryId: '1',
-      icon: 'switch',
-      image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 3
-    },
-    {
-      id: '4',
-      name: 'Pipe Repair',
-      categoryId: '2',
-      icon: 'pipe',
-      image: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 1
-    },
-    {
-      id: '5',
-      name: 'Tap Repair',
-      categoryId: '2',
-      icon: 'tap',
-      image: 'https://images.unsplash.com/photo-1581578731548-c6a0c3f2fcc0?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 2
-    },
-    {
-      id: '6',
-      name: 'AC Deep Service',
-      categoryId: '3',
-      icon: 'air-conditioner',
-      image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 1
-    },
-    {
-      id: '7',
-      name: 'Home Cleaning',
-      categoryId: '4',
-      icon: 'broom',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 1
-    },
-    {
-      id: '8',
-      name: 'Furniture Repair',
-      categoryId: '5',
-      icon: 'furniture',
-      image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 1
-    },
-    {
-      id: '9',
-      name: 'Door Repair',
-      categoryId: '5',
-      icon: 'door',
-      image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 2
-    },
-    {
-      id: '10',
-      name: 'Washing Machine Repair',
-      categoryId: '6',
-      icon: 'washing-machine',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&h=100&fit=crop&crop=center',
-      status: 'active',
-      displayOrder: 1
-    }
-  ]);
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch sub-services with filters
+  const { 
+    subServices, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isFetching 
+  } = useSubServices({
+    page: currentPage,
+    limit: pageSize,
+    status: statusFilter === 'all' ? '' : statusFilter,
+    service_id: serviceFilter === 'all' ? '' : serviceFilter,
+    search: debouncedSearch,
+  });
+
+  // Handle filter changes
+  const handleServiceFilterChange = useCallback((value: string) => {
+    setServiceFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
 
   const handleAddSubService = () => {
     setEditingSubService(null);
@@ -180,11 +131,6 @@ const SubServiceManagement = ({
 
   const handleSaveSubService = (subServiceData: any) => {
     if (editingSubService) {
-      setSubServices(prev => prev.map(sub => 
-        sub.id === editingSubService.id 
-          ? { ...sub, ...subServiceData }
-          : sub
-      ));
       onUpdateSubService?.(subServiceData);
       enqueueSnackbar('Sub-service updated successfully', { 
         variant: 'solid', 
@@ -192,13 +138,7 @@ const SubServiceManagement = ({
         icon: 'check-circle'
       });
     } else {
-      const newSubService: ISubService = {
-        ...subServiceData,
-        id: Date.now().toString(),
-        displayOrder: subServices.length + 1
-      };
-      setSubServices(prev => [...prev, newSubService]);
-      onCreateSubService?.(newSubService);
+      onCreateSubService?.(subServiceData);
       enqueueSnackbar('Sub-service created successfully', { 
         variant: 'solid', 
         state: 'success',
@@ -207,20 +147,22 @@ const SubServiceManagement = ({
     }
     setIsFormOpen(false);
     setEditingSubService(null);
+    // Refetch sub-services after save
+    refetch();
   };
 
   const handleToggleStatus = (subServiceId: string) => {
-    setSubServices(prev => prev.map(sub => 
-      sub.id === subServiceId 
-        ? { ...sub, status: sub.status === 'active' ? 'inactive' : 'active' }
-        : sub
-    ));
     const subService = subServices.find(s => s.id === subServiceId);
-    enqueueSnackbar(`Sub-service ${subService?.status === 'active' ? 'deactivated' : 'activated'}`, { 
-      variant: 'solid', 
-      state: 'info',
-      icon: 'information-2'
-    });
+    if (subService) {
+      // TODO: Implement API call to update status
+      enqueueSnackbar(`Sub-service ${subService.status === 'active' ? 'deactivated' : 'activated'}`, { 
+        variant: 'solid', 
+        state: 'info',
+        icon: 'information-2'
+      });
+      // Refetch after status change
+      refetch();
+    }
   };
 
   const handleDeleteClick = (subServiceId: string) => {
@@ -230,13 +172,14 @@ const SubServiceManagement = ({
 
   const handleConfirmDelete = () => {
     if (subServiceToDelete) {
-      setSubServices(prev => prev.filter(sub => sub.id !== subServiceToDelete));
       onDeleteSubService?.(subServiceToDelete);
       enqueueSnackbar('Sub-service deleted successfully', { 
         variant: 'solid', 
         state: 'success',
         icon: 'check-circle'
       });
+      // Refetch after delete
+      refetch();
     }
     setDeleteDialogOpen(false);
     setSubServiceToDelete(null);
@@ -250,18 +193,17 @@ const SubServiceManagement = ({
     );
   };
 
-  const getCategoryName = (categoryId: string) => {
-    return availableCategories.find(c => c.id === categoryId)?.name || 'Unknown';
+  const getCategoryName = (categoryId?: string, serviceId?: string) => {
+    if (categoryId) {
+      return availableCategories.find(c => c.id === categoryId)?.name || 'Unknown';
+    }
+    if (serviceId) {
+      // If we have serviceId, we might need to look it up differently
+      // For now, return serviceId or Unknown
+      return serviceId || 'Unknown';
+    }
+    return 'Unknown';
   };
-
-  const filteredSubServices = subServices.filter(subService => {
-    const matchesCategory = categoryFilter === 'all' || subService.categoryId === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || subService.status === statusFilter;
-    const matchesSearch = searchTerm === '' || 
-      subService.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getCategoryName(subService.categoryId).toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesStatus && matchesSearch;
-  });
 
   return (
     <>
@@ -269,7 +211,9 @@ const SubServiceManagement = ({
         <div className="card-header">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h3 className="card-title">Sub-Services ({filteredSubServices.length})</h3>
+              <h3 className="card-title">
+                Sub-Services {pagination ? `(${pagination.total})` : `(${subServices.length})`}
+              </h3>
               <p className="text-sm text-gray-600">Manage sub-services (name and icon only)</p>
             </div>
             
@@ -281,6 +225,23 @@ const SubServiceManagement = ({
         </div>
         
         <div className="card-body">
+          {/* Error State */}
+          {isError && (
+            <Alert variant="danger" className="mb-4">
+              <div className="flex items-center justify-between">
+                <span>
+                  {error?.message || 'Failed to load sub-services. Please try again.'}
+                </span>
+                <button
+                  onClick={() => refetch()}
+                  className="text-sm underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            </Alert>
+          )}
+
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
@@ -297,12 +258,12 @@ const SubServiceManagement = ({
             </div>
 
             <div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select value={serviceFilter} onValueChange={handleServiceFilterChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by category" />
+                  <SelectValue placeholder="Filter by service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">All Services</SelectItem>
                   {availableCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
@@ -313,7 +274,7 @@ const SubServiceManagement = ({
             </div>
 
             <div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -326,86 +287,144 @@ const SubServiceManagement = ({
             </div>
           </div>
 
-          {/* Sub-Services Table */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Order</TableHead>
-                  <TableHead className="w-[80px]">Image</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[150px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSubServices.map((subService) => (
-                  <TableRow key={subService.id}>
-                    <TableCell>
-                      <div className="text-sm font-medium text-center">{subService.displayOrder}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                        {subService.image ? (
-                          <img 
-                            src={subService.image} 
-                            alt={subService.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              // Fallback to placeholder if image fails to load
-                              target.src = `https://via.placeholder.com/100x100?text=${encodeURIComponent(subService.name.substring(0, 1))}`;
-                              target.onerror = null; // Prevent infinite loop
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                            <KeenIcon icon={subService.icon} className="text-2xl" />
+          {/* Loading State */}
+          {isLoading && !isFetching ? (
+            <div className="p-8">
+              <ContentLoader />
+            </div>
+          ) : subServices.length === 0 ? (
+            <div className="p-8 text-center">
+              <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
+              <p className="text-gray-600">No sub-services found</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Try adjusting your search or filter criteria
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Sub-Services Table */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Order</TableHead>
+                      <TableHead className="w-[80px]">Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="w-[150px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subServices.map((subService, index) => {
+                      // Handle displayOrder - might be undefined
+                      const displayOrder = subService.displayOrder ?? (index + 1);
+                      
+                      return (
+                      <TableRow key={subService.id}>
+                        <TableCell>
+                          <div className="text-sm font-medium text-center">{displayOrder}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                            {subService.image ? (
+                              <img 
+                                src={subService.image} 
+                                alt={subService.name || 'Sub-service'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  // Fallback to placeholder if image fails to load
+                                  target.src = `https://via.placeholder.com/100x100?text=${encodeURIComponent((subService.name || 'S').substring(0, 1))}`;
+                                  target.onerror = null; // Prevent infinite loop
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                <KeenIcon icon={subService.icon || 'category'} className="text-2xl" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{subService.name}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-600">{getCategoryName(subService.categoryId)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(subService.status)}
-                        <Switch
-                          checked={subService.status === 'active'}
-                          onCheckedChange={() => handleToggleStatus(subService.id)}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditSubService(subService)}
-                        >
-                          <KeenIcon icon="pencil" className="me-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteClick(subService.id)}
-                        >
-                          <KeenIcon icon="trash" className="me-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{subService.name || 'N/A'}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-gray-600">
+                            {getCategoryName(subService.categoryId, subService.serviceId)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(subService.status || 'inactive')}
+                            <Switch
+                              checked={subService.status === 'active'}
+                              onCheckedChange={() => handleToggleStatus(subService.id)}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditSubService(subService)}
+                            >
+                              <KeenIcon icon="pencil" className="me-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteClick(subService.id)}
+                            >
+                              <KeenIcon icon="trash" className="me-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} sub-services
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isFetching}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isFetching}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

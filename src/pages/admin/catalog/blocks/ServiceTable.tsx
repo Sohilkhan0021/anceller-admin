@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,24 +31,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-interface IService {
-  id: string;
-  name: string;
-  subServiceId: string; // Belongs to a sub-service
-  subServiceName?: string; // For display
-  category: string;
-  description?: string;
-  basePrice: number;
-  duration: number; // Duration in minutes
-  status: 'active' | 'inactive';
-  popularity: number;
-  bookings: number;
-  revenue: number;
-  image: string;
-  skills?: string; // Required Skills/Tags
-  displayOrder?: number;
-}
+import { useServices } from '@/services';
+import { IService } from '@/services/service.types';
+import { ContentLoader } from '@/components/loaders';
+import { Alert } from '@/components/alert';
 
 interface IServiceTableProps {
   onEditService?: (service: IService) => void;
@@ -59,6 +45,42 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [subServiceFilter, setSubServiceFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch services with filters
+  const { 
+    services, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isFetching 
+  } = useServices({
+    page: currentPage,
+    limit: pageSize,
+    status: '', // We'll handle status filtering client-side if needed
+    category_id: categoryFilter === 'all' ? '' : categoryFilter,
+    search: debouncedSearch,
+  });
+
+  // Handle filter changes
+  const handleCategoryFilterChange = useCallback((value: string) => {
+    setCategoryFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
   
   // Column visibility state - description and popularity hidden by default
   const [columnVisibility, setColumnVisibility] = useState({
@@ -84,7 +106,8 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   };
 
   // Helper function to format duration from minutes to readable format
-  const formatDuration = (minutes: number): string => {
+  const formatDuration = (minutes?: number): string => {
+    if (!minutes) return 'N/A';
     if (minutes < 60) {
       return `${minutes} min`;
     }
@@ -96,184 +119,20 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
     return `${hours}h ${mins}min`;
   };
 
-  // Mock data - in real app, this would come from API
-  // Services belong to Sub-services, which belong to Categories
-  const services: IService[] = [
-    {
-      id: 'SVC001',
-      name: 'Standard Electrical Wiring',
-      subServiceId: '2', // Electrical Wiring sub-service
-      subServiceName: 'Electrical Wiring',
-      category: 'Electrical',
-      description: 'Complete electrical wiring installation and repair',
-      basePrice: 500,
-      duration: 120, // 2 hours in minutes
-      status: 'active',
-      popularity: 95,
-      bookings: 45,
-      revenue: 22500,
-      image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=300&h=200&fit=crop&crop=center',
-      skills: 'Licensed, Certified, Experienced',
-      displayOrder: 1
-    },
-    {
-      id: 'SVC002',
-      name: 'Standard Pipe Repair',
-      subServiceId: '4', // Pipe Repair sub-service
-      subServiceName: 'Pipe Repair',
-      category: 'Plumbing',
-      description: 'Professional pipe repair and maintenance',
-      basePrice: 600,
-      duration: 150,
-      status: 'active',
-      popularity: 92,
-      bookings: 38,
-      revenue: 22800,
-      image: 'https://images.unsplash.com/photo-1581578731548-c6a0c3f2fcc0?w=300&h=200&fit=crop&crop=center',
-      skills: 'Certified Plumber',
-      displayOrder: 2
-    },
-    {
-      id: 'SVC003',
-      name: 'Standard AC Service',
-      subServiceId: '6', // AC Deep Service sub-service
-      subServiceName: 'AC Deep Service',
-      category: 'AC Services',
-      description: 'Complete AC servicing and repair',
-      basePrice: 800,
-      duration: 120,
-      status: 'active',
-      popularity: 90,
-      bookings: 32,
-      revenue: 25600,
-      image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=300&h=200&fit=crop&crop=center',
-      skills: 'AC Specialist, Licensed',
-      displayOrder: 3
-    },
-    {
-      id: 'SVC004',
-      name: 'Basic Switch Repair',
-      subServiceId: '3', // Switch Board Repair sub-service
-      subServiceName: 'Switch Board Repair',
-      category: 'Electrical',
-      description: 'Electrical switchboard repair and installation',
-      basePrice: 300,
-      duration: 90,
-      status: 'active',
-      popularity: 88,
-      bookings: 28,
-      revenue: 8400,
-      image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300&h=200&fit=crop&crop=center',
-      skills: 'Licensed Electrician',
-      displayOrder: 4
-    },
-    {
-      id: 'SVC005',
-      name: 'Standard Home Cleaning',
-      subServiceId: '7', // Home Cleaning sub-service (need to add)
-      subServiceName: 'Home Cleaning',
-      category: 'Cleaning',
-      description: 'Professional deep cleaning service',
-      basePrice: 300,
-      duration: 180,
-      status: 'active',
-      popularity: 82,
-      bookings: 25,
-      revenue: 7500,
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&crop=center',
-      skills: 'Trained, Background Checked',
-      displayOrder: 5
-    },
-    {
-      id: 'SVC006',
-      name: 'Standard Tap Repair',
-      subServiceId: '5', // Tap Repair sub-service
-      subServiceName: 'Tap Repair',
-      category: 'Plumbing',
-      description: 'Tap repair and replacement service',
-      basePrice: 250,
-      duration: 30,
-      status: 'active',
-      popularity: 85,
-      bookings: 22,
-      revenue: 5500,
-      image: 'https://images.unsplash.com/photo-1581578731548-c6a0c3f2fcc0?w=300&h=200&fit=crop&crop=center',
-      skills: 'Certified',
-      displayOrder: 6
-    },
-    {
-      id: 'SVC007',
-      name: 'Premium Fan Installation',
-      subServiceId: '1', // Fan Installation sub-service
-      subServiceName: 'Fan Installation',
-      category: 'Electrical',
-      description: 'Premium ceiling fan installation with warranty',
-      basePrice: 600,
-      duration: 90,
-      status: 'inactive',
-      popularity: 75,
-      bookings: 15,
-      revenue: 6000,
-      image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=300&h=200&fit=crop&crop=center',
-      skills: 'Licensed, Warranty Included',
-      displayOrder: 7
-    },
-    {
-      id: 'SVC008',
-      name: 'Standard Furniture Repair',
-      subServiceId: '8', // Furniture Repair sub-service (need to add)
-      subServiceName: 'Furniture Repair',
-      category: 'Carpentry',
-      description: 'Furniture repair and restoration',
-      basePrice: 400,
-      duration: 150,
-      status: 'active',
-      popularity: 78,
-      bookings: 18,
-      revenue: 7200,
-      image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=300&h=200&fit=crop&crop=center',
-      skills: 'Skilled Carpenter',
-      displayOrder: 8
-    },
-    {
-      id: 'SVC009',
-      name: 'Basic Door Repair',
-      subServiceId: '9', // Door Repair sub-service (need to add)
-      subServiceName: 'Door Repair',
-      category: 'Carpentry',
-      description: 'Door repair and installation',
-      basePrice: 350,
-      duration: 90,
-      status: 'active',
-      popularity: 72,
-      bookings: 12,
-      revenue: 4200,
-      image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=300&h=200&fit=crop&crop=center',
-      skills: 'Experienced',
-      displayOrder: 9
-    },
-    {
-      id: 'SVC010',
-      name: 'Standard Washing Machine Repair',
-      subServiceId: '10', // Washing Machine Repair sub-service (need to add)
-      subServiceName: 'Washing Machine Repair',
-      category: 'Appliance',
-      description: 'Washing machine repair and maintenance',
-      basePrice: 600,
-      duration: 120,
-      status: 'active',
-      popularity: 85,
-      bookings: 20,
-      revenue: 12000,
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&crop=center',
-      skills: 'Appliance Specialist',
-      displayOrder: 10
-    }
-  ];
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '₹0';
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const handleToggleStatus = (serviceId: string, newStatus: boolean) => {
-    // TODO: Implement status toggle
+    // TODO: Implement API call to update status
     console.log(`Toggling service ${serviceId} to ${newStatus ? 'active' : 'inactive'}`);
+    // Refetch after status change
+    refetch();
   };
 
   const handleEditPricing = (serviceId: string) => {
@@ -289,8 +148,10 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   };
 
   const handleDeleteService = (serviceId: string) => {
-    // TODO: Implement delete service
+    // TODO: Implement API call to delete service
     console.log('Deleting service:', serviceId);
+    // Refetch after delete
+    refetch();
   };
 
   const getStatusBadge = (status: string) => {
@@ -323,39 +184,37 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
     return iconMap[category as keyof typeof iconMap] || 'category';
   };
 
-  // Extract unique sub-services from services
+  // Extract unique sub-services from services for filter dropdown
   const uniqueSubServices = Array.from(
-    new Map(services.map(service => [service.subServiceId, {
-      id: service.subServiceId,
+    new Map(services
+      .filter(service => service.subServiceId)
+      .map(service => [service.subServiceId, {
+        id: service.subServiceId!,
       name: service.subServiceName || 'Unknown'
     }])).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
+  // Client-side filtering for sub-service (if API doesn't support it)
   let filteredServices = services.filter(service => {
-    const matchesCategory = categoryFilter === 'all' || service.category.toLowerCase() === categoryFilter.toLowerCase();
     const matchesSubService = subServiceFilter === 'all' || service.subServiceId === subServiceFilter;
-    const matchesSearch = searchTerm === '' || 
-      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSubService && matchesSearch;
+    return matchesSubService;
   });
 
-  // Sort services
+  // Sort services (client-side sorting)
   filteredServices = [...filteredServices].sort((a, b) => {
     switch (sortBy) {
       case 'displayOrder':
         return (a.displayOrder || 999) - (b.displayOrder || 999);
       case 'name':
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
       case 'price':
-        return a.basePrice - b.basePrice;
+        return (a.basePrice || 0) - (b.basePrice || 0);
       case 'popularity':
-        return b.popularity - a.popularity;
+        return (b.popularity || 0) - (a.popularity || 0);
       case 'bookings':
-        return b.bookings - a.bookings;
+        return (b.bookings || 0) - (a.bookings || 0);
       case 'revenue':
-        return b.revenue - a.revenue;
+        return (b.revenue || 0) - (a.revenue || 0);
       default:
         return (a.displayOrder || 999) - (b.displayOrder || 999);
     }
@@ -366,9 +225,28 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
       <div className="card-header max-w-full w-full overflow-hidden">
         <div className="flex flex-col gap-4">
           <div>
-            <h3 className="card-title">Service Management ({filteredServices.length})</h3>
+            <h3 className="card-title">
+              Service Management {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
+            </h3>
             <p className="text-sm text-gray-600">Manage service pricing and availability</p>
           </div>
+
+          {/* Error State */}
+          {isError && (
+            <Alert variant="danger">
+              <div className="flex items-center justify-between">
+                <span>
+                  {error?.message || 'Failed to load services. Please try again.'}
+                </span>
+                <button
+                  onClick={() => refetch()}
+                  className="text-sm underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            </Alert>
+          )}
           
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search Bar */}
@@ -383,7 +261,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
               />
             </div>
 
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={handleCategoryFilterChange}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
@@ -553,6 +431,20 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
       </div>
       
       <div className="card-body p-0 w-full overflow-hidden">
+        {isLoading && !isFetching ? (
+          <div className="p-8">
+            <ContentLoader />
+          </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="p-8 text-center">
+            <KeenIcon icon="tag" className="text-gray-400 text-4xl mx-auto mb-4" />
+            <p className="text-gray-600">No services found</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
+        ) : (
+          <>
         <div className="scrollable-x-auto" style={{ width: '100%', maxWidth: '100%' }}>
           <table className="caption-bottom text-sm" style={{ minWidth: '1200px' }}>
             <TableHeader>
@@ -581,18 +473,19 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                           <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                             <img 
                               src={service.image} 
-                              alt={service.name}
+                              alt={service.name || 'Service'}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&crop=center';
+                                target.onerror = null; // Prevent infinite loop
                               }}
                             />
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm truncate">{service.name}</div>
-                          <div className="text-xs text-gray-500 truncate">ID: {service.id}</div>
+                          <div className="font-medium text-sm truncate">{service.name || 'N/A'}</div>
+                          <div className="text-xs text-gray-500 truncate">ID: {service.id || 'N/A'}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -613,13 +506,20 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                   )}
                   {columnVisibility.category && (
                     <TableCell className="w-[100px]">
-                      <div className="text-sm truncate">{service.category}</div>
+                      <div className="text-sm truncate">
+                        {service.categoryName || 
+                         (typeof service.category === 'string' ? service.category : 
+                          (service.category && typeof service.category === 'object' ? service.category.name : 'N/A')) || 
+                         'N/A'}
+                      </div>
                     </TableCell>
                   )}
                   {columnVisibility.basePrice && (
                     <TableCell className="w-[90px]">
                       <div className="text-center">
-                        <div className="font-semibold text-sm whitespace-nowrap">₹{service.basePrice.toLocaleString()}</div>
+                        <div className="font-semibold text-sm whitespace-nowrap">
+                          {formatCurrency(service.basePrice)}
+                        </div>
                       </div>
                     </TableCell>
                   )}
@@ -655,7 +555,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                           </Tooltip>
                         </TooltipProvider>
                         <div className="flex-shrink-0">
-                          {getStatusBadge(service.status)}
+                          {getStatusBadge(service.status || 'inactive')}
                         </div>
                       </div>
                     </TableCell>
@@ -663,21 +563,23 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                   {columnVisibility.popularity && (
                     <TableCell className="w-[90px]">
                       <Badge variant="outline" className="badge-outline text-xs whitespace-nowrap px-1.5 py-0.5">
-                        {getPopularityBadge(service.popularity).text}
+                        {getPopularityBadge(service.popularity || 0).text}
                       </Badge>
                     </TableCell>
                   )}
                   {columnVisibility.bookings && (
                     <TableCell className="w-[70px]">
                       <div className="text-center">
-                        <div className="font-semibold text-sm">{service.bookings}</div>
+                        <div className="font-semibold text-sm">{service.bookings || 0}</div>
                       </div>
                     </TableCell>
                   )}
                   {columnVisibility.revenue && (
                     <TableCell className="w-[90px]">
                       <div className="text-center">
-                        <div className="font-semibold text-success text-sm whitespace-nowrap">₹{service.revenue.toLocaleString()}</div>
+                        <div className="font-semibold text-success text-sm whitespace-nowrap">
+                          {formatCurrency(service.revenue)}
+                        </div>
                       </div>
                     </TableCell>
                   )}
@@ -712,6 +614,44 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
             </TableBody>
           </table>
         </div>
+
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="card-footer">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} services
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isFetching}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isFetching}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

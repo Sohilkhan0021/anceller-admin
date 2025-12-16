@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,10 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { useCategories } from '@/services';
+import { ICategory } from '@/services/category.types';
+import { ContentLoader } from '@/components/loaders';
+import { Alert } from '@/components/alert';
 
 interface ICategory {
   id: string;
@@ -88,64 +92,41 @@ const CategoryManagement = ({
   const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Mock data - in real app, this would come from API
-  const [categories, setCategories] = useState<ICategory[]>([
-    {
-      id: '1',
-      name: 'Electrical',
-      icon: 'element-11',
-      lucideIcon: 'zap',
-      description: 'All electrical repair and installation services',
-      status: 'active',
-      displayOrder: 1
-    },
-    {
-      id: '2',
-      name: 'Plumbing',
-      icon: 'water-drop',
-      lucideIcon: 'droplet',
-      description: 'Plumbing repair and installation services',
-      status: 'active',
-      displayOrder: 2
-    },
-    {
-      id: '3',
-      name: 'AC Services',
-      icon: 'air-conditioner-2',
-      lucideIcon: 'wind',
-      description: 'AC installation, repair and maintenance',
-      status: 'active',
-      displayOrder: 3
-    },
-    {
-      id: '4',
-      name: 'Cleaning',
-      icon: 'broom-2',
-      lucideIcon: 'sparkles',
-      description: 'Professional cleaning services',
-      status: 'active',
-      displayOrder: 4
-    },
-    {
-      id: '5',
-      name: 'Carpentry',
-      icon: 'hammer-2',
-      lucideIcon: 'hammer',
-      description: 'Carpentry and woodwork services',
-      status: 'inactive',
-      displayOrder: 5
-    },
-    {
-      id: '6',
-      name: 'Appliance',
-      icon: 'setting-2',
-      lucideIcon: 'washing-machine',
-      description: 'Home appliance repair services',
-      status: 'active',
-      displayOrder: 6
-    }
-  ]);
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch categories with filters
+  const { 
+    categories, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isFetching 
+  } = useCategories({
+    page: currentPage,
+    limit: pageSize,
+    status: statusFilter === 'all' ? '' : statusFilter,
+    search: debouncedSearch,
+  });
+
+  // Handle status filter change
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
 
   const handleAddCategory = () => {
     setEditingCategory(null);
@@ -160,11 +141,6 @@ const CategoryManagement = ({
   const handleSaveCategory = (categoryData: any) => {
     if (editingCategory) {
       // Update existing
-      setCategories(prev => prev.map(cat => 
-        cat.id === editingCategory.id 
-          ? { ...cat, ...categoryData }
-          : cat
-      ));
       onUpdateCategory?.(categoryData);
       enqueueSnackbar('Category updated successfully', { 
         variant: 'solid', 
@@ -173,13 +149,7 @@ const CategoryManagement = ({
       });
     } else {
       // Create new
-      const newCategory: ICategory = {
-        ...categoryData,
-        id: Date.now().toString(),
-        displayOrder: categories.length + 1
-      };
-      setCategories(prev => [...prev, newCategory]);
-      onCreateCategory?.(newCategory);
+      onCreateCategory?.(categoryData);
       enqueueSnackbar('Category created successfully', { 
         variant: 'solid', 
         state: 'success',
@@ -188,20 +158,22 @@ const CategoryManagement = ({
     }
     setIsFormOpen(false);
     setEditingCategory(null);
+    // Refetch categories after save
+    refetch();
   };
 
   const handleToggleStatus = (categoryId: string) => {
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId 
-        ? { ...cat, status: cat.status === 'active' ? 'inactive' : 'active' }
-        : cat
-    ));
     const category = categories.find(c => c.id === categoryId);
-    enqueueSnackbar(`Category ${category?.status === 'active' ? 'deactivated' : 'activated'}`, { 
-      variant: 'solid', 
-      state: 'info',
-      icon: 'information-2'
-    });
+    if (category) {
+      // TODO: Implement API call to update status
+      enqueueSnackbar(`Category ${category.status === 'active' ? 'deactivated' : 'activated'}`, { 
+        variant: 'solid', 
+        state: 'info',
+        icon: 'information-2'
+      });
+      // Refetch after status change
+      refetch();
+    }
   };
 
   const handleDeleteClick = (categoryId: string) => {
@@ -211,39 +183,28 @@ const CategoryManagement = ({
 
   const handleConfirmDelete = () => {
     if (categoryToDelete) {
-      setCategories(prev => prev.filter(cat => cat.id !== categoryToDelete));
       onDeleteCategory?.(categoryToDelete);
       enqueueSnackbar('Category deleted successfully', { 
         variant: 'solid', 
         state: 'success',
         icon: 'check-circle'
       });
+      // Refetch after delete
+      refetch();
     }
     setDeleteDialogOpen(false);
     setCategoryToDelete(null);
   };
 
   const handleUpdateDisplayOrder = (categoryId: string, newOrder: number) => {
-    setCategories(prev => {
-      const updated = [...prev];
-      const category = updated.find(c => c.id === categoryId);
-      if (category) {
-        const oldOrder = category.displayOrder;
-        // Swap orders
-        updated.forEach(cat => {
-          if (cat.displayOrder === newOrder) {
-            cat.displayOrder = oldOrder;
-          }
-        });
-        category.displayOrder = newOrder;
-      }
-      return updated.sort((a, b) => a.displayOrder - b.displayOrder);
-    });
+    // TODO: Implement API call to update display order
     enqueueSnackbar('Display order updated', { 
       variant: 'solid', 
       state: 'info',
       icon: 'information-2'
     });
+    // Refetch after order change
+    refetch();
   };
 
   const getStatusBadge = (status: string) => {
@@ -254,20 +215,15 @@ const CategoryManagement = ({
     );
   };
 
-  const filteredCategories = categories.filter(category => {
-    const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         category.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || category.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
   return (
     <>
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h3 className="card-title">Categories ({filteredCategories.length})</h3>
+              <h3 className="card-title">
+                Categories {pagination ? `(${pagination.total})` : `(${categories.length})`}
+              </h3>
               <p className="text-sm text-gray-600">Manage service categories</p>
             </div>
             
@@ -279,6 +235,23 @@ const CategoryManagement = ({
         </div>
         
         <div className="card-body">
+          {/* Error State */}
+          {isError && (
+            <Alert variant="danger" className="mb-4">
+              <div className="flex items-center justify-between">
+                <span>
+                  {error?.message || 'Failed to load categories. Please try again.'}
+                </span>
+                <button
+                  onClick={() => refetch()}
+                  className="text-sm underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            </Alert>
+          )}
+
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="lg:col-span-2">
@@ -295,7 +268,7 @@ const CategoryManagement = ({
             </div>
 
             <div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -308,32 +281,53 @@ const CategoryManagement = ({
             </div>
           </div>
 
-          {/* Categories Table */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Order</TableHead>
-                  <TableHead className="w-[80px]">Icon</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[150px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCategories.map((category) => (
-                  <TableRow key={category.id}>
+          {/* Loading State */}
+          {isLoading && !isFetching ? (
+            <div className="p-8">
+              <ContentLoader />
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="p-8 text-center">
+              <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
+              <p className="text-gray-600">No categories found</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Try adjusting your search or filter criteria
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Categories Table */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Order</TableHead>
+                      <TableHead className="w-[80px]">Icon</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="w-[150px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((category, index) => {
+                      // Handle displayOrder - might be undefined or use snake_case from API
+                      const displayOrder = category.displayOrder ?? 
+                                         (category as any).display_order ?? 
+                                         (index + 1);
+                      
+                      return (
+                      <TableRow key={category.id}>
                     <TableCell>
                       <Select
-                        value={category.displayOrder.toString()}
+                        value={displayOrder.toString()}
                         onValueChange={(value) => handleUpdateDisplayOrder(category.id, parseInt(value))}
                       >
                         <SelectTrigger className="w-20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories.map((_, index) => (
+                          {Array.from({ length: pagination?.total || categories.length }, (_, index) => (
                             <SelectItem key={index + 1} value={(index + 1).toString()}>
                               {index + 1}
                             </SelectItem>
@@ -347,7 +341,7 @@ const CategoryManagement = ({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{category.name}</div>
+                      <div className="font-medium">{category.name || 'N/A'}</div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-gray-600 max-w-md truncate">
@@ -356,7 +350,7 @@ const CategoryManagement = ({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getStatusBadge(category.status)}
+                        {getStatusBadge(category.status || 'inactive')}
                         <Switch
                           checked={category.status === 'active'}
                           onCheckedChange={() => handleToggleStatus(category.id)}
@@ -384,10 +378,47 @@ const CategoryManagement = ({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    );
+                  })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} categories
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isFetching}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isFetching}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

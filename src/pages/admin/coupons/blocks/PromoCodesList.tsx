@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,20 +24,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface IPromoCode {
-  id: string;
-  code: string;
-  type: 'flat' | 'percentage';
-  value: number;
-  expiry: string;
-  usageCount: number;
-  maxUsage: number;
-  status: 'active' | 'expired' | 'upcoming' | 'deactivated';
-  createdAt: string;
-  revenueImpact: number;
-  redemptions: number;
-}
+import { useCoupons } from '@/services';
+import { ICoupon } from '@/services/coupon.types';
+import { ContentLoader } from '@/components/loaders';
+import { Alert } from '@/components/alert';
 
 interface IPromoCodesListProps {
   onEditPromo: (promo: any) => void;
@@ -46,96 +36,61 @@ interface IPromoCodesListProps {
 const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Mock data - in real app, this would come from API
-  const promoCodes: IPromoCode[] = [
-    {
-      id: 'PROMO001',
-      code: 'WELCOME20',
-      type: 'percentage',
-      value: 20,
-      expiry: '2024-12-31',
-      usageCount: 45,
-      maxUsage: 100,
-      status: 'active',
-      createdAt: '2024-01-01',
-      revenueImpact: 2250,
-      redemptions: 45
-    },
-    {
-      id: 'PROMO002',
-      code: 'SAVE50',
-      type: 'flat',
-      value: 50,
-      expiry: '2024-02-15',
-      usageCount: 23,
-      maxUsage: 50,
-      status: 'active',
-      createdAt: '2024-01-10',
-      revenueImpact: 1150,
-      redemptions: 23
-    },
-    {
-      id: 'PROMO003',
-      code: 'NEWUSER',
-      type: 'percentage',
-      value: 15,
-      expiry: '2024-01-20',
-      usageCount: 12,
-      maxUsage: 200,
-      status: 'expired',
-      createdAt: '2024-01-01',
-      revenueImpact: 1800,
-      redemptions: 12
-    },
-    {
-      id: 'PROMO004',
-      code: 'SUMMER25',
-      type: 'percentage',
-      value: 25,
-      expiry: '2024-06-01',
-      usageCount: 0,
-      maxUsage: 500,
-      status: 'upcoming',
-      createdAt: '2024-01-15',
-      revenueImpact: 0,
-      redemptions: 0
-    },
-    {
-      id: 'PROMO005',
-      code: 'FLASH100',
-      type: 'flat',
-      value: 100,
-      expiry: '2024-01-25',
-      usageCount: 8,
-      maxUsage: 20,
-      status: 'deactivated',
-      createdAt: '2024-01-20',
-      revenueImpact: 800,
-      redemptions: 8
-    }
-  ];
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500); // 500ms debounce
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    // TODO: Implement search functionality
-  };
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch coupons with filters
+  const { 
+    coupons, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isFetching 
+  } = useCoupons({
+    page: currentPage,
+    limit: pageSize,
+    status: statusFilter === 'all' ? '' : statusFilter,
+    search: debouncedSearch,
+  });
+
+  // Handle filter changes
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
 
   const handleEditPromoClick = (promoId: string) => {
-    const promo = promoCodes.find(p => p.id === promoId);
+    const promo = coupons.find(p => p.id === promoId);
     if (promo) {
       onEditPromo(promo);
     }
   };
 
   const handleDeactivatePromo = (promoId: string) => {
-    // TODO: Implement deactivate promo functionality
+    // TODO: Implement API call to deactivate promo
     console.log('Deactivating promo:', promoId);
+    // Refetch after deactivation
+    refetch();
   };
 
   const handleDeletePromo = (promoId: string) => {
-    // TODO: Implement delete promo functionality
+    // TODO: Implement API call to delete promo
     console.log('Deleting promo:', promoId);
+    // Refetch after delete
+    refetch();
   };
 
   const getStatusBadge = (status: string) => {
@@ -150,22 +105,29 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
-  const getTypeDisplay = (type: string, value: number) => {
+  const getTypeDisplay = (type?: string, value?: number) => {
+    if (!type || value === undefined) return 'N/A';
     return type === 'percentage' ? `${value}%` : `₹${value}`;
   };
 
-  const getUsagePercentage = (usageCount: number, maxUsage: number) => {
+  const getUsagePercentage = (usageCount?: number, maxUsage?: number) => {
+    if (!usageCount || !maxUsage || maxUsage === 0) return 0;
     return Math.round((usageCount / maxUsage) * 100);
   };
 
-  const filteredPromoCodes = promoCodes.filter(promo => {
-    const matchesSearch = promo.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || promo.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '₹0';
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
-  const totalRedemptions = promoCodes.reduce((sum, promo) => sum + promo.redemptions, 0);
-  const totalRevenueImpact = promoCodes.reduce((sum, promo) => sum + promo.revenueImpact, 0);
+  // Calculate metrics from API data
+  const totalRedemptions = coupons.reduce((sum, promo) => sum + (promo.redemptions || promo.usageCount || 0), 0);
+  const totalRevenueImpact = coupons.reduce((sum, promo) => sum + (promo.revenueImpact || 0), 0);
+  const activeCouponsCount = coupons.filter(promo => promo.status === 'active').length;
 
   return (
     <div className="space-y-6">
@@ -199,7 +161,7 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">₹{totalRevenueImpact.toLocaleString()}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(totalRevenueImpact)}</h3>
               <p className="text-sm text-gray-600">Revenue Impact</p>
             </div>
           </div>
@@ -216,7 +178,7 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{promoCodes.length}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{activeCouponsCount}</h3>
               <p className="text-sm text-gray-600">Active Promo Codes</p>
             </div>
           </div>
@@ -226,9 +188,28 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
       {/* Filters */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">Promo Codes ({filteredPromoCodes.length})</h3>
+          <h3 className="card-title">
+            Promo Codes {pagination ? `(${pagination.total})` : `(${coupons.length})`}
+          </h3>
         </div>
         <div className="card-body">
+          {/* Error State */}
+          {isError && (
+            <Alert variant="danger" className="mb-4">
+              <div className="flex items-center justify-between">
+                <span>
+                  {error?.message || 'Failed to load coupons. Please try again.'}
+                </span>
+                <button
+                  onClick={() => refetch()}
+                  className="text-sm underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Search Bar */}
             <div className="lg:col-span-2">
@@ -238,7 +219,7 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
                   type="text"
                   placeholder="Search by promo code..."
                   value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -246,7 +227,7 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
 
             {/* Status Filter */}
             <div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -269,22 +250,36 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
           <h3 className="card-title">Promo Codes List</h3>
         </div>
         <div className="card-body p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead className="hidden sm:table-cell">Type</TableHead>
-                  <TableHead className="hidden md:table-cell">Value</TableHead>
-                  <TableHead className="hidden lg:table-cell">Expiry</TableHead>
-                  <TableHead className="hidden sm:table-cell">Usage</TableHead>
-                  <TableHead className="hidden md:table-cell">Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Revenue Impact</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPromoCodes.map((promo) => (
+          {isLoading && !isFetching ? (
+            <div className="p-8">
+              <ContentLoader />
+            </div>
+          ) : coupons.length === 0 ? (
+            <div className="p-8 text-center">
+              <KeenIcon icon="gift" className="text-gray-400 text-4xl mx-auto mb-4" />
+              <p className="text-gray-600">No coupons found</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Try adjusting your search or filter criteria
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead className="hidden sm:table-cell">Type</TableHead>
+                      <TableHead className="hidden md:table-cell">Value</TableHead>
+                      <TableHead className="hidden lg:table-cell">Expiry</TableHead>
+                      <TableHead className="hidden sm:table-cell">Usage</TableHead>
+                      <TableHead className="hidden md:table-cell">Status</TableHead>
+                      <TableHead className="hidden lg:table-cell">Revenue Impact</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {coupons.map((promo) => (
                   <TableRow key={promo.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -292,9 +287,13 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
                           <KeenIcon icon="gift" className="text-primary text-sm" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{promo.code}</div>
-                          <div className="text-sm text-gray-500 hidden sm:block">Created {promo.createdAt}</div>
-                          <div className="text-xs text-gray-500 sm:hidden">{getTypeDisplay(promo.type, promo.value)}</div>
+                          <div className="font-medium truncate">{promo.code || 'N/A'}</div>
+                          <div className="text-sm text-gray-500 hidden sm:block">
+                            Created {promo.createdAt || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500 sm:hidden">
+                            {getTypeDisplay(promo.type, promo.value)}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -308,10 +307,12 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
                         <div className="font-semibold">{getTypeDisplay(promo.type, promo.value)}</div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">{promo.expiry}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{promo.expiry || 'N/A'}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <div className="text-center">
-                        <div className="font-semibold">{promo.usageCount}/{promo.maxUsage}</div>
+                        <div className="font-semibold">
+                          {promo.usageCount || 0}/{promo.maxUsage || 0}
+                        </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                           <div 
                             className="bg-primary h-2 rounded-full" 
@@ -323,21 +324,29 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{getStatusBadge(promo.status)}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {getStatusBadge(promo.status || 'deactivated')}
+                    </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <div className="text-center">
-                        <div className="font-semibold text-success">₹{promo.revenueImpact.toLocaleString()}</div>
-                        <div className="text-xs text-gray-500">{promo.redemptions} redemptions</div>
+                        <div className="font-semibold text-success">
+                          {formatCurrency(promo.revenueImpact)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {promo.redemptions || promo.usageCount || 0} redemptions
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1 sm:hidden">
                           <div className="md:hidden">
-                            {getStatusBadge(promo.status)}
+                            {getStatusBadge(promo.status || 'deactivated')}
                           </div>
                           <div className="lg:hidden">
-                            <div className="text-xs text-gray-500">₹{promo.revenueImpact.toLocaleString()}</div>
+                            <div className="text-xs text-gray-500">
+                              {formatCurrency(promo.revenueImpact)}
+                            </div>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -372,10 +381,48 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="card-footer">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                      {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                      {pagination.total} coupons
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(pagination.page - 1)}
+                        disabled={!pagination.hasPreviousPage || isFetching}
+                      >
+                        <KeenIcon icon="arrow-left" className="me-1" />
+                        Previous
+                      </Button>
+                      <div className="text-sm text-gray-600">
+                        Page {pagination.page} of {pagination.totalPages}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(pagination.page + 1)}
+                        disabled={!pagination.hasNextPage || isFetching}
+                      >
+                        Next
+                        <KeenIcon icon="arrow-right" className="ms-1" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

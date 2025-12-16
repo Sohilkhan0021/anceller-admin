@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,26 +16,83 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { addDays, format } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface IBookingManagementHeaderProps {
   onAddBooking?: () => void;
+  onFiltersChange?: (filters: { 
+    search: string; 
+    status: string;
+    payment_status: string;
+    start_date: string;
+    end_date: string;
+  }) => void;
+  initialFilters?: {
+    search: string;
+    status: string;
+    payment_status: string;
+    start_date: string;
+    end_date: string;
+  };
 }
 
-const BookingManagementHeader = ({ onAddBooking }: IBookingManagementHeaderProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+const BookingManagementHeader = ({ 
+  onAddBooking,
+  onFiltersChange,
+  initialFilters
+}: IBookingManagementHeaderProps) => {
+  const [searchTerm, setSearchTerm] = useState(initialFilters?.search || '');
+  const [statusFilter, setStatusFilter] = useState(initialFilters?.status || 'all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState(initialFilters?.payment_status || 'all');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: addDays(new Date(2024, 0, 1), 30)
+  
+  // Initialize date range from initial filters
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (initialFilters?.start_date && initialFilters?.end_date) {
+      return {
+        from: new Date(initialFilters.start_date),
+        to: new Date(initialFilters.end_date)
+      };
+    }
+    return undefined;
   });
+
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onFiltersChange) {
+        const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
+        const endDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '';
+        
+        onFiltersChange({
+          search: searchTerm,
+          status: statusFilter === 'all' ? '' : statusFilter,
+          payment_status: paymentStatusFilter === 'all' ? '' : paymentStatusFilter,
+          start_date: startDate,
+          end_date: endDate,
+        });
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, paymentStatusFilter, dateRange, onFiltersChange]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    // TODO: Implement search functionality
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+  };
+
+  const handlePaymentStatusChange = (value: string) => {
+    setPaymentStatusFilter(value);
+  };
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setDateRange(range);
   };
 
   const handleBulkAction = (action: string) => {
@@ -105,7 +162,7 @@ const BookingManagementHeader = ({ onAddBooking }: IBookingManagementHeaderProps
 
           {/* Status Filter */}
           <div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -120,7 +177,24 @@ const BookingManagementHeader = ({ onAddBooking }: IBookingManagementHeaderProps
             </Select>
           </div>
 
-          {/* Service Type Filter */}
+          {/* Payment Status Filter */}
+          <div>
+            <Select value={paymentStatusFilter} onValueChange={handlePaymentStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by payment status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
+                <SelectItem value="partially-paid">Partially Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Service Type Filter (UI only - not part of API) */}
           <div>
             <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
               <SelectTrigger>
@@ -133,24 +207,6 @@ const BookingManagementHeader = ({ onAddBooking }: IBookingManagementHeaderProps
                 <SelectItem value="cleaning">Cleaning</SelectItem>
                 <SelectItem value="ac">AC Repair</SelectItem>
                 <SelectItem value="carpentry">Carpentry</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Payment Method Filter */}
-          <div>
-            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by payment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payment Methods</SelectItem>
-                <SelectItem value="credit-card">Credit Card</SelectItem>
-                <SelectItem value="debit-card">Debit Card</SelectItem>
-                <SelectItem value="upi">UPI</SelectItem>
-                <SelectItem value="net-banking">Net Banking</SelectItem>
-                <SelectItem value="wallet">Wallet</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -190,7 +246,7 @@ const BookingManagementHeader = ({ onAddBooking }: IBookingManagementHeaderProps
                   mode="range"
                   defaultMonth={dateRange?.from}
                   selected={dateRange}
-                  onSelect={setDateRange}
+                  onSelect={handleDateRangeChange}
                   numberOfMonths={2}
                 />
               </PopoverContent>

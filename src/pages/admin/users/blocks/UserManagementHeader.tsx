@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,16 +12,41 @@ import {
 
 interface IUserManagementHeaderProps {
   onAddUser?: () => void;
+  onFiltersChange?: (filters: { search: string; status: string }) => void;
+  initialSearch?: string;
+  initialStatus?: string;
 }
 
-const UserManagementHeader = ({ onAddUser }: IUserManagementHeaderProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+const UserManagementHeader = ({ 
+  onAddUser,
+  onFiltersChange,
+  initialSearch = '',
+  initialStatus = 'all'
+}: IUserManagementHeaderProps) => {
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [userTypeFilter, setUserTypeFilter] = useState('all');
+
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onFiltersChange) {
+        onFiltersChange({
+          search: searchTerm,
+          status: statusFilter === 'all' ? '' : statusFilter,
+        });
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, onFiltersChange]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    // TODO: Implement search functionality
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
   };
 
   const handleExport = () => {
@@ -94,7 +119,7 @@ const UserManagementHeader = ({ onAddUser }: IUserManagementHeaderProps) => {
 
           {/* Status Filter */}
           <div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>

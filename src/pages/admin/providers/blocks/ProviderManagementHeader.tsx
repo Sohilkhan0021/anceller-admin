@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,16 +12,42 @@ import {
 
 interface IProviderManagementHeaderProps {
   onAddProvider?: () => void;
+  onFiltersChange?: (filters: { search: string; status: string }) => void;
+  initialSearch?: string;
+  initialStatus?: string;
 }
 
-const ProviderManagementHeader = ({ onAddProvider }: IProviderManagementHeaderProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const ProviderManagementHeader = ({ 
+  onAddProvider,
+  onFiltersChange,
+  initialSearch = '',
+  initialStatus = 'all'
+}: IProviderManagementHeaderProps) => {
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [kycStatusFilter, setKycStatusFilter] = useState('all');
 
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onFiltersChange) {
+        onFiltersChange({
+          search: searchTerm,
+          status: statusFilter === 'all' ? '' : statusFilter,
+        });
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, onFiltersChange]);
+
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    // TODO: Implement search functionality
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
   };
 
   return (
@@ -61,7 +87,22 @@ const ProviderManagementHeader = ({ onAddProvider }: IProviderManagementHeaderPr
             </div>
           </div>
 
-          {/* Category Filter */}
+          {/* Status Filter */}
+          <div>
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Category Filter (UI only - not part of API) */}
           <div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger>
@@ -74,22 +115,6 @@ const ProviderManagementHeader = ({ onAddProvider }: IProviderManagementHeaderPr
                 <SelectItem value="plumbing">Plumbing</SelectItem>
                 <SelectItem value="cleaning">Cleaning</SelectItem>
                 <SelectItem value="carpentry">Carpentry</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* KYC Status Filter */}
-          <div>
-            <Select value={kycStatusFilter} onValueChange={setKycStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by KYC status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All KYC Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="under-review">Under Review</SelectItem>
               </SelectContent>
             </Select>
           </div>

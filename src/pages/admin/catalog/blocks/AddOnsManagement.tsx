@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,15 +29,10 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-
-interface IAddOn {
-  id: string;
-  name: string;
-  price: number;
-  isPerUnit: boolean;
-  status: 'active' | 'inactive';
-  appliesTo: string[]; // Service IDs
-}
+import { useAddOns } from '@/services';
+import { IAddOn } from '@/services/addon.types';
+import { ContentLoader } from '@/components/loaders';
+import { Alert } from '@/components/alert';
 
 interface IAddOnsManagementProps {
   services?: any[]; // List of all services for assignment
@@ -59,8 +54,43 @@ const AddOnsManagement = ({
   const [editingAddOn, setEditingAddOn] = useState<IAddOn | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addOnToDelete, setAddOnToDelete] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Mock services data
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch add-ons with filters
+  const { 
+    addOns, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isFetching 
+  } = useAddOns({
+    page: currentPage,
+    limit: pageSize,
+    status: statusFilter === 'all' ? '' : statusFilter,
+    search: debouncedSearch,
+  });
+
+  // Handle filter changes
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  }, []);
+
+  // Mock services data (for backward compatibility)
   const mockServices = [
     { id: '1', name: 'Electrical Wiring', category: 'Electrical' },
     { id: '2', name: 'Fan Installation', category: 'Electrical' },
@@ -70,50 +100,6 @@ const AddOnsManagement = ({
   ];
 
   const availableServices = services.length > 0 ? services : mockServices;
-
-  // Mock data - in real app, this would come from API
-  const [addOns, setAddOns] = useState<IAddOn[]>([
-    {
-      id: '1',
-      name: 'Extra Power Outlet',
-      price: 200,
-      isPerUnit: false,
-      status: 'active',
-      appliesTo: ['1', '2']
-    },
-    {
-      id: '2',
-      name: 'Pipe Extra Length',
-      price: 150,
-      isPerUnit: true,
-      status: 'active',
-      appliesTo: ['3']
-    },
-    {
-      id: '3',
-      name: 'Height Work (Above 10ft)',
-      price: 300,
-      isPerUnit: false,
-      status: 'active',
-      appliesTo: ['1', '2', '4']
-    },
-    {
-      id: '4',
-      name: 'Gas Top-up',
-      price: 400,
-      isPerUnit: false,
-      status: 'active',
-      appliesTo: ['4']
-    },
-    {
-      id: '5',
-      name: 'Extra Fixtures',
-      price: 100,
-      isPerUnit: true,
-      status: 'inactive',
-      appliesTo: ['5']
-    }
-  ]);
 
   const handleAddAddOn = () => {
     setEditingAddOn(null);
@@ -127,12 +113,6 @@ const AddOnsManagement = ({
 
   const handleSaveAddOn = (addOnData: any) => {
     if (editingAddOn) {
-      // Update existing
-      setAddOns(prev => prev.map(addOn => 
-        addOn.id === editingAddOn.id 
-          ? { ...addOn, ...addOnData }
-          : addOn
-      ));
       onUpdateAddOn?.(addOnData);
       enqueueSnackbar('Add-on updated successfully', { 
         variant: 'solid', 
@@ -140,13 +120,7 @@ const AddOnsManagement = ({
         icon: 'check-circle'
       });
     } else {
-      // Create new
-      const newAddOn: IAddOn = {
-        ...addOnData,
-        id: Date.now().toString()
-      };
-      setAddOns(prev => [...prev, newAddOn]);
-      onCreateAddOn?.(newAddOn);
+      onCreateAddOn?.(addOnData);
       enqueueSnackbar('Add-on created successfully', { 
         variant: 'solid', 
         state: 'success',
@@ -155,20 +129,22 @@ const AddOnsManagement = ({
     }
     setIsFormOpen(false);
     setEditingAddOn(null);
+    // Refetch add-ons after save
+    refetch();
   };
 
   const handleToggleStatus = (addOnId: string) => {
-    setAddOns(prev => prev.map(addOn => 
-      addOn.id === addOnId 
-        ? { ...addOn, status: addOn.status === 'active' ? 'inactive' : 'active' }
-        : addOn
-    ));
     const addOn = addOns.find(a => a.id === addOnId);
-    enqueueSnackbar(`Add-on ${addOn?.status === 'active' ? 'deactivated' : 'activated'}`, { 
-      variant: 'solid', 
-      state: 'info',
-      icon: 'information-2'
-    });
+    if (addOn) {
+      // TODO: Implement API call to update status
+      enqueueSnackbar(`Add-on ${addOn.status === 'active' ? 'deactivated' : 'activated'}`, { 
+        variant: 'solid', 
+        state: 'info',
+        icon: 'information-2'
+      });
+      // Refetch after status change
+      refetch();
+    }
   };
 
   const handleDeleteClick = (addOnId: string) => {
@@ -178,13 +154,14 @@ const AddOnsManagement = ({
 
   const handleConfirmDelete = () => {
     if (addOnToDelete) {
-      setAddOns(prev => prev.filter(addOn => addOn.id !== addOnToDelete));
       onDeleteAddOn?.(addOnToDelete);
       enqueueSnackbar('Add-on deleted successfully', { 
         variant: 'solid', 
         state: 'success',
         icon: 'check-circle'
       });
+      // Refetch after delete
+      refetch();
     }
     setDeleteDialogOpen(false);
     setAddOnToDelete(null);
@@ -198,18 +175,22 @@ const AddOnsManagement = ({
     );
   };
 
-  const getServiceNames = (serviceIds: string[]) => {
+  const getServiceNames = (serviceIds?: string[]) => {
+    if (!serviceIds || serviceIds.length === 0) return '—';
     return serviceIds
       .map(id => availableServices.find(s => s.id === id)?.name)
       .filter(Boolean)
       .join(', ') || '—';
   };
 
-  const filteredAddOns = addOns.filter(addOn => {
-    const matchesSearch = addOn.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || addOn.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '₹0';
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   return (
     <>
@@ -217,7 +198,9 @@ const AddOnsManagement = ({
         <div className="card-header">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h3 className="card-title">Add-Ons & Extras ({filteredAddOns.length})</h3>
+              <h3 className="card-title">
+                Add-Ons & Extras {pagination ? `(${pagination.total})` : `(${addOns.length})`}
+              </h3>
               <p className="text-sm text-gray-600">Manage additional charges and extras</p>
             </div>
             
@@ -229,6 +212,23 @@ const AddOnsManagement = ({
         </div>
         
         <div className="card-body">
+          {/* Error State */}
+          {isError && (
+            <Alert variant="danger" className="mb-4">
+              <div className="flex items-center justify-between">
+                <span>
+                  {error?.message || 'Failed to load add-ons. Please try again.'}
+                </span>
+                <button
+                  onClick={() => refetch()}
+                  className="text-sm underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            </Alert>
+          )}
+
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="lg:col-span-2">
@@ -245,7 +245,7 @@ const AddOnsManagement = ({
             </div>
 
             <div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -258,49 +258,64 @@ const AddOnsManagement = ({
             </div>
           </div>
 
-          {/* Add-Ons Table */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Pricing Type</TableHead>
-                  <TableHead>Applies To</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[150px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAddOns.map((addOn) => (
+          {/* Loading State */}
+          {isLoading && !isFetching ? (
+            <div className="p-8">
+              <ContentLoader />
+            </div>
+          ) : addOns.length === 0 ? (
+            <div className="p-8 text-center">
+              <KeenIcon icon="plus" className="text-gray-400 text-4xl mx-auto mb-4" />
+              <p className="text-gray-600">No add-ons found</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Try adjusting your search or filter criteria
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Add-Ons Table */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Pricing Type</TableHead>
+                      <TableHead>Applies To</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="w-[150px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {addOns.map((addOn) => (
                   <TableRow key={addOn.id}>
-                    <TableCell>
-                      <div className="font-medium">{addOn.name}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-semibold">₹{addOn.price}</div>
-                    </TableCell>
-                    <TableCell>
-                      {addOn.isPerUnit ? (
-                        <Badge variant="outline">Per Unit</Badge>
-                      ) : (
-                        <Badge variant="outline">Flat Price</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-600 max-w-md">
-                        {getServiceNames(addOn.appliesTo)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(addOn.status)}
-                        <Switch
-                          checked={addOn.status === 'active'}
-                          onCheckedChange={() => handleToggleStatus(addOn.id)}
-                        />
-                      </div>
-                    </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{addOn.name || 'N/A'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold">{formatCurrency(addOn.price)}</div>
+                      </TableCell>
+                      <TableCell>
+                        {addOn.isPerUnit ? (
+                          <Badge variant="outline">Per Unit</Badge>
+                        ) : (
+                          <Badge variant="outline">Flat Price</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-600 max-w-md">
+                          {getServiceNames(addOn.appliesTo)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(addOn.status || 'inactive')}
+                          <Switch
+                            checked={addOn.status === 'active'}
+                            onCheckedChange={() => handleToggleStatus(addOn.id)}
+                          />
+                        </div>
+                      </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -322,10 +337,46 @@ const AddOnsManagement = ({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} add-ons
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage || isFetching}
+                    >
+                      <KeenIcon icon="arrow-left" className="me-1" />
+                      Previous
+                    </Button>
+                    <div className="text-sm text-gray-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage || isFetching}
+                    >
+                      Next
+                      <KeenIcon icon="arrow-right" className="ms-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

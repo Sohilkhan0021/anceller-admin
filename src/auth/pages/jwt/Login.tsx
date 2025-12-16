@@ -23,8 +23,8 @@ const loginSchema = Yup.object().shape({
 });
 
 const initialValues = {
-  email: 'demo@anceller.com',
-  password: 'demo1234',
+  email: 'admin@quickcommerce.com',
+  password: 'admin123456',
   remember: false
 };
 
@@ -48,17 +48,19 @@ const Login = () => {
           throw new Error('JWTProvider is required for this form.');
         }
 
-        await login('demo@keenthemes.com', values.password);
+        await login(values.email, values.password);
 
         if (values.remember) {
-          localStorage.setItem('email', 'demo@keenthemes.com');
+          localStorage.setItem('email', values.email);
         } else {
           localStorage.removeItem('email');
         }
 
         navigate(from, { replace: true });
-      } catch {
-        setStatus('The login details are incorrect');
+      } catch (error: any) {
+        // Display the actual error message from the API
+        const errorMessage = error?.message || 'The login details are incorrect';
+        setStatus(errorMessage);
         setSubmitting(false);
       }
       setLoading(false);
