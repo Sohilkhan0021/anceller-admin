@@ -34,15 +34,15 @@ import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 
-interface ISubService {
-  id: string;
-  name: string;
-  categoryId: string;
-  icon: string;
-  image?: string; // Image URL or placeholder
-  status: 'active' | 'inactive';
-  displayOrder: number;
-}
+// interface ISubService {
+//   id: string;
+//   name: string;
+//   categoryId: string;
+//   icon: string;
+//   image?: string; 
+//   status: 'active' | 'inactive';
+//   displayOrder: number;
+// }
 
 interface ISubServiceManagementProps {
   categories?: any[];

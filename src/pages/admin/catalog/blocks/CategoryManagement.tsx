@@ -43,16 +43,16 @@ import { ICategory } from '@/services/category.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 
-interface ICategory {
-  id: string;
-  name: string;
-  icon: string;
-  lucideIcon?: string;
-  description?: string;
-  status: 'active' | 'inactive';
-  displayOrder: number;
-  iconUrl?: string;
-}
+// interface ICategory {
+//   id: string;
+//   name: string;
+//   icon: string;
+//   lucideIcon?: string;
+//   description?: string;
+//   status: 'active' | 'inactive';
+//   displayOrder: number;
+//   iconUrl?: string;
+// }
 
 // Icon component that can use both KeenIcon and Lucide icons
 const CategoryIcon = ({ icon, lucideIcon, className }: { icon: string; lucideIcon?: string; className?: string }) => {
@@ -337,7 +337,7 @@ const CategoryManagement = ({
                     </TableCell>
                     <TableCell>
                       <div className="p-2 bg-primary-light rounded-lg w-fit">
-                        <CategoryIcon icon={category.icon} lucideIcon={category.lucideIcon} className="text-primary w-5 h-5" />
+                        <CategoryIcon icon={category.icon || ''} lucideIcon={category.lucideIcon} className="text-primary w-5 h-5" />
                       </div>
                     </TableCell>
                     <TableCell>
