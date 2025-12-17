@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
 import { useSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import { userService } from '@/services/user.service';
 import { ICreateUserRequest } from '@/services/user.types';
 
@@ -22,43 +23,42 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
 
     const mutation = useMutation(userService.createUser, {
         onSuccess: (data) => {
-            enqueueSnackbar(data.message || 'User created successfully', { variant: 'success' });
+            toast.success(data.message || 'User created successfully');
             // Invalidate users query to refetch the list so the new user appears
             queryClient.invalidateQueries(['users']);
         },
         onError: (error: Error) => {
-            enqueueSnackbar(error.message || 'Failed to create user', { variant: 'error' });
+            toast.error(error.message || 'Failed to create user');
         }
     });
 
     const createUser = async (formData: any) => {
-        // Map form data (camelCase) to API payload (snake_case)
+        // Construct payload with only required fields first
         const payload: ICreateUserRequest = {
             first_name: formData.firstName,
             last_name: formData.lastName,
             email: formData.email,
             phone_number: formData.phone,
-            address: formData.address || '',
-            city: formData.city || '',
-            state: formData.state || '',
-            pincode: formData.pincode || '',
-            status: formData.status ? formData.status.toUpperCase() : 'ACTIVE', // Ensure generic status if needed, or keeping as is depending on API
-            is_verified: formData.isVerified,
-            notes: formData.notes || ''
         };
 
-        // Note: The status in API might be strictly enum. 
-        // The form sends 'active', 'inactive', 'blocked'. 
-        // The previous analysis of user.types.ts shows UserStatus = 'active' | 'blocked' | 'inactive'.
-        // However, the screenshot reaction shows "status": "ACTIVE". 
-        // So I might need to uppercase it. I'll uppercase it to be safe or rely on backend to handle case.
-        // Given the response body in screenshot has "ACTIVE", I'll send it as is or uppercase if I see fit.
-        // The form default is 'active'.
-        // Let's modify the payload generation slightly to be safe.
+        // Conditionally add optional fields only if they are not empty
+        // This matches the Postman example where only required fields were sent
+        if (formData.address) payload.address = formData.address;
+        if (formData.city) payload.city = formData.city;
+        if (formData.state) payload.state = formData.state;
+        if (formData.pincode) payload.pincode = formData.pincode;
+        if (formData.notes) payload.notes = formData.notes;
 
-        // Actually, looking at the type definition I added: status?: string;
-        // So I will just pass it. The screenshot has "ACTIVE".
+        // Handle status and verification
+        if (formData.status) {
+            payload.status = formData.status.toUpperCase();
+        }
 
+        if (typeof formData.isVerified === 'boolean') {
+            payload.is_verified = formData.isVerified;
+        }
+
+        console.log('Creating user with payload:', payload);
         await mutation.mutateAsync(payload);
     };
 
