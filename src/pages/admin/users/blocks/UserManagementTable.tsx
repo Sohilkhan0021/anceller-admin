@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { IUser, IPaginationMeta } from '@/services/user.types';
 import { ContentLoader } from '@/components/loaders';
+import { useUserManage } from '@/providers/userManageProvider';
 
 interface IUserManagementTableProps {
   users: IUser[];
@@ -36,18 +37,18 @@ const UserManagementTable = ({
   onPageChange
 }: IUserManagementTableProps) => {
 
+  const { updateUserStatus } = useUserManage();
+
   const handleViewUser = (user: IUser) => {
     onUserSelect(user);
   };
 
-  const handleBlockUser = (userId: string) => {
-    // TODO: Implement block user functionality
-    console.log('Blocking user:', userId);
+  const handleBlockUser = async (userId: string) => {
+    await updateUserStatus(userId, 'SUSPENDED');
   };
 
-  const handleUnblockUser = (userId: string) => {
-    // TODO: Implement unblock user functionality
-    console.log('Unblocking user:', userId);
+  const handleUnblockUser = async (userId: string) => {
+    await updateUserStatus(userId, 'ACTIVE');
   };
 
   const getStatusBadge = (status: string) => {
@@ -57,7 +58,7 @@ const UserManagementTable = ({
     } else if (s === 'BLOCKED') {
       return <Badge variant="destructive" className="badge-danger">Blocked</Badge>;
     } else {
-      return <Badge variant="secondary">Inactive</Badge>;
+      return <Badge variant="outline">Inactive</Badge>;
     }
   };
 
@@ -177,7 +178,7 @@ const UserManagementTable = ({
                               {/* {user.status === 'active' ? ( */}
                               {user.status?.toLowerCase() === 'active' ? (
                                 <DropdownMenuItem
-                                  onClick={() => handleBlockUser(user.id)}
+                                  onClick={() => handleBlockUser(user.user_id || user.id)}
                                   className="text-danger"
                                 >
                                   <KeenIcon icon="cross-circle" className="me-2" />
@@ -185,7 +186,7 @@ const UserManagementTable = ({
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem
-                                  onClick={() => handleUnblockUser(user.id)}
+                                  onClick={() => handleUnblockUser(user.user_id || user.id)}
                                   className="text-success"
                                 >
                                   <KeenIcon icon="check-circle" className="me-2" />

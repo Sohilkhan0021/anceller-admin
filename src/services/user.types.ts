@@ -113,6 +113,25 @@ export interface ICreateUserRequest {
 }
 
 /**
+ * Request payload for updating user status
+ */
+export interface IUpdateUserStatusRequest {
+  status: 'ACTIVE' | 'SUSPENDED';
+}
+
+/**
+ * API response structure for update user status endpoint
+ */
+export interface IUpdateUserStatusResponse {
+  status: number;
+  message: string;
+  data: {
+    user_id: string;
+    status: string;
+  };
+}
+
+/**
  * API response structure for create user endpoint
  */
 export interface ICreateUserResponse {

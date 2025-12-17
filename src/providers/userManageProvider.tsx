@@ -9,8 +9,11 @@ interface IUserManageContext {
     createUser: (userData: any) => Promise<void>;
     isLoading: boolean;
     currentUserDetails: import('@/services/user.types').IUserDetails | null;
+
     fetchUserDetails: (userId: string) => Promise<void>;
     userDetailsLoading: boolean;
+    updateUserStatus: (userId: string, status: 'ACTIVE' | 'SUSPENDED') => Promise<void>;
+    isUpdatingStatus: boolean;
 }
 
 const UserManageContext = createContext<IUserManageContext | undefined>(undefined);
@@ -76,13 +79,36 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         }
     };
 
+    const statusMutation = useMutation(
+        ({ userId, status }: { userId: string; status: 'ACTIVE' | 'SUSPENDED' }) =>
+            userService.updateUserStatus(userId, status),
+        {
+            onSuccess: (data) => {
+                toast.success(data.message || 'User status updated successfully');
+                queryClient.invalidateQueries(['users']);
+                if (currentUserDetails) {
+                    fetchUserDetails(currentUserDetails.user_id || currentUserDetails.id);
+                }
+            },
+            onError: (error: Error) => {
+                toast.error(error.message || 'Failed to update user status');
+            }
+        }
+    );
+
+    const updateUserStatus = async (userId: string, status: 'ACTIVE' | 'SUSPENDED') => {
+        await statusMutation.mutateAsync({ userId, status });
+    };
+
     return (
         <UserManageContext.Provider value={{
             createUser,
             isLoading: mutation.isLoading,
             currentUserDetails,
             fetchUserDetails,
-            userDetailsLoading
+            userDetailsLoading,
+            updateUserStatus,
+            isUpdatingStatus: statusMutation.isLoading
         }}>
             {children}
         </UserManageContext.Provider>

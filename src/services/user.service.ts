@@ -121,6 +121,35 @@ export const getUserDetails = async (
 };
 
 /**
+ * Update user status (Block/Unblock)
+ * 
+ * @param userId - ID of the user to update
+ * @param status - New status to set (ACTIVE or SUSPENDED)
+ * @returns Promise resolving to update response
+ */
+export const updateUserStatus = async (
+  userId: string,
+  status: 'ACTIVE' | 'SUSPENDED'
+): Promise<import('./user.types').IUpdateUserStatusResponse> => {
+  try {
+    const response = await axios.put<import('./user.types').IUpdateUserStatusResponse>(
+      `${USER_BASE_URL}/${userId}/status`,
+      { status }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const apiError: IApiError = error.response?.data || {
+        success: false,
+        message: error.message || 'Error updating user status',
+      };
+      throw new Error(apiError.message);
+    }
+    throw new Error('An unexpected error occurred while updating user status');
+  }
+};
+
+/**
  * User Service Object
  * 
  * Centralized service object for all user-related operations
@@ -130,6 +159,7 @@ export const userService = {
   getUsers,
   createUser,
   getUserDetails,
+  updateUserStatus,
   // Future methods can be added here:
   // getUserById,
   // createUser,

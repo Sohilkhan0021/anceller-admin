@@ -33,7 +33,7 @@ interface IUserDetailModalProps {
 }
 
 const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
-  const { fetchUserDetails, currentUserDetails, userDetailsLoading } = useUserManage();
+  const { fetchUserDetails, currentUserDetails, userDetailsLoading, updateUserStatus, isUpdatingStatus } = useUserManage();
 
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -42,6 +42,27 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
       fetchUserDetails(idToFetch);
     }
   }, [isOpen, user]);
+
+  const handleStatusChange = async () => {
+    if (!displayUser) return;
+
+    // Determine current status and next action
+    // "active" in UI maps to ACTIVE in backend
+    // "suspended" or "blocked" in UI maps to SUSPENDED in backend
+    const currentStatus = displayUser.status?.toLowerCase();
+    const isCurrentlyActive = currentStatus === 'active';
+
+    const newStatus = isCurrentlyActive ? 'SUSPENDED' : 'ACTIVE';
+    const userId = displayUser.user_id || displayUser.id;
+
+    try {
+      await updateUserStatus(userId, newStatus);
+      onClose();
+    } catch (error) {
+      // Error is handled in provider
+      console.error(error);
+    }
+  };
 
   if (!isOpen) return null; // Don't verify user prop here, rely on Loading or Details
 
@@ -158,6 +179,8 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
     return <Badge variant={config.variant as any}>{config.text}</Badge>;
   };
 
+  const isUserActive = displayUser.status?.toLowerCase() === 'active';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
@@ -201,15 +224,15 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                         <label className="text-sm font-medium text-gray-700">User ID</label>
                         <p className="text-sm text-gray-900">{displayUser.user_id || displayUser.id}</p>
                       </div>
-                      <div>
+                      <div className='ml-20'>
                         <label className="text-sm font-medium text-gray-700">Status</label>
                         <div className="mt-1">{getStatusBadge(displayUser.status)}</div>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700">Join Date</label>
-                        <p className="text-sm text-gray-900">{displayUser.joined_at || displayUser.joinDate}</p>
+                        <p className="text-sm text-gray-900 whitespace-nowrap">{displayUser.joined_at || displayUser.joinDate}</p>
                       </div>
-                      <div>
+                      <div className='ml-20'>
                         <label className="text-sm font-medium text-gray-700">Last Active</label>
                         <p className="text-sm text-gray-900">{displayUser.last_login_at || displayUser.lastActive || 'N/A'}</p>
                       </div>
@@ -346,12 +369,26 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isUpdatingStatus}>
             Close
           </Button>
-          <Button variant="destructive">
-            <KeenIcon icon="cross-circle" className="me-2" />
-            Block User
+          <Button
+            variant={isUserActive ? "destructive" : "default"}
+            onClick={handleStatusChange}
+            disabled={isUpdatingStatus}
+            className={!isUserActive ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            {isUpdatingStatus ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                Processing...
+              </span>
+            ) : (
+              <>
+                <KeenIcon icon={isUserActive ? "cross-circle" : "check-circle"} className="me-2" />
+                {isUserActive ? "Block User" : "Unblock User"}
+              </>
+            )}
           </Button>
         </div>
       </DialogContent>
