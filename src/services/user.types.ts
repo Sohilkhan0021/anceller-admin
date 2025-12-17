@@ -22,6 +22,17 @@ export interface IUser {
   joinDate: string;
   lastActive: string;
   totalSpent: number;
+  // Mapped/Original fields from API (Snake case support)
+  user_id?: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  profile_picture_url?: string | null;
+  is_phone_verified?: boolean;
+  is_email_verified?: boolean;
+  joined_at?: string;
+  last_login_at?: string | null;
+
   // Additional fields that might come from API
   avatar?: string;
   address?: string;
@@ -31,6 +42,23 @@ export interface IUser {
   country?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface IUserStats {
+  total_orders: number;
+  total_addresses: number;
+  total_revenue: number;
+}
+
+export interface IUserDetails extends IUser {
+  user_id: string; // Enforce user_id for details
+  is_phone_verified: boolean;
+  is_email_verified: boolean;
+  joined_at: string;
+  last_login_at: string | null;
+  stats: IUserStats;
+  recent_orders: any[]; // Define structure if available, else any[]
+  addresses: any[];     // Define structure if available, else any[]
 }
 
 /**
@@ -65,6 +93,45 @@ export interface IGetUsersResponse {
     pagination: IPaginationMeta;
   };
   message?: string;
+}
+
+/**
+ * Request payload for creating a new user
+ */
+export interface ICreateUserRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  status?: string;
+  is_verified?: boolean;
+  notes?: string;
+}
+
+/**
+ * API response structure for create user endpoint
+ */
+export interface ICreateUserResponse {
+  status: number | string;
+  message: string;
+  data: {
+    user: IUser;
+  };
+}
+
+/**
+ * API response structure for get user details endpoint
+ */
+export interface IGetUserDetailsResponse {
+  status: number | string;
+  message: string;
+  data: {
+    user: IUserDetails;
+  };
 }
 
 /**

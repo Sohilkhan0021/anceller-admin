@@ -8,6 +8,7 @@ import { useUsers } from '@/services';
 import { IUser } from '@/services/user.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
+import { useUserManage } from '@/providers/userManageProvider';
 
 const UserManagementContent = () => {
   const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
@@ -15,7 +16,7 @@ const UserManagementContent = () => {
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editUser, setEditUser] = useState<IUser | null>(null);
-  
+
   // Filter state
   const [filters, setFilters] = useState<{ search: string; status: string }>({
     search: '',
@@ -24,15 +25,17 @@ const UserManagementContent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
+  const { createUser } = useUserManage();
+
   // Fetch users with filters
-  const { 
-    users, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
+  const {
+    users,
+    pagination,
+    isLoading,
+    isError,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useUsers({
     page: currentPage,
     limit: pageSize,
@@ -74,12 +77,9 @@ const UserManagementContent = () => {
     setEditUser(null);
   };
 
-  const handleSaveUser = (userData: any) => {
-    console.log('Saving user:', userData);
-    // TODO: Implement API call to save user
-    setIsAddFormOpen(false);
-    // Refetch users after save
-    refetch();
+  const handleSaveUser = async (userData: any) => {
+    await createUser(userData);
+    // Form closing is handled in AddUserForm via onClose() after successful await
   };
 
   const handleUpdateUser = (userData: any) => {
@@ -95,7 +95,7 @@ const UserManagementContent = () => {
   return (
     <div className="grid gap-5 lg:gap-7.5">
       {/* Header with search and filters */}
-      <UserManagementHeader 
+      <UserManagementHeader
         onAddUser={handleAddUser}
         onFiltersChange={handleFiltersChange}
         initialSearch={filters.search}
@@ -128,32 +128,32 @@ const UserManagementContent = () => {
         </div>
       ) : (
         /* User Management Table */
-        <UserManagementTable 
+        <UserManagementTable
           users={users}
           pagination={pagination}
           isLoading={isFetching}
-          onUserSelect={handleUserSelect} 
+          onUserSelect={handleUserSelect}
           onEditUser={handleEditUser}
           onPageChange={setCurrentPage}
         />
       )}
 
       {/* User Detail Modal */}
-      <UserDetailModal 
-        user={selectedUser} 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal} 
+      <UserDetailModal
+        user={selectedUser}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
       />
 
       {/* Add User Form */}
-      <AddUserForm 
+      <AddUserForm
         isOpen={isAddFormOpen}
         onClose={handleCloseAddForm}
         onSave={handleSaveUser}
       />
 
       {/* Edit User Form */}
-      <EditUserForm 
+      <EditUserForm
         isOpen={isEditFormOpen}
         onClose={handleCloseEditForm}
         onSave={handleUpdateUser}

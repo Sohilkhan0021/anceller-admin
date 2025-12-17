@@ -9,7 +9,8 @@ import {
   MenusProvider,
   SettingsProvider,
   SnackbarProvider,
-  TranslationProvider
+  TranslationProvider,
+  UserManageProvider
 } from '@/providers';
 import { HelmetProvider } from 'react-helmet-async';
 
@@ -25,7 +26,9 @@ const ProvidersWrapper = ({ children }: PropsWithChildren) => {
               <LayoutProvider>
                 <LoadersProvider>
                   <DashboardProvider>
-                  <MenusProvider>{children}</MenusProvider>
+                    <UserManageProvider>
+                      <MenusProvider>{children}</MenusProvider>
+                    </UserManageProvider>
                   </DashboardProvider>
                 </LoadersProvider>
               </LayoutProvider>

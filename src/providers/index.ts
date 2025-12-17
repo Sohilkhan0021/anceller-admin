@@ -7,3 +7,4 @@ export * from './SnackbarProvider';
 export * from './TranslationProvider';
 export * from './ProvidersWrapper';
 export * from './DashboardProvider';
+export * from './userManageProvider';
