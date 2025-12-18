@@ -65,6 +65,58 @@ export interface IGetCategoriesResponse {
 }
 
 /**
+ * Request structure for creating a category
+ * Supports multipart/form-data for image and icon files
+ */
+export interface ICreateCategoryRequest {
+  name: string;
+  description?: string;
+  image?: File | null;
+  icon?: File | null;
+  sort_order?: number;
+  is_active?: boolean;
+  meta_data?: string; // JSON string
+}
+
+/**
+ * Response structure for category creation
+ */
+export interface ICreateCategoryResponse {
+  status: number;
+  message: string;
+  data: {
+    category_id: string;
+  };
+}
+
+/**
+ * Request structure for updating a category
+ */
+export interface IUpdateCategoryRequest extends Partial<ICreateCategoryRequest> {
+  id: string;
+}
+
+/**
+ * Response structure for category update
+ */
+export interface IUpdateCategoryResponse {
+  status: number;
+  message: string;
+  data: {
+    category_id: string;
+  };
+}
+
+/**
+ * Response structure for category deletion
+ */
+export interface IDeleteCategoryResponse {
+  status: number;
+  message: string;
+  data: null;
+}
+
+/**
  * Error response structure
  */
 export interface IApiError {

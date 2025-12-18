@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { 
-  Zap, 
-  Droplet, 
-  Wind, 
-  Sparkles, 
-  Hammer, 
-  WashingMachine 
+import {
+  Zap,
+  Droplet,
+  Wind,
+  Sparkles,
+  Hammer,
+  WashingMachine
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { CategoryForm } from '../forms/CategoryForm';
-import { useSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -38,8 +38,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useCategories } from '@/services';
-import { ICategory } from '@/services/category.types';
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/services';
+import { ICategory, ICreateCategoryRequest, IUpdateCategoryRequest } from '@/services/category.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 
@@ -80,12 +80,11 @@ interface ICategoryManagementProps {
   onDeleteCategory?: (categoryId: string) => void;
 }
 
-const CategoryManagement = ({ 
-  onCreateCategory, 
-  onUpdateCategory, 
-  onDeleteCategory 
+const CategoryManagement = ({
+  onCreateCategory,
+  onUpdateCategory,
+  onDeleteCategory
 }: ICategoryManagementProps) => {
-  const { enqueueSnackbar } = useSnackbar();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -106,15 +105,52 @@ const CategoryManagement = ({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Create category mutation
+  const { mutate: createCategory, isLoading: isCreating } = useCreateCategory({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Category created successfully');
+      setIsFormOpen(false);
+      setEditingCategory(null);
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create category');
+    }
+  });
+
+  // Update category mutation
+  const { mutate: updateCategory, isLoading: isUpdating } = useUpdateCategory({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Category updated successfully');
+      setIsFormOpen(false);
+      setEditingCategory(null);
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update category');
+    }
+  });
+
+  // Delete category mutation
+  const { mutate: deleteCategory, isLoading: isDeleting } = useDeleteCategory({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Category deleted successfully');
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete category');
+    }
+  });
+
   // Fetch categories with filters
-  const { 
-    categories, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
+  const {
+    categories,
+    pagination,
+    isLoading,
+    isError,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useCategories({
     page: currentPage,
     limit: pageSize,
@@ -134,43 +170,51 @@ const CategoryManagement = ({
   };
 
   const handleEditCategory = (category: ICategory) => {
-    setEditingCategory(category);
+    // Ensure we have an ID for the request
+    const categoryWithId = {
+      ...category,
+      id: category.id || (category as any).public_id || (category as any).category_id
+    };
+    setEditingCategory(categoryWithId);
     setIsFormOpen(true);
   };
 
   const handleSaveCategory = (categoryData: any) => {
     if (editingCategory) {
       // Update existing
-      onUpdateCategory?.(categoryData);
-      enqueueSnackbar('Category updated successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      const request: IUpdateCategoryRequest = {
+        id: editingCategory.id,
+        name: categoryData.name,
+        description: categoryData.description,
+        icon: categoryData.iconFile,
+        sort_order: categoryData.displayOrder,
+        is_active: categoryData.status === 'active',
+        meta_data: JSON.stringify({ preset_icon: categoryData.icon })
+      };
+
+      updateCategory(request);
+      // Note: We don't close the form here; it's handled in onSuccess
     } else {
       // Create new
-      onCreateCategory?.(categoryData);
-      enqueueSnackbar('Category created successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      const request: ICreateCategoryRequest = {
+        name: categoryData.name,
+        description: categoryData.description,
+        icon: categoryData.iconFile,
+        sort_order: categoryData.displayOrder,
+        is_active: categoryData.status === 'active',
+        meta_data: JSON.stringify({ preset_icon: categoryData.icon })
+      };
+
+      createCategory(request);
+      // Note: We don't close the form here; it's handled in onSuccess
     }
-    setIsFormOpen(false);
-    setEditingCategory(null);
-    // Refetch categories after save
-    refetch();
   };
 
   const handleToggleStatus = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
     if (category) {
       // TODO: Implement API call to update status
-      enqueueSnackbar(`Category ${category.status === 'active' ? 'deactivated' : 'activated'}`, { 
-        variant: 'solid', 
-        state: 'info',
-        icon: 'information-2'
-      });
+      toast.info(`Category ${category.status === 'active' ? 'deactivated' : 'activated'}`);
       // Refetch after status change
       refetch();
     }
@@ -183,14 +227,7 @@ const CategoryManagement = ({
 
   const handleConfirmDelete = () => {
     if (categoryToDelete) {
-      onDeleteCategory?.(categoryToDelete);
-      enqueueSnackbar('Category deleted successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
-      // Refetch after delete
-      refetch();
+      deleteCategory(categoryToDelete);
     }
     setDeleteDialogOpen(false);
     setCategoryToDelete(null);
@@ -198,11 +235,7 @@ const CategoryManagement = ({
 
   const handleUpdateDisplayOrder = (categoryId: string, newOrder: number) => {
     // TODO: Implement API call to update display order
-    enqueueSnackbar('Display order updated', { 
-      variant: 'solid', 
-      state: 'info',
-      icon: 'information-2'
-    });
+    toast.info('Display order updated');
     // Refetch after order change
     refetch();
   };
@@ -211,7 +244,7 @@ const CategoryManagement = ({
     return status === 'active' ? (
       <Badge variant="default" className="bg-success text-white">Active</Badge>
     ) : (
-      <Badge variant="secondary">Inactive</Badge>
+      <Badge variant="outline">Inactive</Badge>
     );
   };
 
@@ -226,14 +259,14 @@ const CategoryManagement = ({
               </h3>
               <p className="text-sm text-gray-600">Manage service categories</p>
             </div>
-            
+
             <Button size="sm" onClick={handleAddCategory}>
               <KeenIcon icon="plus" className="me-2" />
               Add Category
             </Button>
           </div>
         </div>
-        
+
         <div className="card-body">
           {/* Error State */}
           {isError && (
@@ -312,74 +345,74 @@ const CategoryManagement = ({
                   <TableBody>
                     {categories.map((category, index) => {
                       // Handle displayOrder - might be undefined or use snake_case from API
-                      const displayOrder = category.displayOrder ?? 
-                                         (category as any).display_order ?? 
-                                         (index + 1);
-                      
+                      const displayOrder = category.displayOrder ??
+                        (category as any).display_order ??
+                        (index + 1);
+
                       return (
-                      <TableRow key={category.id}>
-                    <TableCell>
-                      <Select
-                        value={displayOrder.toString()}
-                        onValueChange={(value) => handleUpdateDisplayOrder(category.id, parseInt(value))}
-                      >
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: pagination?.total || categories.length }, (_, index) => (
-                            <SelectItem key={index + 1} value={(index + 1).toString()}>
-                              {index + 1}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <div className="p-2 bg-primary-light rounded-lg w-fit">
-                        <CategoryIcon icon={category.icon || ''} lucideIcon={category.lucideIcon} className="text-primary w-5 h-5" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{category.name || 'N/A'}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-600 max-w-md truncate">
-                        {category.description || '—'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(category.status || 'inactive')}
-                        <Switch
-                          checked={category.status === 'active'}
-                          onCheckedChange={() => handleToggleStatus(category.id)}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditCategory(category)}
-                        >
-                          <KeenIcon icon="pencil" className="me-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteClick(category.id)}
-                        >
-                          <KeenIcon icon="trash" className="me-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                    );
-                  })}
+                        <TableRow key={category.id}>
+                          <TableCell>
+                            <Select
+                              value={displayOrder.toString()}
+                              onValueChange={(value) => handleUpdateDisplayOrder(category.id, parseInt(value))}
+                            >
+                              <SelectTrigger className="w-20">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: pagination?.total || categories.length }, (_, index) => (
+                                  <SelectItem key={index + 1} value={(index + 1).toString()}>
+                                    {index + 1}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <div className="p-2 bg-primary-light rounded-lg w-fit">
+                              <CategoryIcon icon={category.icon || ''} lucideIcon={category.lucideIcon} className="text-primary w-5 h-5" />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{category.name || 'N/A'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600 max-w-md truncate">
+                              {category.description || '—'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(category.status || 'inactive')}
+                              <Switch
+                                checked={category.status === 'active'}
+                                onCheckedChange={() => handleToggleStatus(category.id)}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditCategory(category)}
+                              >
+                                <KeenIcon icon="pencil" className="me-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteClick(category.id)}
+                              >
+                                <KeenIcon icon="trash" className="me-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -439,19 +472,19 @@ const CategoryManagement = ({
           <DialogHeader>
             <DialogTitle>Delete Category</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this category? This action cannot be undone. 
+              Are you sure you want to delete this category? This action cannot be undone.
               All sub-services under this category will also be affected.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleConfirmDelete}
             >
               Delete

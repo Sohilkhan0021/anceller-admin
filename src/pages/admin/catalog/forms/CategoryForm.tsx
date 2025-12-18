@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Zap, 
-  Droplet, 
-  Wind, 
-  Sparkles, 
-  Hammer, 
-  Settings, 
-  Grid, 
-  Home, 
-  ShoppingBag, 
-  Wrench 
+import {
+  Zap,
+  Droplet,
+  Wind,
+  Sparkles,
+  Hammer,
+  Settings,
+  Grid,
+  Home,
+  ShoppingBag,
+  Wrench
 } from 'lucide-react';
 import {
   Dialog,
@@ -47,7 +47,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
     status: 'active' as 'active' | 'inactive',
     displayOrder: 1
   });
-  
+
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -65,7 +65,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
     { value: 'shop', label: 'Shop', lucideIcon: ShoppingBag },
     { value: 'tools', label: 'Tools', lucideIcon: Wrench }
   ];
-  
+
   // Get Lucide icon component for selected icon
   const getLucideIcon = (iconValue: string) => {
     const option = iconOptions.find(opt => opt.value === iconValue);
@@ -132,7 +132,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         const width = img.width;
         const height = img.height;
         const ratio = width / height;
-        
+
         if (ratio < 0.9 || ratio > 1.1) {
           setErrors(prev => ({
             ...prev,
@@ -191,13 +191,14 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     const categoryDataToSave = {
       ...formData,
+      iconFile: iconFile || undefined,
       iconUrl: iconPreview || undefined
     };
 
@@ -249,7 +250,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
             {/* Icon Selection */}
             <div className="space-y-4">
               <Label>Category Icon</Label>
-              
+
               {/* Icon Preset Selection */}
               <div>
                 <Label htmlFor="icon-select" className="text-sm text-gray-600">
@@ -303,25 +304,25 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                   {iconPreview ? (
                     <div className="space-y-3">
                       <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                        <img 
-                          src={iconPreview} 
-                          alt="Icon preview" 
+                        <img
+                          src={iconPreview}
+                          alt="Icon preview"
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
+                        <Button
+                          type="button"
+                          variant="outline"
                           size="sm"
                           onClick={() => document.getElementById('icon-upload')?.click()}
                         >
                           <KeenIcon icon="pencil" className="me-2" />
                           Change Icon
                         </Button>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
+                        <Button
+                          type="button"
+                          variant="outline"
                           size="sm"
                           onClick={handleRemoveIcon}
                         >
@@ -365,7 +366,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
               <Switch
                 id="status"
                 checked={formData.status === 'active'}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   handleInputChange('status', checked ? 'active' : 'inactive')
                 }
               />

@@ -5,13 +5,18 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, UseQueryResult } from 'react-query';
+import { useQuery, useMutation, UseQueryResult, UseMutationResult } from 'react-query';
 import { categoryService } from './category.service';
 import type {
   IGetCategoriesParams,
   IGetCategoriesResponse,
   ICategory,
   IPaginationMeta,
+  ICreateCategoryRequest,
+  ICreateCategoryResponse,
+  IUpdateCategoryRequest,
+  IUpdateCategoryResponse,
+  IDeleteCategoryResponse,
 } from './category.types';
 
 /**
@@ -85,8 +90,9 @@ export const useCategories = (
   );
 
   // Normalize categories data - convert snake_case to camelCase
-  const normalizedCategories = (queryResult.data?.data?.categories || []).map((category) => ({
+  const normalizedCategories = (queryResult.data?.data?.categories || []).map((category: any) => ({
     ...category,
+    id: category.id || category.public_id || category.category_id,
     displayOrder: category.displayOrder ?? category.display_order ?? undefined,
     iconUrl: category.iconUrl ?? category.icon_url ?? undefined,
   }));
@@ -102,3 +108,80 @@ export const useCategories = (
   };
 };
 
+/**
+ * Custom hook to create a new category
+ * 
+ * @returns Mutation result for creating a category
+ */
+export const useCreateCategory = (options?: {
+  onSuccess?: (data: ICreateCategoryResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<ICreateCategoryResponse, Error, ICreateCategoryRequest> => {
+  return useMutation(
+    (data: ICreateCategoryRequest) => categoryService.createCategory(data),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
+};
+
+/**
+ * Custom hook to update an existing category
+ * 
+ * @returns Mutation result for updating a category
+ */
+export const useUpdateCategory = (options?: {
+  onSuccess?: (data: IUpdateCategoryResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IUpdateCategoryResponse, Error, IUpdateCategoryRequest> => {
+  return useMutation(
+    (data: IUpdateCategoryRequest) => categoryService.updateCategory(data),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
+};
+
+/**
+ * Custom hook to delete a category
+ * 
+ * @returns Mutation result for deleting a category
+ */
+export const useDeleteCategory = (options?: {
+  onSuccess?: (data: IDeleteCategoryResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IDeleteCategoryResponse, Error, string> => {
+  return useMutation(
+    (categoryId: string) => categoryService.deleteCategory(categoryId),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
+};
