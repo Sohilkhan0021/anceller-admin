@@ -31,8 +31,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useServices } from '@/services';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { useServices, useDeleteService } from '@/services';
 import { IService } from '@/services/service.types';
+import { toast } from 'sonner';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 
@@ -49,6 +58,10 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   const [pageSize] = useState(20);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+
   // Debounce search to avoid too many API calls
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,14 +73,14 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   }, [searchTerm]);
 
   // Fetch services with filters
-  const { 
-    services, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
+  const {
+    services,
+    pagination,
+    isLoading,
+    isError,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useServices({
     page: currentPage,
     limit: pageSize,
@@ -76,12 +89,23 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
     search: debouncedSearch,
   });
 
+  // Delete service mutation
+  const { mutate: deleteService, isLoading: isDeleting } = useDeleteService({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Service deleted successfully');
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete service');
+    }
+  });
+
   // Handle filter changes
   const handleCategoryFilterChange = useCallback((value: string) => {
     setCategoryFilter(value);
     setCurrentPage(1); // Reset to first page when filter changes
   }, []);
-  
+
   // Column visibility state - description and popularity hidden by default
   const [columnVisibility, setColumnVisibility] = useState({
     service: true,
@@ -97,7 +121,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
     revenue: true,
     actions: true,
   });
-  
+
   const toggleColumn = (column: keyof typeof columnVisibility) => {
     setColumnVisibility(prev => ({
       ...prev,
@@ -147,11 +171,17 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
     }
   };
 
-  const handleDeleteService = (serviceId: string) => {
-    // TODO: Implement API call to delete service
-    console.log('Deleting service:', serviceId);
-    // Refetch after delete
-    refetch();
+  const handleDeleteClick = (serviceId: string) => {
+    setServiceToDelete(serviceId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (serviceToDelete) {
+      deleteService(serviceToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setServiceToDelete(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -159,8 +189,8 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
       active: { variant: 'success', text: 'Active' },
       inactive: { variant: 'destructive', text: 'Inactive' }
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', text: status };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', text: status };
     return <Badge variant={config.variant as any}>{config.text}</Badge>;
   };
 
@@ -180,7 +210,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
       'Carpentry': 'hammer-2',
       'Appliance': 'setting-2'
     };
-    
+
     return iconMap[category as keyof typeof iconMap] || 'category';
   };
 
@@ -190,8 +220,8 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
       .filter(service => service.subServiceId)
       .map(service => [service.subServiceId, {
         id: service.subServiceId!,
-      name: service.subServiceName || 'Unknown'
-    }])).values()
+        name: service.subServiceName || 'Unknown'
+      }])).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   // Client-side filtering for sub-service (if API doesn't support it)
@@ -247,7 +277,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
               </div>
             </Alert>
           )}
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search Bar */}
             <div className="relative flex-1 sm:w-64">
@@ -289,7 +319,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                 ))}
               </SelectContent>
             </Select>
-            
+
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Sort by" />
@@ -303,7 +333,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                 <SelectItem value="price">Price</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {/* Columns Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -429,7 +459,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
           </div>
         </div>
       </div>
-      
+
       <div className="card-body p-0 w-full overflow-hidden">
         {isLoading && !isFetching ? (
           <div className="p-8">
@@ -445,175 +475,176 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
           </div>
         ) : (
           <>
-        <div className="scrollable-x-auto" style={{ width: '100%', maxWidth: '100%' }}>
-          <table className="caption-bottom text-sm" style={{ minWidth: '1200px' }}>
-            <TableHeader>
-              <TableRow>
-                {columnVisibility.service && <TableHead className="w-[200px]">Service</TableHead>}
-                {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>}
-                {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
-                {columnVisibility.category && <TableHead className="w-[100px]">Category</TableHead>}
-                {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>}
-                {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>}
-                {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>}
-                {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
-                {columnVisibility.popularity && <TableHead className="w-[90px]">Popularity</TableHead>}
-                {columnVisibility.bookings && <TableHead className="w-[70px] text-center">Bookings</TableHead>}
-                {columnVisibility.revenue && <TableHead className="w-[90px] text-center">Revenue</TableHead>}
-                {columnVisibility.actions && <TableHead className="w-[60px] text-center">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredServices.map((service) => (
-                <TableRow key={service.id}>
-                  {columnVisibility.service && (
-                    <TableCell className="w-[200px]">
-                      <div className="flex items-center gap-2">
-                        {service.image && (
-                          <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                            <img 
-                              src={service.image} 
-                              alt={service.name || 'Service'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&crop=center';
-                                target.onerror = null; // Prevent infinite loop
-                              }}
-                            />
+            <div className="scrollable-x-auto" style={{ width: '100%', maxWidth: '100%' }}>
+              <table className="caption-bottom text-sm" style={{ minWidth: '1200px' }}>
+                <TableHeader>
+                  <TableRow>
+                    {columnVisibility.service && <TableHead className="w-[200px]">Service</TableHead>}
+                    {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>}
+                    {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
+                    {columnVisibility.category && <TableHead className="w-[100px]">Category</TableHead>}
+                    {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>}
+                    {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>}
+                    {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>}
+                    {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
+                    {columnVisibility.popularity && <TableHead className="w-[90px]">Popularity</TableHead>}
+                    {columnVisibility.bookings && <TableHead className="w-[70px] text-center">Bookings</TableHead>}
+                    {columnVisibility.revenue && <TableHead className="w-[90px] text-center">Revenue</TableHead>}
+                    {columnVisibility.actions && <TableHead className="w-[60px] text-center">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredServices.map((service) => (
+                    <TableRow key={service.id}>
+                      {columnVisibility.service && (
+                        <TableCell className="w-[200px]">
+                          <div className="flex items-center gap-2">
+                            {service.image && (
+                              <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                <img
+                                  src={service.image}
+                                  alt={service.name || 'Service'}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&crop=center';
+                                    target.onerror = null; // Prevent infinite loop
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-sm truncate">{service.name || 'N/A'}</div>
+                              <div className="text-xs text-gray-500 truncate">ID: {service.id || 'N/A'}</div>
+                            </div>
                           </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm truncate">{service.name || 'N/A'}</div>
-                          <div className="text-xs text-gray-500 truncate">ID: {service.id || 'N/A'}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.subService && (
-                    <TableCell className="w-[150px]">
-                      <div className="font-medium text-sm truncate" title={service.subServiceName || '—'}>
-                        {service.subServiceName || '—'}
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.description && (
-                    <TableCell className="w-[160px]">
-                      <div className="text-sm text-gray-600 truncate" title={service.description}>
-                        {service.description || '—'}
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.category && (
-                    <TableCell className="w-[100px]">
-                      <div className="text-sm truncate">
-                        {service.categoryName || 
-                         (typeof service.category === 'string' ? service.category : 
-                          (service.category && typeof service.category === 'object' ? service.category.name : 'N/A')) || 
-                         'N/A'}
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.basePrice && (
-                    <TableCell className="w-[90px]">
-                      <div className="text-center">
-                        <div className="font-semibold text-sm whitespace-nowrap">
-                          {formatCurrency(service.basePrice)}
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.duration && (
-                    <TableCell className="w-[90px]">
-                      <div className="text-center">
-                        <div className="text-sm whitespace-nowrap">{formatDuration(service.duration)}</div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.skills && (
-                    <TableCell className="w-[140px]">
-                      <div className="text-xs text-gray-600 truncate" title={service.skills}>
-                        {service.skills || '—'}
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.status && (
-                    <TableCell className="w-[100px]">
-                      <div className="flex items-center gap-1.5 flex-nowrap">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Switch
-                                checked={service.status === 'active'}
-                                onCheckedChange={(checked) => handleToggleStatus(service.id, checked)}
-                                className="flex-shrink-0"
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Changes affect new bookings only</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <div className="flex-shrink-0">
-                          {getStatusBadge(service.status || 'inactive')}
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.popularity && (
-                    <TableCell className="w-[90px]">
-                      <Badge variant="outline" className="badge-outline text-xs whitespace-nowrap px-1.5 py-0.5">
-                        {getPopularityBadge(service.popularity || 0).text}
-                      </Badge>
-                    </TableCell>
-                  )}
-                  {columnVisibility.bookings && (
-                    <TableCell className="w-[70px]">
-                      <div className="text-center">
-                        <div className="font-semibold text-sm">{service.bookings || 0}</div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.revenue && (
-                    <TableCell className="w-[90px]">
-                      <div className="text-center">
-                        <div className="font-semibold text-success text-sm whitespace-nowrap">
-                          {formatCurrency(service.revenue)}
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columnVisibility.actions && (
-                    <TableCell className="w-[60px]">
-                    <div className="flex items-center justify-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
-                            <KeenIcon icon="dots-vertical" className="text-base" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditService(service.id)}>
-                            <KeenIcon icon="edit" className="me-2" />
-                            Edit Service
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteService(service.id)}
-                            className="text-danger"
-                          >
-                            <KeenIcon icon="trash" className="me-2" />
-                            Delete Service
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </table>
-        </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.subService && (
+                        <TableCell className="w-[150px]">
+                          <div className="font-medium text-sm truncate" title={service.subServiceName || '—'}>
+                            {service.subServiceName || '—'}
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.description && (
+                        <TableCell className="w-[160px]">
+                          <div className="text-sm text-gray-600 truncate" title={service.description}>
+                            {service.description || '—'}
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.category && (
+                        <TableCell className="w-[100px]">
+                          <div className="text-sm truncate">
+                            {service.categoryName ||
+                              (typeof service.category === 'string' ? service.category :
+                                (service.category && typeof service.category === 'object' ? service.category.name : 'N/A')) ||
+                              'N/A'}
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.basePrice && (
+                        <TableCell className="w-[90px]">
+                          <div className="text-center">
+                            <div className="font-semibold text-sm whitespace-nowrap">
+                              {formatCurrency(service.basePrice)}
+                            </div>
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.duration && (
+                        <TableCell className="w-[90px]">
+                          <div className="text-center">
+                            <div className="text-sm whitespace-nowrap">{formatDuration(service.duration)}</div>
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.skills && (
+                        <TableCell className="w-[140px]">
+                          <div className="text-xs text-gray-600 truncate" title={service.skills}>
+                            {service.skills || '—'}
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.status && (
+                        <TableCell className="w-[100px]">
+                          <div className="flex items-center gap-1.5 flex-nowrap">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Switch
+                                    checked={service.status === 'active'}
+                                    onCheckedChange={(checked) => handleToggleStatus(service.id, checked)}
+                                    className="flex-shrink-0"
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Changes affect new bookings only</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <div className="flex-shrink-0">
+                              {getStatusBadge(service.status || 'inactive')}
+                            </div>
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.popularity && (
+                        <TableCell className="w-[90px]">
+                          <Badge variant="outline" className="badge-outline text-xs whitespace-nowrap px-1.5 py-0.5">
+                            {getPopularityBadge(service.popularity || 0).text}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.bookings && (
+                        <TableCell className="w-[70px]">
+                          <div className="text-center">
+                            <div className="font-semibold text-sm">{service.bookings || 0}</div>
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.revenue && (
+                        <TableCell className="w-[90px]">
+                          <div className="text-center">
+                            <div className="font-semibold text-success text-sm whitespace-nowrap">
+                              {formatCurrency(service.revenue)}
+                            </div>
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.actions && (
+                        <TableCell className="w-[60px]">
+                          <div className="flex items-center justify-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
+                                  <KeenIcon icon="dots-vertical" className="text-base" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditService(service.id)}>
+                                  <KeenIcon icon="edit" className="me-2" />
+                                  Edit Service
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteClick(service.id)}
+                                  className="text-danger"
+                                  disabled={isDeleting}
+                                >
+                                  <KeenIcon icon="trash" className="me-2" />
+                                  Delete Service
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </table>
+            </div>
 
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && (
@@ -653,6 +684,35 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Service</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this service? This action cannot be undone.
+              This will also affect any sub-services under this service.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

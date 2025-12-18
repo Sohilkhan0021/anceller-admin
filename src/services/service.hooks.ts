@@ -5,13 +5,17 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, UseQueryResult } from 'react-query';
+import { useQuery, UseQueryResult, useMutation, UseMutationResult } from 'react-query';
+import { useMemo } from 'react';
 import { serviceService } from './service.service';
 import type {
   IGetServicesParams,
   IGetServicesResponse,
   IService,
   IPaginationMeta,
+  IUpdateServiceRequest,
+  IUpdateServiceResponse,
+  IDeleteServiceResponse,
 } from './service.types';
 
 /**
@@ -91,26 +95,27 @@ export const useServices = (
 
   // Normalize services data - convert snake_case to camelCase
   const rawServices = queryResult.data?.data?.services || [];
-  
-  const normalizedServices = rawServices.map((service) => {
+
+  const normalizedServices = useMemo(() => rawServices.map((service) => {
     // Handle category - can be string or object {category_id, name}
     let categoryName: string | undefined;
     let categoryId: string | undefined;
-    
+
     if (typeof service.category === 'string') {
       categoryName = service.category;
     } else if (service.category && typeof service.category === 'object') {
-      categoryName = service.category.name;
-      categoryId = service.category.category_id;
+      categoryName = (service.category as any).name;
+      categoryId = (service.category as any).category_id;
     }
-    
+
     // Also check if category_id exists separately
     if (!categoryId) {
       categoryId = service.categoryId ?? service.category_id ?? undefined;
     }
-    
+
     return {
       ...service,
+      id: service.id || service.public_id || (service as any).service_id || '',
       subServiceId: service.subServiceId ?? service.sub_service_id ?? undefined,
       subServiceName: service.subServiceName ?? service.sub_service_name ?? undefined,
       categoryId: categoryId,
@@ -122,7 +127,7 @@ export const useServices = (
       image: service.image ?? service.image_url ?? undefined,
       skills: service.skills ?? service.skills_tags ?? undefined,
     };
-  });
+  }), [rawServices]);
 
   return {
     services: normalizedServices,
@@ -135,3 +140,54 @@ export const useServices = (
   };
 };
 
+/**
+ * Custom hook to update a service
+ * 
+ * @returns Mutation result for updating a service
+ */
+export const useUpdateService = (options?: {
+  onSuccess?: (data: IUpdateServiceResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IUpdateServiceResponse, Error, IUpdateServiceRequest> => {
+  return useMutation(
+    (data: IUpdateServiceRequest) => serviceService.updateService(data),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
+};
+
+/**
+ * Custom hook to delete a service
+ * 
+ * @returns Mutation result for deleting a service
+ */
+export const useDeleteService = (options?: {
+  onSuccess?: (data: IDeleteServiceResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IDeleteServiceResponse, Error, string> => {
+  return useMutation(
+    (serviceId: string) => serviceService.deleteService(serviceId),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
+};

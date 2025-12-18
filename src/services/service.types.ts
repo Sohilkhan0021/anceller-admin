@@ -81,6 +81,41 @@ export interface IGetServicesResponse {
 }
 
 /**
+ * Request structure for updating a service
+ */
+export interface IUpdateServiceRequest {
+  id: string; // service_id for URL
+  category_id?: string; // This corresponds to sub-service UI selection
+  name?: string;
+  description?: string;
+  image?: File;
+  base_price?: number;
+  currency?: string;
+  estimated_duration_minutes?: number;
+  is_active?: boolean;
+  sort_order?: number;
+  meta_data?: string;
+}
+
+/**
+ * Response structure for update service endpoint
+ */
+export interface IUpdateServiceResponse {
+  success: boolean;
+  message: string;
+  data: IService | null;
+}
+
+/**
+ * Response structure for delete service endpoint
+ */
+export interface IDeleteServiceResponse {
+  status: number;
+  message: string;
+  data: null;
+}
+
+/**
  * Error response structure
  */
 export interface IApiError {
@@ -88,4 +123,3 @@ export interface IApiError {
   message: string;
   errors?: Record<string, string[]>;
 }
-

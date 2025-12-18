@@ -189,7 +189,7 @@ const SubServiceManagement = ({
     return status === 'active' ? (
       <Badge variant="default" className="bg-success text-white">Active</Badge>
     ) : (
-      <Badge variant="secondary">Inactive</Badge>
+      <Badge variant="outline">Inactive</Badge>
     );
   };
 
