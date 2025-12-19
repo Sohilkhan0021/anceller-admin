@@ -97,9 +97,9 @@ const EditPromoForm = ({ isOpen, onClose, onSave, promoData }: IEditPromoFormPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ 
-      ...formData, 
-      startDate, 
+    onSave({
+      ...formData,
+      startDate,
       endDate
     });
     onClose();
@@ -117,270 +117,270 @@ const EditPromoForm = ({ isOpen, onClose, onSave, promoData }: IEditPromoFormPro
 
         <DialogBody>
           <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="code">Promo Code *</Label>
-                <Input
-                  id="code"
-                  value={formData.code}
-                  onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
-                  required
-                  className="mt-2"
-                  placeholder="e.g., SAVE20"
-                  maxLength={20}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="name">Promo Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  required
-                  className="mt-2"
-                  placeholder="e.g., Summer Sale 20% Off"
-                />
-              </div>
-            </div>
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={3}
-                className="mt-2"
-                placeholder="Describe the promo code offer..."
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="code">Promo Code *</Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
+                    required
+                    className="mt-2"
+                    placeholder="e.g., SAVE20"
+                    maxLength={20}
+                  />
+                </div>
 
-          {/* Discount Configuration */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Discount Configuration</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="type">Discount Type *</Label>
-                <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select discount type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {promoTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div>
+                  <Label htmlFor="name">Promo Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    required
+                    className="mt-2"
+                    placeholder="e.g., Summer Sale 20% Off"
+                  />
+                </div>
               </div>
-              
+
               <div>
-                <Label htmlFor="value">
-                  {formData.type === 'percentage' ? 'Discount Percentage (%)' : 'Discount Amount (₹)'} *
-                </Label>
-                <Input
-                  id="value"
-                  type="number"
-                  value={formData.value}
-                  onChange={(e) => handleInputChange('value', e.target.value)}
-                  required
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows={3}
                   className="mt-2"
-                  placeholder={formData.type === 'percentage' ? 'e.g., 20' : 'e.g., 100'}
-                  min="0"
-                  max={formData.type === 'percentage' ? '100' : undefined}
+                  placeholder="Describe the promo code offer..."
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Discount Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Discount Configuration</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="type">Discount Type *</Label>
+                  <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select discount type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {promoTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="value">
+                    {formData.type === 'percentage' ? 'Discount Percentage (%)' : 'Discount Amount (₹)'} *
+                  </Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    value={formData.value}
+                    onChange={(e) => handleInputChange('value', e.target.value)}
+                    required
+                    className="mt-2"
+                    placeholder={formData.type === 'percentage' ? 'e.g., 20' : 'e.g., 100'}
+                    min="0"
+                    max={formData.type === 'percentage' ? '100' : undefined}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="minOrderAmount">Minimum Order Amount (₹)</Label>
+                  <Input
+                    id="minOrderAmount"
+                    type="number"
+                    value={formData.minOrderAmount}
+                    onChange={(e) => handleInputChange('minOrderAmount', e.target.value)}
+                    className="mt-2"
+                    placeholder="e.g., 500"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="maxDiscount">Maximum Discount (₹)</Label>
+                  <Input
+                    id="maxDiscount"
+                    type="number"
+                    value={formData.maxDiscount}
+                    onChange={(e) => handleInputChange('maxDiscount', e.target.value)}
+                    className="mt-2"
+                    placeholder="e.g., 200"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Usage Limits */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Usage Limits</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="usageLimit">Total Usage Limit</Label>
+                  <Input
+                    id="usageLimit"
+                    type="number"
+                    value={formData.usageLimit}
+                    onChange={(e) => handleInputChange('usageLimit', e.target.value)}
+                    className="mt-2"
+                    placeholder="e.g., 1000 (leave empty for unlimited)"
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="usageCount">Current Usage Count</Label>
+                  <Input
+                    id="usageCount"
+                    type="number"
+                    value={formData.usageCount}
+                    onChange={(e) => handleInputChange('usageCount', e.target.value)}
+                    className="mt-2"
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Validity Period */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Validity Period</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startDate">Start Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal mt-2",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label htmlFor="endDate">End Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal mt-2",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+
+            {/* Restrictions & Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Restrictions & Settings</h3>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => handleInputChange('isActive', checked)}
+                />
+                <Label htmlFor="isActive">Active Promo Code</Label>
+              </div>
+
               <div>
-                <Label htmlFor="minOrderAmount">Minimum Order Amount (₹)</Label>
-                <Input
-                  id="minOrderAmount"
-                  type="number"
-                  value={formData.minOrderAmount}
-                  onChange={(e) => handleInputChange('minOrderAmount', e.target.value)}
+                <Label htmlFor="applicableServices">Applicable Services</Label>
+                <Textarea
+                  id="applicableServices"
+                  value={formData.applicableServices}
+                  onChange={(e) => handleInputChange('applicableServices', e.target.value)}
+                  rows={2}
                   className="mt-2"
-                  placeholder="e.g., 500"
-                  min="0"
+                  placeholder="Enter service IDs or categories (comma-separated)..."
                 />
               </div>
-              
+
               <div>
-                <Label htmlFor="maxDiscount">Maximum Discount (₹)</Label>
-                <Input
-                  id="maxDiscount"
-                  type="number"
-                  value={formData.maxDiscount}
-                  onChange={(e) => handleInputChange('maxDiscount', e.target.value)}
+                <Label htmlFor="userRestrictions">User Restrictions</Label>
+                <Textarea
+                  id="userRestrictions"
+                  value={formData.userRestrictions}
+                  onChange={(e) => handleInputChange('userRestrictions', e.target.value)}
+                  rows={2}
                   className="mt-2"
-                  placeholder="e.g., 200"
-                  min="0"
+                  placeholder="e.g., New users only, First-time customers..."
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="terms">Terms & Conditions</Label>
+                <Textarea
+                  id="terms"
+                  value={formData.terms}
+                  onChange={(e) => handleInputChange('terms', e.target.value)}
+                  rows={3}
+                  className="mt-2"
+                  placeholder="Enter terms and conditions for this promo code..."
                 />
               </div>
             </div>
-          </div>
 
-          {/* Usage Limits */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Usage Limits</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="usageLimit">Total Usage Limit</Label>
-                <Input
-                  id="usageLimit"
-                  type="number"
-                  value={formData.usageLimit}
-                  onChange={(e) => handleInputChange('usageLimit', e.target.value)}
-                  className="mt-2"
-                  placeholder="e.g., 1000 (leave empty for unlimited)"
-                  min="1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="usageCount">Current Usage Count</Label>
-                <Input
-                  id="usageCount"
-                  type="number"
-                  value={formData.usageCount}
-                  onChange={(e) => handleInputChange('usageCount', e.target.value)}
-                  className="mt-2"
-                  placeholder="0"
-                  min="0"
-                />
-              </div>
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                <KeenIcon icon="check" className="me-2" />
+                Update Promo Code
+              </Button>
             </div>
-          </div>
-
-          {/* Validity Period */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Validity Period</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal mt-2",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={setStartDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div>
-                <Label htmlFor="endDate">End Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal mt-2",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </div>
-
-          {/* Restrictions & Settings */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Restrictions & Settings</h3>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) => handleInputChange('isActive', checked)}
-              />
-              <Label htmlFor="isActive">Active Promo Code</Label>
-            </div>
-
-            <div>
-              <Label htmlFor="applicableServices">Applicable Services</Label>
-              <Textarea
-                id="applicableServices"
-                value={formData.applicableServices}
-                onChange={(e) => handleInputChange('applicableServices', e.target.value)}
-                rows={2}
-                className="mt-2"
-                placeholder="Enter service IDs or categories (comma-separated)..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="userRestrictions">User Restrictions</Label>
-              <Textarea
-                id="userRestrictions"
-                value={formData.userRestrictions}
-                onChange={(e) => handleInputChange('userRestrictions', e.target.value)}
-                rows={2}
-                className="mt-2"
-                placeholder="e.g., New users only, First-time customers..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="terms">Terms & Conditions</Label>
-              <Textarea
-                id="terms"
-                value={formData.terms}
-                onChange={(e) => handleInputChange('terms', e.target.value)}
-                rows={3}
-                className="mt-2"
-                placeholder="Enter terms and conditions for this promo code..."
-              />
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              <KeenIcon icon="check" className="me-2" />
-              Update Promo Code
-            </Button>
-          </div>
           </form>
         </DialogBody>
       </DialogContent>

@@ -10,6 +10,13 @@ import { API_URL } from '@/config/api.config';
 import type {
   IGetCouponsParams,
   IGetCouponsResponse,
+  ICouponStatsResponse,
+  ICreateCouponRequest,
+  ICreateCouponResponse,
+  IGetCouponDetailResponse,
+  IUpdateCouponRequest,
+  IUpdateCouponResponse,
+  IDeleteCouponResponse,
   IApiError,
 } from './coupon.types';
 
@@ -31,7 +38,7 @@ export const getCoupons = async (
   try {
     // Build query parameters, excluding undefined and empty values
     const queryParams: Record<string, string | number> = {};
-    
+
     if (params.page !== undefined && params.page > 0) {
       queryParams.page = params.page;
     }
@@ -77,7 +84,7 @@ export const getCoupons = async (
 
       // Extract error message from response
       let errorMessage = 'An error occurred while fetching coupons';
-      
+
       // Try to extract meaningful error message from response
       if (errorData) {
         // Handle structured error response (status, message, errorCode)
@@ -86,22 +93,22 @@ export const getCoupons = async (
         } else if (typeof errorData === 'string') {
           errorMessage = errorData;
         } else if (errorData.error) {
-          errorMessage = typeof errorData.error === 'string' 
-            ? errorData.error 
+          errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
             : errorData.error.message || JSON.stringify(errorData.error);
         } else if (errorData.errors) {
           errorMessage = Array.isArray(errorData.errors)
             ? errorData.errors.join(', ')
             : JSON.stringify(errorData.errors);
         }
-        
+
         // For 500 errors, try to extract backend error details
         if (error.response?.status === 500) {
           // Check if it's a Prisma/database error
-          if (errorMessage.includes('prisma') || 
-              errorMessage.includes('Prisma') ||
-              errorMessage.includes('Unknown field') ||
-              errorMessage.includes('Invalid')) {
+          if (errorMessage.includes('prisma') ||
+            errorMessage.includes('Prisma') ||
+            errorMessage.includes('Unknown field') ||
+            errorMessage.includes('Invalid')) {
             // Extract a cleaner error message for Prisma errors
             const prismaErrorMatch = errorMessage.match(/Unknown field `(\w+)`/);
             if (prismaErrorMatch) {
@@ -114,20 +121,124 @@ export const getCoupons = async (
           }
         }
       }
-      
+
       // Provide more specific error messages based on status code
       if (error.response?.status === 500) {
         throw new Error(
-          errorMessage || 
+          errorMessage ||
           'Server error occurred while fetching coupons. Please try again later or contact support.'
         );
       }
-      
+
       throw new Error(errorMessage);
     }
-    
+
     // Handle unexpected errors
     throw new Error('An unexpected error occurred while fetching coupons');
+  }
+};
+
+/**
+ * Get coupon statistics
+ * 
+ * @returns Promise resolving to coupon statistics
+ * @throws Error if API request fails
+ */
+export const getCouponStats = async (): Promise<ICouponStatsResponse> => {
+  try {
+    const response = await axios.get<ICouponStatsResponse>(`${COUPON_BASE_URL}/stats`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch coupon stats');
+    }
+    throw new Error('An unexpected error occurred while fetching coupon stats');
+  }
+};
+
+/**
+ * Create a new coupon
+ * 
+ * @param data - Coupon data to create
+ * @returns Promise resolving to creation response
+ * @throws Error if API request fails
+ */
+export const createCoupon = async (
+  data: ICreateCouponRequest
+): Promise<ICreateCouponResponse> => {
+  try {
+    const response = await axios.post<ICreateCouponResponse>(COUPON_BASE_URL, data);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to create coupon');
+    }
+    throw new Error('An unexpected error occurred while creating coupon');
+  }
+};
+
+/**
+ * Get coupon details by ID
+ * 
+ * @param couponId - ID of the coupon to fetch
+ * @returns Promise resolving to coupon details
+ * @throws Error if API request fails
+ */
+export const getCouponById = async (
+  couponId: string
+): Promise<IGetCouponDetailResponse> => {
+  try {
+    const response = await axios.get<IGetCouponDetailResponse>(`${COUPON_BASE_URL}/${couponId}`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch coupon details');
+    }
+    throw new Error('An unexpected error occurred while fetching coupon details');
+  }
+};
+
+/**
+ * Update an existing coupon
+ * 
+ * @param couponId - ID of the coupon to update
+ * @param data - Updated coupon data
+ * @returns Promise resolving to update response
+ * @throws Error if API request fails
+ */
+export const updateCoupon = async (
+  couponId: string,
+  data: IUpdateCouponRequest
+): Promise<IUpdateCouponResponse> => {
+  try {
+    const response = await axios.put<IUpdateCouponResponse>(`${COUPON_BASE_URL}/${couponId}`, data);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to update coupon');
+    }
+    throw new Error('An unexpected error occurred while updating coupon');
+  }
+};
+
+/**
+ * Delete a coupon
+ * 
+ * @param couponId - ID of the coupon to delete
+ * @returns Promise resolving to deletion response
+ * @throws Error if API request fails
+ */
+export const deleteCoupon = async (
+  couponId: string
+): Promise<IDeleteCouponResponse> => {
+  try {
+    const response = await axios.delete<IDeleteCouponResponse>(`${COUPON_BASE_URL}/${couponId}`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to delete coupon');
+    }
+    throw new Error('An unexpected error occurred while deleting coupon');
   }
 };
 
@@ -139,11 +250,10 @@ export const getCoupons = async (
  */
 export const couponService = {
   getCoupons,
-  // Future methods can be added here:
-  // getCouponById,
-  // createCoupon,
-  // updateCoupon,
-  // deleteCoupon,
-  // updateCouponStatus,
+  getCouponStats,
+  createCoupon,
+  getCouponById,
+  updateCoupon,
+  deleteCoupon,
 };
 

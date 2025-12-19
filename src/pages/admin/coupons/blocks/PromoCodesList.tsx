@@ -24,16 +24,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useCoupons } from '@/services';
+import { useCoupons, useCouponStats } from '@/services';
 import { ICoupon } from '@/services/coupon.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 
 interface IPromoCodesListProps {
   onEditPromo: (promo: any) => void;
+  onDeletePromo: (promoId: string) => void;
 }
 
-const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
+const PromoCodesList = ({ onEditPromo, onDeletePromo }: IPromoCodesListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,20 +52,23 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
   }, [searchTerm]);
 
   // Fetch coupons with filters
-  const { 
-    coupons, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
+  const {
+    coupons,
+    pagination,
+    isLoading,
+    isError,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useCoupons({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
     search: debouncedSearch,
   });
+
+  // Fetch coupon statistics
+  const { stats, isLoading: isStatsLoading } = useCouponStats();
 
   // Handle filter changes
   const handleStatusFilterChange = useCallback((value: string) => {
@@ -87,10 +91,7 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
   };
 
   const handleDeletePromo = (promoId: string) => {
-    // TODO: Implement API call to delete promo
-    console.log('Deleting promo:', promoId);
-    // Refetch after delete
-    refetch();
+    onDeletePromo(promoId);
   };
 
   const getStatusBadge = (status: string) => {
@@ -100,8 +101,8 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
       upcoming: { variant: 'default', className: 'bg-info text-white', text: 'Upcoming' },
       deactivated: { variant: 'secondary', className: '', text: 'Deactivated' }
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
@@ -139,12 +140,11 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
               <div className="p-3 rounded-lg text-primary bg-primary-light">
                 <KeenIcon icon="gift" className="text-xl" />
               </div>
-              <div className="text-sm font-medium text-primary">
-                +15.2%
-              </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{totalRedemptions}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {isStatsLoading ? '...' : (stats?.total_redemptions || 0)}
+              </h3>
               <p className="text-sm text-gray-600">Total Redemptions</p>
             </div>
           </div>
@@ -156,12 +156,11 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
               <div className="p-3 rounded-lg text-success bg-success-light">
                 <KeenIcon icon="dollar" className="text-xl" />
               </div>
-              <div className="text-sm font-medium text-success">
-                +8.7%
-              </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(totalRevenueImpact)}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {isStatsLoading ? '...' : formatCurrency(stats?.revenue_impact || 0)}
+              </h3>
               <p className="text-sm text-gray-600">Revenue Impact</p>
             </div>
           </div>
@@ -173,12 +172,11 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
               <div className="p-3 rounded-lg text-info bg-info-light">
                 <KeenIcon icon="chart-simple" className="text-xl" />
               </div>
-              <div className="text-sm font-medium text-info">
-                +12.3%
-              </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{activeCouponsCount}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {isStatsLoading ? '...' : (stats?.active_coupons || 0)}
+              </h3>
               <p className="text-sm text-gray-600">Active Promo Codes</p>
             </div>
           </div>
@@ -280,107 +278,107 @@ const PromoCodesList = ({ onEditPromo }: IPromoCodesListProps) => {
                   </TableHeader>
                   <TableBody>
                     {coupons.map((promo) => (
-                  <TableRow key={promo.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
-                          <KeenIcon icon="gift" className="text-primary text-sm" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{promo.code || 'N/A'}</div>
-                          <div className="text-sm text-gray-500 hidden sm:block">
-                            Created {promo.createdAt || 'N/A'}
-                          </div>
-                          <div className="text-xs text-gray-500 sm:hidden">
-                            {getTypeDisplay(promo.type, promo.value)}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge variant="outline" className="badge-outline">
-                        {promo.type === 'percentage' ? 'Percentage' : 'Flat Amount'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="text-center">
-                        <div className="font-semibold">{getTypeDisplay(promo.type, promo.value)}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{promo.expiry || 'N/A'}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="text-center">
-                        <div className="font-semibold">
-                          {promo.usageCount || 0}/{promo.maxUsage || 0}
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                          <div 
-                            className="bg-primary h-2 rounded-full" 
-                            style={{ width: `${getUsagePercentage(promo.usageCount, promo.maxUsage)}%` }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {getUsagePercentage(promo.usageCount, promo.maxUsage)}% used
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {getStatusBadge(promo.status || 'deactivated')}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <div className="text-center">
-                        <div className="font-semibold text-success">
-                          {formatCurrency(promo.revenueImpact)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {promo.redemptions || promo.usageCount || 0} redemptions
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1 sm:hidden">
-                          <div className="md:hidden">
-                            {getStatusBadge(promo.status || 'deactivated')}
-                          </div>
-                          <div className="lg:hidden">
-                            <div className="text-xs text-gray-500">
-                              {formatCurrency(promo.revenueImpact)}
+                      <TableRow key={promo.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
+                              <KeenIcon icon="gift" className="text-primary text-sm" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">{promo.code || 'N/A'}</div>
+                              <div className="text-sm text-gray-500 hidden sm:block">
+                                Created {promo.createdAt || 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 sm:hidden">
+                                {getTypeDisplay(promo.type, promo.value)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <KeenIcon icon="dots-vertical" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditPromoClick(promo.id)}>
-                              <KeenIcon icon="edit" className="me-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            {promo.status === 'active' && (
-                              <DropdownMenuItem 
-                                onClick={() => handleDeactivatePromo(promo.id)}
-                                className="text-warning"
-                              >
-                                <KeenIcon icon="pause" className="me-2" />
-                                Deactivate
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => handleDeletePromo(promo.id)}
-                              className="text-danger"
-                            >
-                              <KeenIcon icon="trash" className="me-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="outline" className="badge-outline">
+                            {promo.type === 'percentage' ? 'Percentage' : 'Flat Amount'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="text-center">
+                            <div className="font-semibold">{getTypeDisplay(promo.type, promo.value)}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">{promo.expiry || 'N/A'}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="text-center">
+                            <div className="font-semibold">
+                              {promo.usageCount || 0}/{promo.maxUsage || 0}
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                              <div
+                                className="bg-primary h-2 rounded-full"
+                                style={{ width: `${getUsagePercentage(promo.usageCount, promo.maxUsage)}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {getUsagePercentage(promo.usageCount, promo.maxUsage)}% used
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {getStatusBadge(promo.status || 'deactivated')}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="text-center">
+                            <div className="font-semibold text-success">
+                              {formatCurrency(promo.revenueImpact)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {promo.redemptions || promo.usageCount || 0} redemptions
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1 sm:hidden">
+                              <div className="md:hidden">
+                                {getStatusBadge(promo.status || 'deactivated')}
+                              </div>
+                              <div className="lg:hidden">
+                                <div className="text-xs text-gray-500">
+                                  {formatCurrency(promo.revenueImpact)}
+                                </div>
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <KeenIcon icon="dots-vertical" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditPromoClick(promo.id)}>
+                                  <KeenIcon icon="edit" className="me-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                {promo.status === 'active' && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeactivatePromo(promo.id)}
+                                    className="text-warning"
+                                  >
+                                    <KeenIcon icon="pause" className="me-2" />
+                                    Deactivate
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => handleDeletePromo(promo.id)}
+                                  className="text-danger"
+                                >
+                                  <KeenIcon icon="trash" className="me-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>

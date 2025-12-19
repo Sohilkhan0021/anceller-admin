@@ -12,7 +12,7 @@ export type CouponStatus = 'active' | 'expired' | 'upcoming' | 'deactivated';
 /**
  * Coupon type enum
  */
-export type CouponType = 'flat' | 'percentage';
+export type CouponType = 'flat' | 'percentage' | 'fixed';
 
 /**
  * Coupon entity interface
@@ -45,6 +45,9 @@ export interface ICoupon {
   is_active?: boolean;
   updated_at?: string;
   is_deleted?: boolean;
+  coupon_type?: 'PERCENTAGE' | 'FLAT_AMOUNT'; // Backend version
+  coupon_id?: string;
+  name?: string;
 }
 
 /**
@@ -83,11 +86,92 @@ export interface IGetCouponsResponse {
 }
 
 /**
+ * Coupon stats interface
+ */
+export interface ICouponStats {
+  total_redemptions: number;
+  revenue_impact: number;
+  active_coupons: number;
+}
+
+/**
+ * API response structure for coupon stats
+ */
+export interface ICouponStatsResponse {
+  status: number;
+  message: string;
+  data: ICouponStats;
+}
+
+/**
+ * Create coupon request interface
+ */
+export interface ICreateCouponRequest {
+  code: string;
+  name: string;
+  coupon_type: 'PERCENTAGE' | 'FLAT_AMOUNT';
+  discount_value: number;
+  max_usage: number;
+  valid_until: string;
+  description?: string;
+  min_order_amount?: number;
+}
+
+/**
+ * API response structure for create coupon
+ */
+export interface ICreateCouponResponse {
+  status: number;
+  message: string;
+  data: {
+    coupon_id: string;
+  };
+}
+
+/**
+ * API response structure for coupon details
+ */
+export interface IGetCouponDetailResponse {
+  status: number;
+  message: string;
+  data: {
+    coupon: ICoupon;
+  };
+}
+
+/**
+ * Update coupon request interface
+ */
+export interface IUpdateCouponRequest extends Partial<ICreateCouponRequest> {
+  status?: CouponStatus;
+}
+
+/**
+ * API response structure for update coupon
+ */
+export interface IUpdateCouponResponse {
+  status: number;
+  message: string;
+  data: {
+    coupon_id: string;
+  };
+}
+
+/**
+ * API response structure for delete coupon
+ */
+export interface IDeleteCouponResponse {
+  status: number;
+  message: string;
+  data: null;
+}
+
+/**
  * Error response structure
  */
 export interface IApiError {
-  success: false;
+  status: number;
   message: string;
-  errors?: Record<string, string[]>;
+  error?: any;
 }
 

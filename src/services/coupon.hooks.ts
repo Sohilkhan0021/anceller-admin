@@ -5,13 +5,22 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, UseQueryResult } from 'react-query';
+import { useQuery, UseQueryResult, useMutation, UseMutationResult } from 'react-query';
 import { couponService } from './coupon.service';
 import type {
   IGetCouponsParams,
   IGetCouponsResponse,
   ICoupon,
+  CouponType,
   IPaginationMeta,
+  ICouponStatsResponse,
+  ICouponStats,
+  ICreateCouponRequest,
+  ICreateCouponResponse,
+  IGetCouponDetailResponse,
+  IUpdateCouponRequest,
+  IUpdateCouponResponse,
+  IDeleteCouponResponse,
 } from './coupon.types';
 
 /**
@@ -86,16 +95,24 @@ export const useCoupons = (
 
   // Normalize coupons data - convert snake_case to camelCase
   // Handle both camelCase and snake_case response formats
-  const rawCoupons = queryResult.data?.data?.coupons || 
-                     queryResult.data?.data?.coupon || 
-                     [];
-  
-  const normalizedCoupons = rawCoupons.map((coupon) => ({
+  const rawCoupons = queryResult.data?.data?.coupons ||
+    queryResult.data?.data?.coupon ||
+    [];
+
+  const normalizedCoupons: ICoupon[] = rawCoupons.map((coupon: any) => ({
     ...coupon,
-    type: coupon.type ?? coupon.discount_type ?? 'flat',
+    id: coupon.id ?? coupon.coupon_id ?? coupon.public_id,
+    type: (coupon.type ??
+      (coupon.coupon_type === 'PERCENTAGE' ? 'percentage' :
+        coupon.coupon_type === 'FLAT_AMOUNT' ? 'fixed' :
+          coupon.discount_type ?? 'fixed')) as CouponType,
     value: coupon.value ?? coupon.discount_value ?? 0,
     expiry: coupon.expiry ?? coupon.expiry_date ?? coupon.expires_at ?? undefined,
+    startDate: coupon.startDate ?? coupon.valid_from ?? coupon.start_date ?? undefined,
+    endDate: coupon.endDate ?? coupon.valid_until ?? coupon.expiry_date ?? coupon.expires_at ?? undefined,
+    isActive: coupon.isActive ?? (coupon.status === 'active'),
     usageCount: coupon.usageCount ?? coupon.usage_count ?? 0,
+    usageLimit: coupon.usageLimit ?? coupon.max_usage ?? coupon.maxUsage ?? 0,
     maxUsage: coupon.maxUsage ?? coupon.max_usage ?? 0,
     createdAt: coupon.createdAt ?? coupon.created_at ?? undefined,
     revenueImpact: coupon.revenueImpact ?? coupon.revenue_impact ?? 0,
@@ -112,5 +129,143 @@ export const useCoupons = (
     refetch: queryResult.refetch,
     isFetching: queryResult.isFetching,
   };
+};
+
+/**
+ * Hook to fetch coupon stats
+ */
+export const useCouponStats = (options?: {
+  enabled?: boolean;
+}): {
+  stats: ICouponStats | null;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  refetch: () => void;
+} => {
+  const queryResult: UseQueryResult<ICouponStatsResponse, Error> = useQuery(
+    ['coupon-stats'],
+    () => couponService.getCouponStats(),
+    {
+      enabled: options?.enabled !== false,
+      staleTime: 60000, // 1 minute
+    }
+  );
+
+  return {
+    stats: queryResult.data?.data || null,
+    isLoading: queryResult.isLoading,
+    isError: queryResult.isError,
+    error: queryResult.error || null,
+    refetch: queryResult.refetch,
+  };
+};
+
+/**
+ * Hook to create a new coupon
+ */
+export const useCreateCoupon = (options?: {
+  onSuccess?: (data: ICreateCouponResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<ICreateCouponResponse, Error, ICreateCouponRequest> => {
+  return useMutation(
+    (data: ICreateCouponRequest) => couponService.createCoupon(data),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to fetch coupon detail by ID
+ */
+export const useCouponDetail = (
+  couponId: string,
+  options?: { enabled?: boolean }
+): {
+  coupon: ICoupon | null;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+} => {
+  const queryResult: UseQueryResult<IGetCouponDetailResponse, Error> = useQuery(
+    ['coupon-detail', couponId],
+    () => couponService.getCouponById(couponId),
+    {
+      enabled: !!couponId && options?.enabled !== false,
+      staleTime: 30000,
+    }
+  );
+
+  // Normalize coupon data if needed
+  const rawCoupon: any = queryResult.data?.data?.coupon || null;
+  const normalizedCoupon = rawCoupon ? {
+    ...rawCoupon,
+    id: rawCoupon.id ?? rawCoupon.coupon_id ?? rawCoupon.public_id,
+    type: (rawCoupon.type ??
+      (rawCoupon.coupon_type === 'PERCENTAGE' ? 'percentage' :
+        rawCoupon.coupon_type === 'FLAT_AMOUNT' ? 'fixed' :
+          rawCoupon.discount_type ?? 'fixed')) as CouponType,
+    value: rawCoupon.value ?? rawCoupon.discount_value ?? 0,
+    expiry: rawCoupon.expiry ?? rawCoupon.expiry_date ?? rawCoupon.expires_at ?? undefined,
+    startDate: rawCoupon.startDate ?? rawCoupon.valid_from ?? rawCoupon.start_date ?? undefined,
+    endDate: rawCoupon.endDate ?? rawCoupon.valid_until ?? rawCoupon.expiry_date ?? rawCoupon.expires_at ?? undefined,
+    isActive: rawCoupon.isActive ?? (rawCoupon.status === 'active'),
+    usageCount: rawCoupon.usageCount ?? rawCoupon.usage_count ?? 0,
+    usageLimit: rawCoupon.usageLimit ?? rawCoupon.max_usage ?? rawCoupon.maxUsage ?? 0,
+    maxUsage: rawCoupon.maxUsage ?? rawCoupon.max_usage ?? 0,
+  } : null;
+
+  return {
+    coupon: normalizedCoupon as ICoupon | null,
+    isLoading: queryResult.isLoading,
+    isError: queryResult.isError,
+    error: queryResult.error || null,
+  };
+};
+
+/**
+ * Hook to update an existing coupon
+ */
+export const useUpdateCoupon = (options?: {
+  onSuccess?: (data: IUpdateCouponResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IUpdateCouponResponse, Error, { id: string; data: IUpdateCouponRequest }> => {
+  return useMutation(
+    ({ id, data }) => couponService.updateCoupon(id, data),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to delete a coupon
+ */
+export const useDeleteCoupon = (options?: {
+  onSuccess?: (data: IDeleteCouponResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IDeleteCouponResponse, Error, string> => {
+  return useMutation(
+    (id: string) => couponService.deleteCoupon(id),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
 };
 
