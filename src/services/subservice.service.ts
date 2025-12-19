@@ -10,6 +10,7 @@ import { API_URL } from '@/config/api.config';
 import type {
   IGetSubServicesParams,
   IGetSubServicesResponse,
+  IDeleteSubServiceResponse,
   IApiError,
 } from './subservice.types';
 
@@ -31,7 +32,7 @@ export const getSubServices = async (
   try {
     // Build query parameters, excluding undefined and empty values
     const queryParams: Record<string, string | number> = {};
-    
+
     if (params.page !== undefined && params.page > 0) {
       queryParams.page = params.page;
     }
@@ -76,32 +77,66 @@ export const getSubServices = async (
       // Extract error message from response
       const responseData = error.response?.data;
       let errorMessage = 'An error occurred while fetching sub-services';
-      
+
       if (responseData) {
         if (responseData.message) {
           errorMessage = responseData.message;
         } else if (typeof responseData === 'string') {
           errorMessage = responseData;
         } else if (responseData.error) {
-          errorMessage = typeof responseData.error === 'string' 
-            ? responseData.error 
+          errorMessage = typeof responseData.error === 'string'
+            ? responseData.error
             : responseData.error.message || JSON.stringify(responseData.error);
         }
       }
-      
+
       // Provide more specific error messages based on status code
       if (error.response?.status === 500) {
         throw new Error(
-          errorMessage || 
+          errorMessage ||
           'Server error occurred while fetching sub-services. Please try again later or contact support.'
         );
       }
-      
+
       throw new Error(errorMessage);
     }
-    
+
     // Handle unexpected errors
     throw new Error('An unexpected error occurred while fetching sub-services');
+  }
+};
+
+/**
+ * Delete an existing sub-service
+ * 
+ * @param subServiceId - UUID of the sub-service to delete
+ * @returns Promise resolving to delete response
+ */
+export const deleteSubService = async (
+  subServiceId: string
+): Promise<IDeleteSubServiceResponse> => {
+  try {
+    const response = await axios.delete<IDeleteSubServiceResponse>(
+      `${SUB_SERVICE_BASE_URL}/${subServiceId}`
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data;
+      let errorMessage = 'An error occurred while deleting sub-service';
+
+      if (responseData) {
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (typeof responseData === 'string') {
+          errorMessage = responseData;
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
+    throw new Error('An unexpected error occurred while deleting sub-service');
   }
 };
 
@@ -113,11 +148,11 @@ export const getSubServices = async (
  */
 export const subServiceService = {
   getSubServices,
+  deleteSubService,
   // Future methods can be added here:
   // getSubServiceById,
   // createSubService,
   // updateSubService,
-  // deleteSubService,
   // updateSubServiceStatus,
 };
 

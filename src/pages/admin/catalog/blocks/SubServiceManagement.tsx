@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +21,6 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { SubServiceForm } from '../forms/SubServiceForm';
-import { useSnackbar } from 'notistack';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useSubServices } from '@/services';
+import { useSubServices, useDeleteSubService } from '@/services';
 import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
@@ -52,13 +52,12 @@ interface ISubServiceManagementProps {
   onDeleteSubService?: (subServiceId: string) => void;
 }
 
-const SubServiceManagement = ({ 
+const SubServiceManagement = ({
   categories = [],
-  onCreateSubService, 
-  onUpdateSubService, 
-  onDeleteSubService 
+  onCreateSubService,
+  onUpdateSubService,
+  onDeleteSubService
 }: ISubServiceManagementProps) => {
-  const { enqueueSnackbar } = useSnackbar();
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceFilter, setServiceFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -94,20 +93,33 @@ const SubServiceManagement = ({
   }, [searchTerm]);
 
   // Fetch sub-services with filters
-  const { 
-    subServices, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
+  const {
+    subServices,
+    pagination,
+    isLoading,
+    isError,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useSubServices({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
     service_id: serviceFilter === 'all' ? '' : serviceFilter,
     search: debouncedSearch,
+  });
+
+  // Delete sub-service mutation
+  const { mutate: deleteSubService, isLoading: isDeleting } = useDeleteSubService({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Sub-service deleted successfully');
+      setDeleteDialogOpen(false);
+      setSubServiceToDelete(null);
+      refetch(); // Refresh the list
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete sub-service');
+    }
   });
 
   // Handle filter changes
@@ -134,18 +146,10 @@ const SubServiceManagement = ({
   const handleSaveSubService = (subServiceData: any) => {
     if (editingSubService) {
       onUpdateSubService?.(subServiceData);
-      enqueueSnackbar('Sub-service updated successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      toast.success('Sub-service updated successfully');
     } else {
       onCreateSubService?.(subServiceData);
-      enqueueSnackbar('Sub-service created successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      toast.success('Sub-service created successfully');
     }
     setIsFormOpen(false);
     setEditingSubService(null);
@@ -157,11 +161,7 @@ const SubServiceManagement = ({
     const subService = subServices.find(s => s.id === subServiceId);
     if (subService) {
       // TODO: Implement API call to update status
-      enqueueSnackbar(`Sub-service ${subService.status === 'active' ? 'deactivated' : 'activated'}`, { 
-        variant: 'solid', 
-        state: 'info',
-        icon: 'information-2'
-      });
+      toast.info(`Sub-service ${subService.status === 'active' ? 'deactivated' : 'activated'}`);
       // Refetch after status change
       refetch();
     }
@@ -174,17 +174,8 @@ const SubServiceManagement = ({
 
   const handleConfirmDelete = () => {
     if (subServiceToDelete) {
-      onDeleteSubService?.(subServiceToDelete);
-      enqueueSnackbar('Sub-service deleted successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
-      // Refetch after delete
-      refetch();
+      deleteSubService(subServiceToDelete);
     }
-    setDeleteDialogOpen(false);
-    setSubServiceToDelete(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -218,14 +209,14 @@ const SubServiceManagement = ({
               </h3>
               <p className="text-sm text-gray-600">Manage sub-services (name and icon only)</p>
             </div>
-            
+
             <Button size="sm" onClick={handleAddSubService}>
               <KeenIcon icon="plus" className="me-2" />
               Add Sub-Service
             </Button>
           </div>
         </div>
-        
+
         <div className="card-body">
           {/* Error State */}
           {isError && (
@@ -321,73 +312,73 @@ const SubServiceManagement = ({
                     {subServices.map((subService, index) => {
                       // Handle displayOrder - might be undefined
                       const displayOrder = subService.displayOrder ?? (index + 1);
-                      
+
                       return (
-                      <TableRow key={subService.id}>
-                        <TableCell>
-                          <div className="text-sm font-medium text-center">{displayOrder}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                            {subService.image ? (
-                              <img 
-                                src={subService.image} 
-                                alt={subService.name || 'Sub-service'}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  // Fallback to placeholder if image fails to load
-                                  target.src = `https://via.placeholder.com/100x100?text=${encodeURIComponent((subService.name || 'S').substring(0, 1))}`;
-                                  target.onerror = null; // Prevent infinite loop
-                                }}
+                        <TableRow key={subService.id}>
+                          <TableCell>
+                            <div className="text-sm font-medium text-center">{displayOrder}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                              {subService.image ? (
+                                <img
+                                  src={subService.image}
+                                  alt={subService.name || 'Sub-service'}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    // Fallback to placeholder if image fails to load
+                                    target.src = `https://via.placeholder.com/100x100?text=${encodeURIComponent((subService.name || 'S').substring(0, 1))}`;
+                                    target.onerror = null; // Prevent infinite loop
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                  <KeenIcon icon={subService.icon || 'category'} className="text-2xl" />
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{subService.name || 'N/A'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              {getCategoryName(subService.categoryId, subService.serviceId)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(subService.status || 'inactive')}
+                              <Switch
+                                checked={subService.status === 'active'}
+                                onCheckedChange={() => handleToggleStatus(subService.id)}
                               />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                                <KeenIcon icon={subService.icon || 'category'} className="text-2xl" />
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{subService.name || 'N/A'}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm text-gray-600">
-                            {getCategoryName(subService.categoryId, subService.serviceId)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(subService.status || 'inactive')}
-                            <Switch
-                              checked={subService.status === 'active'}
-                              onCheckedChange={() => handleToggleStatus(subService.id)}
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEditSubService(subService)}
-                            >
-                              <KeenIcon icon="pencil" className="me-1" />
-                              Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeleteClick(subService.id)}
-                            >
-                              <KeenIcon icon="trash" className="me-1" />
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditSubService(subService)}
+                              >
+                                <KeenIcon icon="pencil" className="me-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteClick(subService.id)}
+                              >
+                                <KeenIcon icon="trash" className="me-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -454,17 +445,19 @@ const SubServiceManagement = ({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleConfirmDelete}
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

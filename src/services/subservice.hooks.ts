@@ -5,13 +5,14 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, UseQueryResult } from 'react-query';
+import { useQuery, useMutation, UseQueryResult, UseMutationResult } from 'react-query';
 import { subServiceService } from './subservice.service';
 import type {
   IGetSubServicesParams,
   IGetSubServicesResponse,
   ISubService,
   IPaginationMeta,
+  IDeleteSubServiceResponse,
 } from './subservice.types';
 
 /**
@@ -90,12 +91,13 @@ export const useSubServices = (
   );
 
   // Normalize sub-services data - convert snake_case to camelCase and handle both response formats
-  const rawSubServices = queryResult.data?.data?.subServices || 
-                        queryResult.data?.data?.sub_services || 
-                        [];
-  
-  const normalizedSubServices = rawSubServices.map((subService) => ({
+  const rawSubServices = queryResult.data?.data?.subServices ||
+    queryResult.data?.data?.sub_services ||
+    [];
+
+  const normalizedSubServices = rawSubServices.map((subService: any) => ({
     ...subService,
+    id: subService.id || subService.public_id || subService.sub_service_id || subService.subServiceId,
     serviceId: subService.serviceId ?? subService.service_id ?? undefined,
     categoryId: subService.categoryId ?? subService.serviceId ?? subService.service_id ?? undefined, // For backward compatibility
     displayOrder: subService.displayOrder ?? subService.display_order ?? undefined,
@@ -111,5 +113,31 @@ export const useSubServices = (
     refetch: queryResult.refetch,
     isFetching: queryResult.isFetching,
   };
+};
+
+/**
+ * Custom hook to delete a sub-service
+ * 
+ * @returns Mutation result for deleting a sub-service
+ */
+export const useDeleteSubService = (options?: {
+  onSuccess?: (data: IDeleteSubServiceResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IDeleteSubServiceResponse, Error, string> => {
+  return useMutation(
+    (subServiceId: string) => subServiceService.deleteSubService(subServiceId),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
 };
 

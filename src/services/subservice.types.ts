@@ -71,6 +71,15 @@ export interface IGetSubServicesResponse {
 }
 
 /**
+ * Response structure for sub-service deletion
+ */
+export interface IDeleteSubServiceResponse {
+  status: number;
+  message: string;
+  data: null;
+}
+
+/**
  * Error response structure
  */
 export interface IApiError {
