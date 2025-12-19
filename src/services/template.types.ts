@@ -23,7 +23,7 @@ export interface ITemplate {
     body: string;
     variables: string[];
     is_active: boolean;
-    status: number;
+    status: string;
     last_modified: string;
     created_at: string;
     updated_at: string;

@@ -265,8 +265,8 @@ const NotificationTemplates = () => {
     });
   };
 
-  const getStatusBadge = (status: number) => {
-    if (status === 1) {
+  const getStatusBadge = (status: string) => {
+    if (status === 'Active') {
       return <Badge variant="default" className="bg-success text-white">Active</Badge>;
     }
     return <Badge variant="outline" className="">Inactive</Badge>;
