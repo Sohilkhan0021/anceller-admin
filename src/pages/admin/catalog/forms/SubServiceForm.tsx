@@ -25,18 +25,20 @@ interface ISubServiceFormProps {
   onSave: (subServiceData: any) => void;
   subServiceData?: any;
   availableCategories?: any[];
+  availableServices?: any[];
 }
 
-const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCategories = [] }: ISubServiceFormProps) => {
+const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCategories = [],availableServices = [] }: ISubServiceFormProps) => {
   const [formData, setFormData] = useState({
     name: '',
+    serviceId: '',
     categoryId: '',
     icon: 'category', // Keep for backward compatibility
     image: '',
     status: 'active' as 'active' | 'inactive',
     displayOrder: 1
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -44,6 +46,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     if (subServiceData) {
       setFormData({
         name: subServiceData.name || '',
+        serviceId: subServiceData.serviceId || '',
         categoryId: subServiceData.categoryId || '',
         icon: subServiceData.icon || 'category',
         image: subServiceData.image || '',
@@ -54,6 +57,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     } else {
       setFormData({
         name: '',
+        serviceId: '',
         categoryId: '',
         icon: 'category',
         image: '',
@@ -142,6 +146,10 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     if (!formData.name.trim()) {
       newErrors.name = 'Sub-service name is required';
     }
+    if (!formData.serviceId) {
+      newErrors.serviceId = 'Service is required';
+    }
+
 
     if (!formData.categoryId) {
       newErrors.categoryId = 'Category is required';
@@ -157,7 +165,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -194,13 +202,42 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               )}
             </div>
 
+            {/* Service */}
+            <div>
+              <Label>
+                Service <span className="text-danger">*</span>
+              </Label>
+
+              <Select
+                value={formData.serviceId}
+                onValueChange={(value) => handleInputChange('serviceId', value)}
+              >
+                <SelectTrigger className={`mt-2 ${errors.serviceId ? 'border-danger' : ''}`}>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {availableServices.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {errors.serviceId && (
+                <p className="text-danger text-sm mt-1">{errors.serviceId}</p>
+              )}
+            </div>
+
+
             {/* Category */}
             <div>
               <Label htmlFor="categoryId">
                 Category <span className="text-danger">*</span>
               </Label>
-              <Select 
-                value={formData.categoryId} 
+              <Select
+                value={formData.categoryId}
                 onValueChange={(value) => handleInputChange('categoryId', value)}
               >
                 <SelectTrigger className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
@@ -274,7 +311,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               <Switch
                 id="status"
                 checked={formData.status === 'active'}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   handleInputChange('status', checked ? 'active' : 'inactive')
                 }
               />

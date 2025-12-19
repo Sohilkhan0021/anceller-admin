@@ -1,4 +1,4 @@
-import { ChangeEvent, Fragment } from 'react';
+import { ChangeEvent, Fragment, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import { useAuthContext } from '@/auth';
@@ -21,10 +21,29 @@ interface IDropdownUserProps {
   menuItemRef: any;
 }
 
+
+
+
 const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
   const { settings, storeSettings } = useSettings();
   const { logout } = useAuthContext();
   const { isRTL } = useLanguage();
+
+
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (menuItemRef.current && menuItemRef.current.isOpen()) {
+        menuItemRef.current.hide();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [menuItemRef]);
 
   const handleThemeMode = (event: ChangeEvent<HTMLInputElement>) => {
     const newThemeMode = event.target.checked ? 'dark' : 'light';
@@ -87,7 +106,7 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
                 My Profile
               </MenuTitle>
             </MenuLink>
-          </MenuItem> 
+          </MenuItem>
           <MenuItem
             toggle="dropdown"
             trigger="hover"
@@ -103,7 +122,7 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
               ]
             }}
           >
-          {/*   <MenuLink>
+            {/*   <MenuLink>
               <MenuIcon>
                 <KeenIcon icon="setting-2" />
               </MenuIcon>
@@ -114,7 +133,7 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
                 <KeenIcon icon="right" className="text-3xs rtl:transform rtl:rotate-180" />
               </MenuArrow>
             </MenuLink> */}
-        {/*     <MenuSub className="menu-default light:border-gray-300 w-[200px]] md:w-[220px]">
+            {/*     <MenuSub className="menu-default light:border-gray-300 w-[200px]] md:w-[220px]">
               <MenuItem>
                 <MenuLink path="/account/home/get-started">
                   <MenuIcon>
@@ -198,8 +217,8 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
               </MenuItem>
             </MenuSub> */}
           </MenuItem>
-        
-       
+
+
           <MenuSeparator />
         </div>
       </Fragment>
@@ -209,7 +228,7 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
   const buildFooter = () => {
     return (
       <div className="flex flex-col">
-       {/*  <div className="menu-item mb-0.5">
+        {/*  <div className="menu-item mb-0.5">
           <div className="menu-link">
             <span className="menu-icon">
               <KeenIcon icon="moon" />

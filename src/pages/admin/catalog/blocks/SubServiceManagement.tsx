@@ -33,6 +33,7 @@ import { useSubServices } from '@/services';
 import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
+import { useServices } from '@/services/service.hooks';
 
 // interface ISubService {
 //   id: string;
@@ -68,6 +69,7 @@ const SubServiceManagement = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { services } = useServices();
 
   // Mock categories (for backward compatibility)
   const mockCategories = [
@@ -437,6 +439,7 @@ const SubServiceManagement = ({
         }}
         onSave={handleSaveSubService}
         subServiceData={editingSubService}
+        availableServices={services}
         availableCategories={availableCategories}
       />
 
