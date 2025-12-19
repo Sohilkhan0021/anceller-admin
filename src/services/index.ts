@@ -48,3 +48,8 @@ export * from './coupon.hooks';
 export * from './policy.service';
 // export * from './policy.types' ;
 export * from './policy.hooks';
+
+// template service 
+export * from './template.service';
+// export * from './template.types';
+export * from './template.hooks';

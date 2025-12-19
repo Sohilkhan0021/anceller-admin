@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -19,10 +20,12 @@ import {
   Tab,
 } from '@/components/tabs';
 import {
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -32,34 +35,81 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  useTemplates,
+  useCreateTemplate,
+  useUpdateTemplate,
+  useDeleteTemplate
+} from '@/services/template.hooks';
+import { TemplateChannel, ITemplate } from '@/services/template.types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface INotificationTemplate {
-  id: string;
-  name: string;
-  type: 'email' | 'sms' | 'push';
-  subject: string;
-  content: string;
-  variables: string[];
-  status: 'active' | 'inactive' | 'draft';
-  lastModified: string;
-  modifiedBy: string;
-}
+// interface INotificationTemplate {
+//   id: string;
+//   name: string;
+//   type: 'email' | 'sms' | 'push';
+//   subject: string;
+//   content: string;
+//   variables: string[];
+//   status: 'active' | 'inactive' | 'draft';
+//   lastModified: string;
+//   modifiedBy: string;
+// }
 
 const NotificationTemplates = () => {
   const [activeTab, setActiveTab] = useState('email');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<INotificationTemplate | null>(null);
-  const [newTemplate, setNewTemplate] = useState<Partial<INotificationTemplate>>({
+  const [editingTemplate, setEditingTemplate] = useState<ITemplate | null>(null);
+  const [newTemplate, setNewTemplate] = useState({
     name: '',
-    type: 'email',
+    channel: 'EMAIL' as TemplateChannel,
     subject: '',
-    content: '',
-    variables: [],
-    status: 'draft'
+    body: '',
   });
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
+
+  // API Hooks
+  const { templates: emailTemplates, isLoading: isEmailLoading, refetch: refetchEmail } = useTemplates({ channel: 'EMAIL' });
+  const { templates: smsTemplates, isLoading: isSmsLoading, refetch: refetchSms } = useTemplates({ channel: 'SMS' });
+  const { templates: pushTemplates, isLoading: isPushLoading, refetch: refetchPush } = useTemplates({ channel: 'PUSH' });
+
+  const createMutation = useCreateTemplate({
+    onSuccess: () => {
+      toast.success('Template created successfully');
+      handleCloseAddForm();
+      refetchAll();
+    },
+    onError: (error) => toast.error(`Error: ${error.message}`)
+  });
+
+  const updateMutation = useUpdateTemplate({
+    onSuccess: () => {
+      toast.success('Template updated successfully');
+      setIsEditorOpen(false);
+      refetchAll();
+    },
+    onError: (error) => toast.error(`Error: ${error.message}`)
+  });
+
+  const deleteMutation = useDeleteTemplate({
+    onSuccess: () => {
+      toast.success('Template deleted successfully');
+      refetchAll();
+    },
+    onError: (error) => toast.error(`Error: ${error.message}`)
+  });
+
+  const refetchAll = () => {
+    refetchEmail();
+    refetchSms();
+    refetchPush();
+  };
+
   // Mock data - in real app, this would come from API
+  /*
   const emailTemplates: INotificationTemplate[] = [
     {
       id: 'booking-confirmation',
@@ -145,8 +195,9 @@ const NotificationTemplates = () => {
       modifiedBy: 'Admin User'
     }
   ];
+  */
 
-  const handleEditTemplate = (template: INotificationTemplate) => {
+  const handleEditTemplate = (template: ITemplate) => {
     setEditingTemplate(template);
     setIsEditorOpen(true);
   };
@@ -154,77 +205,118 @@ const NotificationTemplates = () => {
   const handleAddTemplate = () => {
     setNewTemplate({
       name: '',
-      type: activeTab as 'email' | 'sms' | 'push',
+      channel: activeTab.toUpperCase() as TemplateChannel,
       subject: '',
-      content: '',
-      variables: [],
-      status: 'draft'
+      body: '',
     });
     setIsAddFormOpen(true);
   };
 
   const handleSaveTemplate = () => {
-    // TODO: Implement save template functionality
-    console.log('Saving template:', editingTemplate);
-    setIsEditorOpen(false);
-    setEditingTemplate(null);
+    if (!editingTemplate) return;
+
+    // Subject validation for all channels
+    if (!editingTemplate.subject?.trim()) {
+      toast.error('Subject is required');
+      return;
+    }
+
+    updateMutation.mutate({
+      id: editingTemplate.template_id,
+      data: {
+        name: editingTemplate.name,
+        subject: editingTemplate.subject,
+        body: editingTemplate.body,
+        channel: editingTemplate.channel
+      }
+    });
   };
 
   const handleSaveNewTemplate = () => {
-    // TODO: Implement save new template functionality
-    console.log('Saving new template:', newTemplate);
-    setIsAddFormOpen(false);
-    setNewTemplate({
-      name: '',
-      type: 'email',
-      subject: '',
-      content: '',
-      variables: [],
-      status: 'draft'
-    });
+    // Subject validation for all channels
+    if (!newTemplate.subject?.trim()) {
+      toast.error('Subject is required');
+      return;
+    }
+
+    createMutation.mutate(newTemplate);
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    setTemplateToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (templateToDelete) {
+      deleteMutation.mutate(templateToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setTemplateToDelete(null);
   };
 
   const handleCloseAddForm = () => {
     setIsAddFormOpen(false);
     setNewTemplate({
       name: '',
-      type: 'email',
+      channel: 'EMAIL',
       subject: '',
-      content: '',
-      variables: [],
-      status: 'draft'
+      body: '',
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { variant: 'default', className: 'bg-success text-white', text: 'Active' },
-      inactive: { variant: 'destructive', className: '', text: 'Inactive' },
-      draft: { variant: 'default', className: 'bg-warning text-white', text: 'Draft' }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
+  const getStatusBadge = (status: number) => {
+    if (status === 1) {
+      return <Badge variant="default" className="bg-success text-white">Active</Badge>;
+    }
+    return <Badge variant="outline" className="">Inactive</Badge>;
   };
 
-  const getTypeIcon = (type: string) => {
-    const iconMap = {
-      email: 'message',
-      sms: 'smartphone',
-      push: 'notification'
-    };
-    
-    return iconMap[type as keyof typeof iconMap] || 'message';
-  };
-
-  const getCurrentTemplates = () => {
-    switch (activeTab) {
-      case 'email': return emailTemplates;
-      case 'sms': return smsTemplates;
-      case 'push': return pushTemplates;
-      default: return emailTemplates;
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '—';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '—';
+      return date.toISOString().split('T')[0];
+    } catch {
+      return '—';
     }
   };
+
+  const getTypeIcon = (channel: TemplateChannel) => {
+    const iconMap = {
+      EMAIL: 'message',
+      SMS: 'smartphone',
+      PUSH: 'notification'
+    };
+
+    return iconMap[channel] || 'message';
+  };
+
+  const renderLoadingTable = () => (
+    <Table className="min-w-full table-fixed">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[200px] sm:w-[250px]">Template Name</TableHead>
+          <TableHead className="hidden md:table-cell w-[200px]">Detail</TableHead>
+          <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
+          <TableHead className="hidden lg:table-cell w-[120px]">Last Modified</TableHead>
+          <TableHead className="w-[80px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array(3).fill(0).map((_, i) => (
+          <TableRow key={i}>
+            <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
+            <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-1/2" /></TableCell>
+            <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16" /></TableCell>
+            <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+            <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <div className="card">
@@ -232,7 +324,7 @@ const NotificationTemplates = () => {
         <h3 className="card-title">Notification Templates</h3>
         <p className="text-sm text-gray-600">Manage email, SMS, and push notification templates</p>
       </div>
-      
+
       <div className="card-body">
         <Tabs value={activeTab} onChange={(event, newValue) => setActiveTab(String(newValue) || 'email')} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -251,58 +343,63 @@ const NotificationTemplates = () => {
                   Add Template
                 </Button>
               </div>
-              
+
               <div className="overflow-x-auto">
-                <Table className="min-w-full table-fixed">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px] sm:w-[250px]">Template Name</TableHead>
-                      <TableHead className="hidden md:table-cell w-[200px]">Subject</TableHead>
-                      <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
-                      <TableHead className="hidden lg:table-cell w-[120px]">Last Modified</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {emailTemplates.map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell className="w-[200px] sm:w-[250px]">
-                          <div className="flex items-center gap-2">
-                            <KeenIcon icon={getTypeIcon(template.type)} className="text-primary text-sm" />
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium truncate text-sm">{template.name}</div>
-                              <div className="text-xs text-gray-500 hidden sm:block">{template.variables.length} variables</div>
-                              <div className="text-xs text-gray-500 sm:hidden">{template.subject.substring(0, 20)}...</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell w-[200px]">
-                          <div className="max-w-xs">
-                            <div className="truncate text-sm" title={template.subject}>
-                              {template.subject}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell w-[100px]">{getStatusBadge(template.status)}</TableCell>
-                        <TableCell className="hidden lg:table-cell w-[120px]">
-                          <div className="text-sm">{template.lastModified}</div>
-                        </TableCell>
-                        <TableCell className="w-[80px]">
-                          <div className="flex items-center justify-end">
-                            <div className="flex flex-col gap-1 sm:hidden mr-1">
-                              <div className="sm:hidden">
-                                {getStatusBadge(template.status)}
+                {isEmailLoading ? renderLoadingTable() : (
+                  <Table className="min-w-full table-fixed">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px] sm:w-[250px]">Template Name</TableHead>
+                        <TableHead className="hidden md:table-cell w-[200px]">Subject</TableHead>
+                        <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
+                        <TableHead className="hidden lg:table-cell w-[120px]">Last Modified</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {emailTemplates.length > 0 ? emailTemplates.map((template) => (
+                        <TableRow key={template.template_id}>
+                          <TableCell className="w-[200px] sm:w-[250px]">
+                            <div className="flex items-center gap-2">
+                              <KeenIcon icon={getTypeIcon(template.channel)} className="text-primary text-sm" />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium truncate text-sm">{template.name}</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">{template.variables?.length || 0} variables</div>
                               </div>
                             </div>
-                            <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0 p-1">
-                              <KeenIcon icon="pencil" className="text-sm" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell w-[200px]">
+                            <div className="max-w-xs">
+                              <div className="truncate text-sm" title={template.subject}>
+                                {template.subject}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell w-[100px]">{getStatusBadge(template.status)}</TableCell>
+                          <TableCell className="hidden lg:table-cell w-[120px]">
+                            <div className="text-sm">{formatDate(template.last_modified)}</div>
+                          </TableCell>
+                          <TableCell className="w-[120px]">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0 p-1">
+                                <KeenIcon icon="pencil" className="text-sm" />
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="flex-shrink-0 p-1 border-destructive text-destructive hover:bg-destructive hover:text-white">
+                                <KeenIcon icon="trash" className="text-sm" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-4 text-gray-500">No email templates found</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </div>
           </TabPanel>
@@ -317,58 +414,72 @@ const NotificationTemplates = () => {
                   Add Template
                 </Button>
               </div>
-              
+
               <div className="overflow-x-auto">
-                <Table className="min-w-full table-fixed">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px] sm:w-[250px]">Template Name</TableHead>
-                      <TableHead className="hidden md:table-cell w-[200px]">Content</TableHead>
-                      <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
-                      <TableHead className="hidden lg:table-cell w-[120px]">Last Modified</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {smsTemplates.map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell className="w-[200px] sm:w-[250px]">
-                          <div className="flex items-center gap-2">
-                            <KeenIcon icon={getTypeIcon(template.type)} className="text-primary text-sm" />
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium truncate text-sm">{template.name}</div>
-                              <div className="text-xs text-gray-500 hidden sm:block">{template.variables.length} variables</div>
-                              <div className="text-xs text-gray-500 sm:hidden">{template.content.substring(0, 20)}...</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell w-[200px]">
-                          <div className="max-w-xs">
-                            <div className="truncate text-sm" title={template.content}>
-                              {template.content}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell w-[100px]">{getStatusBadge(template.status)}</TableCell>
-                        <TableCell className="hidden lg:table-cell w-[120px]">
-                          <div className="text-sm">{template.lastModified}</div>
-                        </TableCell>
-                        <TableCell className="w-[80px]">
-                          <div className="flex items-center justify-end">
-                            <div className="flex flex-col gap-1 sm:hidden mr-1">
-                              <div className="sm:hidden">
-                                {getStatusBadge(template.status)}
+                {isSmsLoading ? renderLoadingTable() : (
+                  <Table className="min-w-full table-fixed">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px] sm:w-[250px]">Template Name</TableHead>
+                        <TableHead className="hidden md:table-cell w-[150px]">Subject</TableHead>
+                        {/* <TableHead className="hidden md:table-cell w-[200px]">Content</TableHead> */}
+                        <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
+                        <TableHead className="hidden lg:table-cell w-[120px]">Last Modified</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {smsTemplates.length > 0 ? smsTemplates.map((template) => (
+                        <TableRow key={template.template_id}>
+                          <TableCell className="w-[200px] sm:w-[250px]">
+                            <div className="flex items-center gap-2">
+                              <KeenIcon icon={getTypeIcon(template.channel)} className="text-primary text-sm" />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium truncate text-sm">{template.name}</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">{template.variables?.length || 0} variables</div>
                               </div>
                             </div>
-                            <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0 p-1">
-                              <KeenIcon icon="pencil" className="text-sm" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell w-[150px]">
+                            <div className="max-w-xs">
+                              <div className="truncate text-sm" title={template.subject}>
+                                {template.subject || '—'}
+                              </div>
+                            </div>
+                          </TableCell>
+                          {/* <TableCell className="hidden md:table-cell w-[200px]">
+                            <div className="max-w-xs">
+                              <div className="truncate text-sm" title={template.body}>
+                                {template.body}
+                              </div>
+                            </div>
+                          </TableCell> */}
+                          <TableCell className="hidden sm:table-cell w-[100px]">{getStatusBadge(template.status)}</TableCell>
+                          <TableCell className="hidden lg:table-cell w-[120px]">
+                            <div className="text-sm">{formatDate(template.last_modified)}</div>
+                          </TableCell>
+                          <TableCell className="w-[120px]">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0 p-1">
+                                <KeenIcon icon="pencil" className="text-sm" />
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="flex-shrink-0 p-1 border-destructive text-destructive hover:bg-destructive hover:text-white">
+                                <KeenIcon icon="trash" className="text-sm" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                        : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4 text-gray-500">No sms templates found</TableCell>
+                          </TableRow>
+                        )}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </div>
           </TabPanel>
@@ -383,49 +494,65 @@ const NotificationTemplates = () => {
                   Add Template
                 </Button>
               </div>
-              
+
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Template Name</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Content</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pushTemplates.map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <KeenIcon icon={getTypeIcon(template.type)} className="text-primary text-sm" />
-                            <div>
-                              <div className="font-medium">{template.name}</div>
-                              <div className="text-sm text-gray-500">{template.variables.length} variables</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{template.subject}</TableCell>
-                        <TableCell>
-                          <div className="max-w-xs">
-                            <div className="truncate" title={template.content}>
-                              {template.content}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(template.status)}</TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
-                            <KeenIcon icon="pencil" className="me-1" />
-                            Edit
-                          </Button>
-                        </TableCell>
+                {isPushLoading ? renderLoadingTable() : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Template Name</TableHead>
+                        <TableHead>Subject</TableHead>
+                        {/* <TableHead>Content</TableHead> */}
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Modified</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {pushTemplates.length > 0 ? pushTemplates.map((template) => (
+                        <TableRow key={template.template_id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <KeenIcon icon={getTypeIcon(template.channel)} className="text-primary text-sm" />
+                              <div>
+                                <div className="font-medium">{template.name}</div>
+                                <div className="text-sm text-gray-500">{template.variables?.length || 0} variables</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{template.subject}</TableCell>
+                          {/* <TableCell>
+                            <div className="max-w-xs">
+                              <div className="truncate" title={template.body}>
+                                {template.body}
+                              </div>
+                            </div>
+                          </TableCell> */}
+                          <TableCell>{getStatusBadge(template.status)}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">{formatDate(template.last_modified)}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
+                                <KeenIcon icon="pencil" className="me-1" />
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="border-destructive text-destructive hover:bg-destructive hover:text-white">
+                                <KeenIcon icon="trash" className="me-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-4 text-gray-500">No push templates found</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </div>
           </TabPanel>
@@ -444,61 +571,86 @@ const NotificationTemplates = () => {
 
           <div className="px-6 pb-6">
             <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="template-name">Template Name</Label>
-                <Input
-                  id="template-name"
-                  value={editingTemplate?.name || ''}
-                  onChange={(e) => setEditingTemplate(prev => prev ? {...prev, name: e.target.value} : null)}
-                  className="mt-2"
-                />
-              </div>
-              
-              {editingTemplate?.type === 'email' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="template-name">Template Name</Label>
+                  <Input
+                    id="template-name"
+                    value={editingTemplate?.name || ''}
+                    onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, name: e.target.value } : null)}
+                    className="mt-2"
+                  />
+                </div>
+
                 <div>
                   <Label htmlFor="template-subject">Subject</Label>
                   <Input
                     id="template-subject"
                     value={editingTemplate?.subject || ''}
-                    onChange={(e) => setEditingTemplate(prev => prev ? {...prev, subject: e.target.value} : null)}
+                    onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, subject: e.target.value } : null)}
                     className="mt-2"
+                    placeholder="Enter template subject..."
                   />
                 </div>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="template-content">Content</Label>
-              <Textarea
-                id="template-content"
-                value={editingTemplate?.content || ''}
-                onChange={(e) => setEditingTemplate(prev => prev ? {...prev, content: e.target.value} : null)}
-                rows={8}
-                className="mt-2"
-                placeholder="Enter template content..."
-              />
-            </div>
-
-            <div>
-              <Label>Available Variables</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {editingTemplate?.variables.map((variable, index) => (
-                  <Badge key={index} variant="outline" className="badge-outline">
-                    {`{{${variable}}}`}
-                  </Badge>
-                ))}
               </div>
-            </div>
+
+              <div>
+                <Label htmlFor="template-content">Content</Label>
+                <Textarea
+                  id="template-content"
+                  value={editingTemplate?.body || ''}
+                  onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, body: e.target.value } : null)}
+                  rows={8}
+                  className="mt-2"
+                  placeholder="Enter template content..."
+                />
+              </div>
+
+              <div>
+                <Label>Available Variables</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(editingTemplate?.variables || []).map((variable, index) => (
+                    <Badge key={index} variant="outline" className="badge-outline">
+                      {`{{${variable}}}`}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Quick Variables</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {['user_name', 'amount', 'booking_id', 'service_name', 'booking_date', 'booking_time', 'provider_name', 'transaction_id', 'rating_link'].map((variable) => (
+                    <Badge
+                      key={variable}
+                      variant="outline"
+                      className="badge-outline cursor-pointer hover:bg-primary hover:text-white"
+                      onClick={() => {
+                        setEditingTemplate(prev => prev ? {
+                          ...prev,
+                          body: prev.body + `{{${variable}}}`
+                        } : null);
+                      }}
+                    >
+                      {`{{${variable}}}`}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-600 mt-2">Click on variables to add them to your template content</p>
+              </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveTemplate}>
-                  <KeenIcon icon="check" className="me-2" />
-                  Save Template
+                <Button onClick={handleSaveTemplate} disabled={updateMutation.isLoading}>
+                  {updateMutation.isLoading ? 'Saving...' : (
+                    <>
+                      <KeenIcon icon="check" className="me-2" />
+                      Save Template
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -524,49 +676,47 @@ const NotificationTemplates = () => {
                   <Input
                     id="new-template-name"
                     value={newTemplate.name || ''}
-                    onChange={(e) => setNewTemplate(prev => ({...prev, name: e.target.value}))}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
                     className="mt-2"
                     placeholder="Enter template name..."
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="new-template-type">Template Type</Label>
                   <Select
-                    value={newTemplate.type || 'email'}
-                    onValueChange={(value) => setNewTemplate(prev => ({...prev, type: value as 'email' | 'sms' | 'push'}))}
+                    value={newTemplate.channel}
+                    onValueChange={(value) => setNewTemplate(prev => ({ ...prev, channel: value as TemplateChannel }))}
                   >
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Select template type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="sms">SMS</SelectItem>
-                      <SelectItem value="push">Push Notification</SelectItem>
+                      <SelectItem value="EMAIL">Email</SelectItem>
+                      <SelectItem value="SMS">SMS</SelectItem>
+                      <SelectItem value="PUSH">Push Notification</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {newTemplate.type === 'email' && (
-                <div>
-                  <Label htmlFor="new-template-subject">Subject</Label>
-                  <Input
-                    id="new-template-subject"
-                    value={newTemplate.subject || ''}
-                    onChange={(e) => setNewTemplate(prev => ({...prev, subject: e.target.value}))}
-                    className="mt-2"
-                    placeholder="Enter email subject..."
-                  />
-                </div>
-              )}
+              <div>
+                <Label htmlFor="new-template-subject">Subject</Label>
+                <Input
+                  id="new-template-subject"
+                  value={newTemplate.subject}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, subject: e.target.value }))}
+                  className="mt-2"
+                  placeholder="Enter template subject..."
+                />
+              </div>
 
               <div>
                 <Label htmlFor="new-template-content">Content</Label>
                 <Textarea
                   id="new-template-content"
-                  value={newTemplate.content || ''}
-                  onChange={(e) => setNewTemplate(prev => ({...prev, content: e.target.value}))}
+                  value={newTemplate.body}
+                  onChange={(e) => setNewTemplate(prev => ({ ...prev, body: e.target.value }))}
                   rows={8}
                   className="mt-2"
                   placeholder="Enter template content..."
@@ -574,50 +724,25 @@ const NotificationTemplates = () => {
               </div>
 
               <div>
-                <Label>Template Status</Label>
-                <Select
-                  value={newTemplate.status || 'draft'}
-                  onValueChange={(value) => setNewTemplate(prev => ({...prev, status: value as 'active' | 'inactive' | 'draft'}))}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Available Variables</Label>
+                <Label>Quick Variables</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {['customer_name', 'service_name', 'booking_date', 'booking_time', 'provider_name', 'amount', 'transaction_id'].map((variable) => (
-                    <Badge 
-                      key={variable} 
-                      variant="outline" 
+                  {['user_name', 'amount', 'booking_id', 'service_name', 'booking_date', 'booking_time', 'provider_name', 'transaction_id', 'rating_link'].map((variable) => (
+                    <Badge
+                      key={variable}
+                      variant="outline"
                       className="badge-outline cursor-pointer hover:bg-primary hover:text-white"
                       onClick={() => {
-                        const currentVariables = newTemplate.variables || [];
-                        if (currentVariables.includes(variable)) {
-                          setNewTemplate(prev => ({
-                            ...prev,
-                            variables: currentVariables.filter(v => v !== variable)
-                          }));
-                        } else {
-                          setNewTemplate(prev => ({
-                            ...prev,
-                            variables: [...currentVariables, variable]
-                          }));
-                        }
+                        setNewTemplate(prev => ({
+                          ...prev,
+                          body: prev.body + `{{${variable}}}`
+                        }));
                       }}
                     >
                       {`{{${variable}}}`}
                     </Badge>
                   ))}
                 </div>
-                <p className="text-sm text-gray-600 mt-2">Click on variables to add them to your template</p>
+                <p className="text-sm text-gray-600 mt-2">Click on variables to add them to your template content</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -625,13 +750,43 @@ const NotificationTemplates = () => {
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveNewTemplate}>
-                  <KeenIcon icon="check" className="me-2" />
-                  Create Template
+                <Button onClick={handleSaveNewTemplate} disabled={createMutation.isLoading}>
+                  {createMutation.isLoading ? 'Creating...' : (
+                    <>
+                      <KeenIcon icon="check" className="me-2" />
+                      Create Template
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Template</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this template? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isLoading}
+            >
+              {deleteMutation.isLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
