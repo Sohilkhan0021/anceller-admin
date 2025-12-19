@@ -44,3 +44,7 @@ export * from './coupon.service';
 // export * from './coupon.types';
 export * from './coupon.hooks';
 
+// policy service 
+export * from './policy.service';
+// export * from './policy.types' ;
+export * from './policy.hooks';

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   Tabs,
   TabPanel,
@@ -24,23 +25,80 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  usePolicies,
+  usePolicyDetail,
+  useUpdatePolicy,
+  useCreatePolicy,
+  usePublishPolicy
+} from '@/services/policy.hooks';
+import { PolicyTitleType, IPolicy } from '@/services/policy.types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface IPolicySection {
-  id: string;
-  title: string;
-  content: string;
-  lastModified: string;
-  version: string;
-  status: 'draft' | 'published' | 'archived';
-  modifiedBy: string;
-}
+// interface IPolicySection {
+//   id: string;
+//   title: string;
+//   content: string;
+//   lastModified: string;
+//   version: string;
+//   status: 'draft' | 'published' | 'archived';
+//   modifiedBy: string;
+// }
 
 const PolicySections = () => {
-  const [activeTab, setActiveTab] = useState('terms');
+  const [activeTab, setActiveTab] = useState('TERMS_AND_CONDITIONS');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingPolicy, setEditingPolicy] = useState<IPolicySection | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [editChanges, setEditChanges] = useState('Update policy content');
+
+  // API Hooks
+  const { policies, isLoading: isPoliciesLoading, refetch: refetchPolicies } = usePolicies();
+
+  // Find the policy summary for the active tab to get its ID
+  const activePolicySummary = useMemo(() =>
+    policies.find(p => p.title === activeTab || p.policy_type === activeTab),
+    [policies, activeTab]
+  );
+
+  const { policy: activePolicyDetail, isLoading: isDetailLoading } = usePolicyDetail(
+    activePolicySummary?.policy_id,
+    { enabled: !!activePolicySummary?.policy_id }
+  );
+
+  const updatePolicyMutation = useUpdatePolicy({
+    onSuccess: () => {
+      toast.success('Policy updated successfully');
+      setIsEditorOpen(false);
+      refetchPolicies();
+    },
+    onError: (error) => {
+      toast.error(`Failed to update policy: ${error.message}`);
+    }
+  });
+
+  const createPolicyMutation = useCreatePolicy({
+    onSuccess: () => {
+      toast.success('Policy created successfully');
+      setIsEditorOpen(false);
+      refetchPolicies();
+    },
+    onError: (error) => {
+      toast.error(`Failed to create policy: ${error.message}`);
+    }
+  });
+
+  const publishPolicyMutation = usePublishPolicy({
+    onSuccess: () => {
+      toast.success('Policy published successfully');
+      refetchPolicies();
+    },
+    onError: (error) => {
+      toast.error(`Failed to publish policy: ${error.message}`);
+    }
+  });
 
   // Mock data - in real app, this would come from API
+  /*
   const policies: IPolicySection[] = [
     {
       id: 'terms',
@@ -79,7 +137,9 @@ const PolicySections = () => {
       modifiedBy: 'Admin User'
     }
   ];
+  */
 
+  /*
   const versionHistory = [
     {
       version: '2.1',
@@ -100,31 +160,97 @@ const PolicySections = () => {
       changes: 'Added new clauses for data protection'
     }
   ];
+  */
 
-  const handleEditPolicy = (policy: IPolicySection) => {
-    setEditingPolicy(policy);
+  const handleEditPolicy = () => {
+    setEditingContent(activePolicyDetail?.content || '');
+    setEditChanges('');
     setIsEditorOpen(true);
   };
 
   const handleSavePolicy = () => {
-    // TODO: Implement save policy functionality
-    console.log('Saving policy:', editingPolicy);
-    setIsEditorOpen(false);
-    setEditingPolicy(null);
+    if (!editingContent.trim()) {
+      toast.error('Content cannot be empty');
+      return;
+    }
+
+    if (activePolicySummary?.policy_id) {
+      updatePolicyMutation.mutate({
+        id: activePolicySummary.policy_id,
+        data: {
+          title: activeTab as PolicyTitleType,
+          content: editingContent,
+          changes: editChanges || 'Updated policy content',
+          is_published: false // Default to false, user can publish later
+        }
+      });
+    } else {
+      createPolicyMutation.mutate({
+        policy_type: activeTab,
+        title: activeTab as PolicyTitleType,
+        content: editingContent
+      });
+    }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      published: { variant: 'default', className: 'bg-success text-white', text: 'Published' },
-      draft: { variant: 'default', className: 'bg-warning text-white', text: 'Draft' },
-      archived: { variant: 'secondary', className: '', text: 'Archived' }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
+  const handlePublishPolicy = () => {
+    if (activePolicySummary?.policy_id) {
+      publishPolicyMutation.mutate(activePolicySummary.policy_id);
+    }
   };
 
-  const currentPolicy = policies.find(p => p.id === activeTab);
+  const getStatusBadge = (isPublished: boolean) => {
+    if (isPublished) {
+      return <Badge variant="default" className="bg-success text-white">Published</Badge>;
+    }
+    return <Badge variant="default" className="bg-warning text-white">Draft</Badge>;
+  };
+
+  const renderPolicyContent = (title: string, policy: IPolicy | null, isLoading: boolean) => {
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-1/4" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="text-lg font-semibold">{title}</h4>
+            <p className="text-sm text-gray-600">
+              {policy ? `Last modified: ${new Date(policy.last_modified).toLocaleDateString()}` : 'No policy created yet'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {policy && getStatusBadge(policy.is_published)}
+            <Button size="sm" onClick={handleEditPolicy} className="w-full sm:w-auto">
+              <KeenIcon icon="pencil" className="me-2" />
+              {policy ? 'Edit' : 'Create'}
+            </Button>
+            {policy && !policy.is_published && (
+              <Button size="sm" variant="outline" onClick={handlePublishPolicy} className="w-full sm:w-auto border-success text-success hover:bg-success hover:text-white" disabled={publishPolicyMutation.isLoading}>
+                <KeenIcon icon="check-circle" className="me-2" />
+                Publish
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="prose max-w-none">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              {policy?.content || 'Click Edit to add content for this policy.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="card">
@@ -132,122 +258,30 @@ const PolicySections = () => {
         <h3 className="card-title">Policy Documents</h3>
         <p className="text-sm text-gray-600">Manage platform policies and legal content</p>
       </div>
-      
+
       <div className="card-body">
-        <Tabs value={activeTab} onChange={(event, newValue) => setActiveTab(String(newValue) || 'terms')} className="w-full">
+        <Tabs value={activeTab} onChange={(event, newValue) => setActiveTab(String(newValue) || 'TERMS_AND_CONDITIONS')} className="w-full">
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-            <Tab value="terms">Terms & Conditions</Tab>
-            <Tab value="privacy">Privacy Policy</Tab>
-            <Tab value="refund">Refund Policy</Tab>
-            <Tab value="conduct">Code of Conduct</Tab>
+            <Tab value="TERMS_AND_CONDITIONS">Terms & Conditions</Tab>
+            <Tab value="PRIVACY_POLICY">Privacy Policy</Tab>
+            <Tab value="REFUND_POLICY">Refund Policy</Tab>
+            <Tab value="CODE_OF_CONDUCT">Code of Conduct</Tab>
           </TabsList>
 
-          {/* Terms & Conditions Tab */}
-          <TabPanel value="terms">
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-lg font-semibold">Terms & Conditions</h4>
-                  <p className="text-sm text-gray-600">Last modified: {currentPolicy?.lastModified}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(currentPolicy?.status || 'draft')}
-                  <Button size="sm" onClick={() => handleEditPolicy(currentPolicy!)} className="w-full sm:w-auto">
-                    <KeenIcon icon="pencil" className="me-2" />
-                    Edit
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="prose max-w-none">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    {currentPolicy?.content}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <TabPanel value="TERMS_AND_CONDITIONS">
+            {renderPolicyContent('Terms & Conditions', activePolicyDetail, isDetailLoading)}
           </TabPanel>
 
-          {/* Privacy Policy Tab */}
-          <TabPanel value="privacy">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-lg font-semibold">Privacy Policy</h4>
-                  <p className="text-sm text-gray-600">Last modified: {currentPolicy?.lastModified}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(currentPolicy?.status || 'draft')}
-                  <Button size="sm" onClick={() => handleEditPolicy(currentPolicy!)}>
-                    <KeenIcon icon="pencil" className="me-2" />
-                    Edit
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="prose max-w-none">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    {currentPolicy?.content}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <TabPanel value="PRIVACY_POLICY">
+            {renderPolicyContent('Privacy Policy', activePolicyDetail, isDetailLoading)}
           </TabPanel>
 
-          {/* Refund Policy Tab */}
-          <TabPanel value="refund">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-lg font-semibold">Refund & Cancellation Policy</h4>
-                  <p className="text-sm text-gray-600">Last modified: {currentPolicy?.lastModified}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(currentPolicy?.status || 'draft')}
-                  <Button size="sm" onClick={() => handleEditPolicy(currentPolicy!)}>
-                    <KeenIcon icon="pencil" className="me-2" />
-                    Edit
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="prose max-w-none">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    {currentPolicy?.content}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <TabPanel value="REFUND_POLICY">
+            {renderPolicyContent('Refund & Cancellation Policy', activePolicyDetail, isDetailLoading)}
           </TabPanel>
 
-          {/* Code of Conduct Tab */}
-          <TabPanel value="conduct">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-lg font-semibold">Provider Code of Conduct</h4>
-                  <p className="text-sm text-gray-600">Last modified: {currentPolicy?.lastModified}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(currentPolicy?.status || 'draft')}
-                  <Button size="sm" onClick={() => handleEditPolicy(currentPolicy!)}>
-                    <KeenIcon icon="pencil" className="me-2" />
-                    Edit
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="prose max-w-none">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    {currentPolicy?.content}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <TabPanel value="CODE_OF_CONDUCT">
+            {renderPolicyContent('Provider Code of Conduct', activePolicyDetail, isDetailLoading)}
           </TabPanel>
         </Tabs>
 
@@ -265,21 +299,38 @@ const PolicySections = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {versionHistory.map((version, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="w-[80px] sm:w-[100px] font-medium text-sm">{version.version}</TableCell>
-                    <TableCell className="hidden sm:table-cell w-[100px] text-sm">{version.date}</TableCell>
-                    <TableCell className="hidden md:table-cell w-[120px] text-sm">{version.author}</TableCell>
-                    <TableCell className="w-[200px] sm:w-[250px]">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm" title={version.changes}>
-                          {version.changes}
+                {isDetailLoading ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : activePolicyDetail?.version_history && activePolicyDetail.version_history.length > 0 ? (
+                  activePolicyDetail.version_history.map((version, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="w-[80px] sm:w-[100px] font-medium text-sm">{version.version}</TableCell>
+                      <TableCell className="hidden sm:table-cell w-[100px] text-sm">{new Date(version.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="hidden md:table-cell w-[120px] text-sm">{version.author}</TableCell>
+                      <TableCell className="w-[200px] sm:w-[250px]">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm" title={version.changes}>
+                            {version.changes}
+                          </div>
+                          <div className="text-xs text-gray-500 sm:hidden">{new Date(version.date).toLocaleDateString()} • {version.author}</div>
                         </div>
-                        <div className="text-xs text-gray-500 sm:hidden">{version.date} • {version.author}</div>
-                      </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                      No version history available
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
@@ -292,32 +343,52 @@ const PolicySections = () => {
           <DialogHeader className="px-6 py-4">
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="edit" className="text-primary" />
-              Edit {editingPolicy?.title}
+              Edit {activeTab.replace(/_/g, ' ')}
             </DialogTitle>
           </DialogHeader>
 
           <div className="px-6 pb-6">
             <div className="space-y-6">
-            <div>
-              <Label htmlFor="policy-content">Policy Content</Label>
-              <Textarea
-                id="policy-content"
-                value={editingPolicy?.content || ''}
-                onChange={(e) => setEditingPolicy(prev => prev ? {...prev, content: e.target.value} : null)}
-                rows={15}
-                className="mt-2"
-                placeholder="Enter policy content..."
-              />
-            </div>
+              <div>
+                <Label htmlFor="policy-content">Policy Content</Label>
+                <Textarea
+                  id="policy-content"
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                  rows={15}
+                  className="mt-2"
+                  placeholder="Enter policy content..."
+                />
+              </div>
+
+              {activePolicySummary?.policy_id && (
+                <div>
+                  <Label htmlFor="policy-changes">Change Description</Label>
+                  <Textarea
+                    id="policy-changes"
+                    value={editChanges}
+                    onChange={(e) => setEditChanges(e.target.value)}
+                    rows={2}
+                    className="mt-2"
+                    placeholder="Describe what changed in this version..."
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSavePolicy}>
-                  <KeenIcon icon="check" className="me-2" />
-                  Save Changes
+                <Button onClick={handleSavePolicy} disabled={updatePolicyMutation.isLoading || createPolicyMutation.isLoading}>
+                  {updatePolicyMutation.isLoading || createPolicyMutation.isLoading ? (
+                    <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</>
+                  ) : (
+                    <>
+                      <KeenIcon icon="check" className="me-2" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
