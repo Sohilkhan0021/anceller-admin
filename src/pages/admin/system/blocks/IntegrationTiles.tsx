@@ -52,6 +52,16 @@ const IntegrationTiles = () => {
   const { data: settings, isLoading, isError, error, refetch } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
   const testIntegrationMutation = useTestIntegration();
+  const [testingIntegrationId, setTestingIntegrationId] = useState<string | null>(null);
+
+  const getMaskedApiKey = (apiKey: string | null) => {
+    if (!apiKey) {
+      return 'your****';
+    }
+    return apiKey;
+  };
+
+
 
   // Map API data to integration tiles
   const integrations: IIntegration[] = useMemo(() => {
@@ -62,25 +72,29 @@ const IntegrationTiles = () => {
         id: 'otp-service',
         name: 'OTP Service',
         description: 'SMS and OTP delivery service',
-        icon: 'smartphone'
+        // icon: 'smartphone'
+        icon: 'phone'
       },
       payment_gateway: {
         id: 'payment-gateway',
         name: 'Payment Gateway',
         description: 'Payment processing and transactions',
-        icon: 'money-bill'
+        // icon: 'money-bill'
+        icon: 'dollar'
       },
       payout_service: {
         id: 'payout-service',
         name: 'Payout Service',
         description: 'Provider payouts and settlements',
+        // icon: 'wallet'
         icon: 'wallet'
       },
       maps_api: {
         id: 'maps-api',
         name: 'Maps API',
         description: 'Location services and mapping',
-        icon: 'location'
+        // icon: 'location'
+        icon: 'geolocation'
       }
     };
 
@@ -103,10 +117,14 @@ const IntegrationTiles = () => {
   const handleTestConnection = async (integrationId: string) => {
     const integrationType = integrationId.replace('-', '_') as 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api';
     try {
+      setTestingIntegrationId(integrationId);
       await testIntegrationMutation.mutateAsync(integrationType);
       refetch();
     } catch (error) {
       console.error('Error testing integration:', error);
+    }
+    finally {
+      setTestingIntegrationId(null);
     }
   };
 
@@ -124,7 +142,7 @@ const IntegrationTiles = () => {
     if (!selectedIntegration) return;
 
     const integrationType = selectedIntegration.id.replace('-', '_') as 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api';
-    
+
     try {
       await updateSettingsMutation.mutateAsync({
         integrations: {
@@ -149,7 +167,7 @@ const IntegrationTiles = () => {
       disconnected: { variant: 'destructive', text: 'Disconnected' },
       error: { variant: 'destructive', text: 'Error' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', text: status };
     return <Badge variant={config.variant as any}>{config.text}</Badge>;
   };
@@ -160,7 +178,7 @@ const IntegrationTiles = () => {
       disconnected: 'cross-circle',
       error: 'danger'
     };
-    
+
     return iconConfig[status as keyof typeof iconConfig] || 'question';
   };
 
@@ -201,11 +219,10 @@ const IntegrationTiles = () => {
             <div className="card-body">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${
-                    integration.status === 'connected' ? 'bg-success-light text-success' :
+                  <div className={`p-3 rounded-lg ${integration.status === 'connected' ? 'bg-success-light text-success' :
                     integration.status === 'error' ? 'bg-danger-light text-danger' :
-                    'bg-warning-light text-warning'
-                  }`}>
+                      'bg-warning-light text-warning'
+                    }`}>
                     <KeenIcon icon={integration.icon} className="text-xl" />
                   </div>
                   <div>
@@ -214,7 +231,7 @@ const IntegrationTiles = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <KeenIcon icon={getStatusIcon(integration.status)} className="text-lg" />
+                  {/* <KeenIcon icon={getStatusIcon(integration.status)} className="text-lg" /> */}
                   {getStatusBadge(integration.status)}
                 </div>
               </div>
@@ -228,7 +245,11 @@ const IntegrationTiles = () => {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">API Key</p>
                   <div className="flex items-center gap-2">
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{integration.apiKey}</code>
+                    {/* <code className="text-xs bg-gray-100 px-2 py-1 rounded">{integration.apiKey}</code> */}
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      {getMaskedApiKey(integration.apiKey)}
+                    </code>
+
                     <Button size="sm" variant="ghost">
                       <KeenIcon icon="eye" />
                     </Button>
@@ -241,7 +262,7 @@ const IntegrationTiles = () => {
                 </div>
 
                 <div className="flex gap-2 pt-3">
-                  <Button 
+                  {/* <Button 
                     size="sm" 
                     variant="outline" 
                     onClick={() => handleTestConnection(integration.id)}
@@ -259,9 +280,30 @@ const IntegrationTiles = () => {
                         Test
                       </>
                     )}
+                  </Button> */}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleTestConnection(integration.id)}
+                    className="flex-1"
+                    disabled={testingIntegrationId === integration.id}
+                  >
+                    {testingIntegrationId === integration.id ? (
+                      <>
+                        <div className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600 me-1"></div>
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <KeenIcon icon="refresh" className="me-1" />
+                        Test
+                      </>
+                    )}
                   </Button>
-                  <Button 
-                    size="sm" 
+
+                  <Button
+                    size="sm"
                     onClick={() => handleConfigure(integration)}
                     className="flex-1"
                   >
@@ -289,8 +331,8 @@ const IntegrationTiles = () => {
             <div className="space-y-6">
               {updateSettingsMutation.isError && (
                 <Alert variant="danger">
-                  {updateSettingsMutation.error instanceof Error 
-                    ? updateSettingsMutation.error.message 
+                  {updateSettingsMutation.error instanceof Error
+                    ? updateSettingsMutation.error.message
                     : 'An error occurred while saving configuration'}
                 </Alert>
               )}
@@ -301,7 +343,7 @@ const IntegrationTiles = () => {
                   id="api-key"
                   type="password"
                   value={configData.apiKey}
-                  onChange={(e) => setConfigData(prev => ({...prev, apiKey: e.target.value}))}
+                  onChange={(e) => setConfigData(prev => ({ ...prev, apiKey: e.target.value }))}
                   className="mt-2"
                   placeholder="Enter API key..."
                 />
@@ -312,7 +354,7 @@ const IntegrationTiles = () => {
                 <Input
                   id="webhook-url"
                   value={configData.webhookUrl}
-                  onChange={(e) => setConfigData(prev => ({...prev, webhookUrl: e.target.value}))}
+                  onChange={(e) => setConfigData(prev => ({ ...prev, webhookUrl: e.target.value }))}
                   className="mt-2"
                   placeholder="https://your-domain.com/webhook"
                 />
@@ -322,7 +364,7 @@ const IntegrationTiles = () => {
                 <Label htmlFor="environment">Environment</Label>
                 <Select
                   value={configData.environment}
-                  onValueChange={(value) => setConfigData(prev => ({...prev, environment: value}))}
+                  onValueChange={(value) => setConfigData(prev => ({ ...prev, environment: value }))}
                 >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select environment" />
@@ -336,15 +378,15 @@ const IntegrationTiles = () => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsConfigOpen(false)}
                   disabled={updateSettingsMutation.isLoading}
                 >
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={handleSaveConfiguration}
                   disabled={updateSettingsMutation.isLoading}
                 >

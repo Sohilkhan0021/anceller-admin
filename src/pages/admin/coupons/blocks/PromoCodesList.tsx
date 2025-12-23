@@ -370,7 +370,7 @@ const PromoCodesList = ({ onEditPromo, onDeletePromo }: IPromoCodesListProps) =>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditPromoClick(promo.id)}>
-                                  <KeenIcon icon="edit" className="me-2" />
+                                  <KeenIcon icon="notepad-edit" className="me-2" />
                                   Edit
                                 </DropdownMenuItem>
                                 {promo.status === 'active' && (

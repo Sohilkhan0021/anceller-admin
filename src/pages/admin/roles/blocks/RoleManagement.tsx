@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogBody,
+  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -32,6 +34,8 @@ interface IRoleManagementProps {
 const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManagementProps) => {
   const [selectedRole, setSelectedRole] = useState<IRole | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<IRole | null>(null);
   const [newRole, setNewRole] = useState({
     name: '',
     display_name: '',
@@ -107,20 +111,20 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
     try {
       // Filter permissions to only include those that exist in the database
       const validPermissions = filterValidPermissions(newRole.permissions);
-      
+
       // Warn if some permissions were filtered out
       if (validPermissions.length < newRole.permissions.length && validPermissionNames.length > 0) {
         const filteredOut = newRole.permissions.filter(p => !validPermissions.includes(p));
         console.warn('Some permissions were filtered out as they do not exist in the database:', filteredOut);
         // You could show a toast/alert here if needed
       }
-      
+
       // If using hardcoded permissions and API is empty, warn user
       if (isUsingHardcodedPermissions && newRole.permissions.length > 0) {
         alert('Warning: Permissions need to be created in the database first. Please create permissions before assigning them to roles.');
         return;
       }
-      
+
       if (selectedRole) {
         // Update existing role
         await updateRoleMutation.mutateAsync({
@@ -150,22 +154,26 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
     }
   };
 
-  const handleDeleteRole = async (role: IRole) => {
-    if (!window.confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`)) {
-      return;
-    }
-
+  const handleDeleteRole = (role: IRole) => {
     if (role.is_system) {
       alert('Cannot delete system role');
       return;
     }
+    setRoleToDelete(role);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!roleToDelete) return;
 
     try {
-      await deleteRoleMutation.mutateAsync(role.role_id);
+      await deleteRoleMutation.mutateAsync(roleToDelete.role_id);
       refetchRoles();
+      setDeleteDialogOpen(false);
+      setRoleToDelete(null);
     } catch (error) {
       console.error('Error deleting role:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete role');
+      // alert(error instanceof Error ? error.message : 'Failed to delete role');
     }
   };
 
@@ -174,7 +182,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
       active: { variant: 'default', className: 'bg-success text-white', text: 'Active' },
       inactive: { variant: 'destructive', className: '', text: 'Inactive' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
@@ -283,10 +291,10 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
   // Use API permissions if available, otherwise use hardcoded fallback
   // But only show permissions that exist in the database
   const displayPermissions = permissionsData.length > 0 ? permissionsData : hardcodedPermissions;
-  
+
   // Get all valid permission names from database (for validation)
   const validPermissionNames = getAllPermissionNames();
-  
+
   // Check if we're using hardcoded permissions (API returned empty)
   const isUsingHardcodedPermissions = permissionsData.length === 0 && !permissionsLoading;
 
@@ -309,7 +317,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
           <h3 className="card-title">Role Management</h3>
           <p className="text-sm text-gray-600">Manage admin roles and permissions</p>
         </div>
-        
+
         <div className="card-body p-0">
           {rolesLoading ? (
             <div className="p-8 text-center">
@@ -378,24 +386,26 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                               {getStatusBadge(role.status)}
                             </div>
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleEditRole(role)} 
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditRole(role)}
                             className="flex-shrink-0 p-1"
                             disabled={role.is_system}
                           >
                             <KeenIcon icon="pencil" className="text-sm" />
+                            Edit
                           </Button>
                           {!role.is_system && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleDeleteRole(role)} 
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteRole(role)}
                               className="flex-shrink-0 p-1 text-danger hover:text-danger"
                               disabled={deleteRoleMutation.isLoading}
                             >
                               <KeenIcon icon="trash" className="text-sm" />
+                              Delete
                             </Button>
                           )}
                         </div>
@@ -416,7 +426,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
             <h3 className="card-title">Permission Matrix</h3>
             <p className="text-sm text-gray-600">View permissions by role</p>
           </div>
-          
+
           <div className="card-body p-0">
             {permissionsLoading ? (
               <div className="p-8 text-center">
@@ -511,11 +521,11 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
               {(createRoleMutation.isError || updateRoleMutation.isError) && (
                 <div className="p-3 bg-danger-light border border-danger rounded">
                   <p className="text-danger text-sm">
-                    {createRoleMutation.error instanceof Error 
-                      ? createRoleMutation.error.message 
+                    {createRoleMutation.error instanceof Error
+                      ? createRoleMutation.error.message
                       : updateRoleMutation.error instanceof Error
-                      ? updateRoleMutation.error.message
-                      : 'An error occurred while saving the role'}
+                        ? updateRoleMutation.error.message
+                        : 'An error occurred while saving the role'}
                   </p>
                 </div>
               )}
@@ -527,20 +537,20 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                   <Input
                     id="role-name"
                     value={newRole.name}
-                    onChange={(e) => setNewRole(prev => ({...prev, name: e.target.value}))}
+                    onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
                     className="mt-2"
                     placeholder="Enter role name (e.g., manager)"
                     disabled={!!selectedRole}
                     required
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="role-display-name">Display Name</Label>
                   <Input
                     id="role-display-name"
                     value={newRole.display_name}
-                    onChange={(e) => setNewRole(prev => ({...prev, display_name: e.target.value}))}
+                    onChange={(e) => setNewRole(prev => ({ ...prev, display_name: e.target.value }))}
                     className="mt-2"
                     placeholder="Enter display name (e.g., Manager)"
                   />
@@ -552,7 +562,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                 <textarea
                   id="role-description"
                   value={newRole.description}
-                  onChange={(e) => setNewRole(prev => ({...prev, description: e.target.value}))}
+                  onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
                   className="mt-2 w-full p-3 border border-gray-300 rounded-md"
                   rows={3}
                   placeholder="Enter role description..."
@@ -566,7 +576,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                   <Checkbox
                     id="role-status"
                     checked={newRole.is_active}
-                    onCheckedChange={(checked) => setNewRole(prev => ({...prev, is_active: checked as boolean}))}
+                    onCheckedChange={(checked) => setNewRole(prev => ({ ...prev, is_active: checked as boolean }))}
                   />
                   <Label htmlFor="role-status" className="text-sm">
                     Active
@@ -605,8 +615,8 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                                   onCheckedChange={() => handlePermissionToggle(action.permission)}
                                   disabled={!isValid && validPermissionNames.length > 0}
                                 />
-                                <Label 
-                                  htmlFor={action.permission} 
+                                <Label
+                                  htmlFor={action.permission}
                                   className={`text-sm ${isValid || validPermissionNames.length === 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
                                 >
                                   {action.name || action.permission.split(':')[1]?.charAt(0).toUpperCase() + action.permission.split(':')[1]?.slice(1) || action.permission}
@@ -625,14 +635,14 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleCloseModal}
                   disabled={createRoleMutation.isLoading || updateRoleMutation.isLoading}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={handleSaveRole}
                   disabled={createRoleMutation.isLoading || updateRoleMutation.isLoading || !newRole.name.trim()}
                 >
@@ -651,6 +661,33 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
               </div>
             </div>
           </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Role</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this role? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteRoleMutation.isLoading}
+            >
+              {deleteRoleMutation.isLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

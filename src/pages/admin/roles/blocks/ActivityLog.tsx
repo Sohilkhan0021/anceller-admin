@@ -132,14 +132,14 @@ const ActivityLog = () => {
               <KeenIcon icon="file-down" className="me-2" />
               Export Log
             </Button> */}
-            <Button 
+            {/* <Button 
               size="sm" 
               onClick={() => refetch()}
               disabled={isLoading}
             >
               <KeenIcon icon="refresh" className="me-2" />
               Refresh
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
