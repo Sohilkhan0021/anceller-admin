@@ -109,7 +109,7 @@ const KPICards = ({ period = 'today' }: KPICardsProps) => {
     {
       title: 'Commission Earned',
       value: formatCurrency(stats.commission.earned),
-      icon: 'percentage-circle',
+      icon: 'financial-schedule',
       color: 'danger',
       isLoading: false
     }
@@ -142,7 +142,7 @@ const KPICards = ({ period = 'today' }: KPICardsProps) => {
               </div>
             )}
           </div>
-          
+
           <div className="mb-2">
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
               {card.isLoading ? '...' : card.value}
@@ -181,7 +181,7 @@ const KPICards = ({ period = 'today' }: KPICardsProps) => {
         <div className="sm:col-span-2 lg:col-span-1">
           {renderKPICard(kpiData[1], 1, 'h-full')}
         </div>
-        
+
         {/* Row 2: Remaining 3 cards, responsive columns */}
         <div className="sm:col-span-1">
           {renderKPICard(kpiData[2], 2)}

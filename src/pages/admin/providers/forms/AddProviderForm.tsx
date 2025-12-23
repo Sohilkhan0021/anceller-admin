@@ -199,6 +199,8 @@ const AddProviderForm = ({ isOpen, onClose, onSave }: IAddProviderFormProps) => 
                 <Input
                   id="experience"
                   type="number"
+                  min={0}
+                  max={100}
                   value={formData.experience}
                   onChange={(e) => handleInputChange('experience', e.target.value)}
                   className="mt-2"

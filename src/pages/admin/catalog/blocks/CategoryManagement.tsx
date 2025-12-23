@@ -55,20 +55,20 @@ import { Alert } from '@/components/alert';
 // }
 
 // Icon component that can use both KeenIcon, Lucide icons, and image URLs
-const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: { 
-  icon?: string; 
-  lucideIcon?: string; 
+const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
+  icon?: string;
+  lucideIcon?: string;
   iconUrl?: string;
   imageUrl?: string;
-  className?: string 
+  className?: string
 }) => {
   // Priority: imageUrl > iconUrl > lucideIcon > icon
   if (imageUrl || iconUrl) {
     const imageSrc = imageUrl || iconUrl;
     return (
-      <img 
-        src={imageSrc} 
-        alt="Category icon" 
+      <img
+        src={imageSrc}
+        alt="Category icon"
         className={className || "w-5 h-5 object-cover"}
         onError={(e) => {
           const target = e.target as HTMLImageElement;
@@ -83,7 +83,7 @@ const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
       />
     );
   }
-  
+
   // Try Lucide icon first if provided
   if (lucideIcon) {
     const LucideIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -99,12 +99,12 @@ const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
       return <LucideIcon className={className || "text-primary"} />;
     }
   }
-  
+
   // Fallback to KeenIcon
   if (icon) {
     return <KeenIcon icon={icon} className={className || "text-primary"} />;
   }
-  
+
   // Default fallback
   return <KeenIcon icon="category" className={className || "text-primary"} />;
 };
@@ -377,7 +377,7 @@ const CategoryManagement = ({
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">Order</TableHead>
-                      <TableHead className="w-[80px]">Icon</TableHead>
+                      {/* <TableHead className="w-[80px]">Icon</TableHead> */}
                       <TableHead>Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="w-[100px]">Status</TableHead>
@@ -410,17 +410,22 @@ const CategoryManagement = ({
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell>
-                            <div className="p-2 bg-primary-light rounded-lg w-fit">
-                              <CategoryIcon 
-                                icon={category.icon} 
-                                lucideIcon={category.lucideIcon} 
-                                iconUrl={category.iconUrl || category.icon_url}
-                                imageUrl={category.imageUrl || category.image_url}
-                                className="text-primary w-5 h-5" 
+                          {/* <TableCell className="text-center align-middle">
+                            <div className="p-2 bg-primary-light rounded-lg inline-flex items-center justify-center">
+                              <CategoryIcon
+                                // icon={category.icon}
+                                // lucideIcon={category.lucideIcon}
+                                // iconUrl={category.iconUrl || category.icon_url}
+                                // imageUrl={category.imageUrl || category.image_url}
+                                lucideIcon={
+                                  category?.meta_data
+                                    ? JSON.parse(category.meta_data)?.preset_icon
+                                    : undefined
+                                }
+                                className="text-primary w-5 h-5"
                               />
                             </div>
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell>
                             <div className="font-medium">{category.name || 'N/A'}</div>
                           </TableCell>

@@ -131,7 +131,7 @@ const CommissionsReportsTab = () => {
           <div className="card-body">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg text-primary bg-primary-light">
-                <KeenIcon icon="money-bill" className="text-xl" />
+                <KeenIcon icon="wallet" className="text-xl" />
               </div>
             </div>
             <div className="mb-2">

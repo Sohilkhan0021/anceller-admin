@@ -17,7 +17,7 @@ interface IUserManagementHeaderProps {
   initialStatus?: string;
 }
 
-const UserManagementHeader = ({ 
+const UserManagementHeader = ({
   onAddUser,
   onFiltersChange,
   initialSearch = '',
@@ -63,7 +63,7 @@ const UserManagementHeader = ({
 
     // Convert to CSV string
     const csvString = csvData.map(row => row.join(',')).join('\n');
-    
+
     // Create and download file
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -87,7 +87,7 @@ const UserManagementHeader = ({
               <p className="text-sm text-gray-600">Manage customers using the app</p>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
             <Button onClick={onAddUser} variant="default" size="sm" className="w-full sm:w-auto">
               <KeenIcon icon="plus" className="me-2" />
@@ -100,7 +100,7 @@ const UserManagementHeader = ({
           </div>
         </div>
       </div>
-      
+
       <div className="card-body">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search Bar */}
@@ -126,7 +126,7 @@ const UserManagementHeader = ({
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="SUSPENDED">Inactive</SelectItem>
                 <SelectItem value="blocked">Blocked</SelectItem>
               </SelectContent>
             </Select>

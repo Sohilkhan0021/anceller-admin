@@ -111,8 +111,8 @@ const UserManagementTable = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="hidden sm:table-cell">User ID</TableHead>
-                    <TableHead>Name</TableHead>
+                    {/* <TableHead className="hidden sm:table-cell">User ID</TableHead> */}
+                    <TableHead className='pl-8'>Name</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden lg:table-cell">Phone</TableHead>
                     <TableHead className="hidden sm:table-cell">Bookings</TableHead>
@@ -123,7 +123,7 @@ const UserManagementTable = ({
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell>
+                      {/* <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell> */}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">

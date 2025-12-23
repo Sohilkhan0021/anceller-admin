@@ -13,6 +13,7 @@ export type CategoryStatus = 'active' | 'inactive';
  * Category entity interface
  */
 export interface ICategory {
+  meta_data: any;
   id: string;
   category_id?: string; // Alternative ID field from API
   name: string;

@@ -59,14 +59,14 @@ export const useAdminProfile = (
   // Normalize profile data - memoize to prevent infinite loops
   const profile = useMemo(() => {
     const rawProfile = queryResult.data?.data?.user || null;
-    
+
     if (!rawProfile) {
       return null;
     }
-    
+
     // Normalize profile picture URL - convert relative paths to full URLs
     let profilePictureUrl = rawProfile.profile_picture_url;
-    
+
     // If it's a relative path (starts with /uploads), construct full URL
     if (profilePictureUrl && profilePictureUrl.startsWith('/uploads')) {
       // In dev, use relative path (goes through Vite proxy)
@@ -80,21 +80,24 @@ export const useAdminProfile = (
         profilePictureUrl = `${baseUrl}${profilePictureUrl}`;
       }
     }
-    
+
     return {
       ...rawProfile,
       profile_picture_url: profilePictureUrl,
-      name: `${rawProfile.first_name || ''} ${rawProfile.last_name || ''}`.trim() || rawProfile.email || 'Admin User',
-      phone: rawProfile.phone_number ? `${rawProfile.phone_country_code || ''} ${rawProfile.phone_number}`.trim() : null,
+      // name: `${rawProfile.first_name || ''} ${rawProfile.last_name || ''}`.trim() || rawProfile.email || 'Admin User',
+      name: rawProfile.name || `${rawProfile.first_name || ''} ${rawProfile.last_name || ''}`.trim() || 'Admin User',
+      phone: rawProfile.phone || (rawProfile.phone_number ? `${rawProfile.phone_country_code || ''} ${rawProfile.phone_number}`.trim() : null),
     };
   }, [
     queryResult.data?.data?.user?.user_id,
     queryResult.data?.data?.user?.profile_picture_url,
     queryResult.data?.data?.user?.first_name,
     queryResult.data?.data?.user?.last_name,
-    queryResult.data?.data?.user?.phone_number,
+    // queryResult.data?.data?.user?.phone_number,
     queryResult.data?.data?.user?.phone_country_code,
-    queryResult.data?.data?.user?.email
+    queryResult.data?.data?.user?.email,
+    queryResult.data?.data?.user?.name,
+    queryResult.data?.data?.user?.phone
   ]);
 
   return {
@@ -129,7 +132,7 @@ export const useUpdateAdminProfile = (
   }
 ): UseMutationResult<IUpdateAdminProfileResponse, any, IUpdateAdminProfileRequest & { profile_picture?: File }> => {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     (data: IUpdateAdminProfileRequest & { profile_picture?: File }) => profileService.updateAdminProfile(data),
     {

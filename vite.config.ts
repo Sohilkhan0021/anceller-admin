@@ -20,9 +20,11 @@ export default defineConfig({
     chunkSizeWarningLimit: 3000
   },
   server: {
+    port:3000,
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:3000',
+        // target: 'http://localhost:3000',
+        target: 'https://ancellor.duckdns.org',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path,
@@ -39,7 +41,8 @@ export default defineConfig({
         }
       },
       '/uploads': {
-        target: 'http://localhost:3000',
+        // target: 'http://localhost:3000',
+        target: 'https://ancellor.duckdns.org',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path,
