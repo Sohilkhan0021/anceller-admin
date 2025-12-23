@@ -35,7 +35,7 @@ const QuickLinks = () => {
     {
       title: 'Pending Provider Approvals',
       description: 'Review and approve new service providers',
-      icon: 'user-check',
+      icon: 'user-tick',
       path: '/admin/providers?kyc_status=pending',
       color: 'warning',
       badge: {

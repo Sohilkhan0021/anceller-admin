@@ -329,7 +329,7 @@ const NotificationTemplates = () => {
         <Tabs value={activeTab} onChange={(event, newValue) => setActiveTab(String(newValue) || 'email')} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <Tab value="email">Email Templates</Tab>
-            <Tab value="sms">SMS Templates</Tab>
+            <Tab value="sms">SMS Templates</Tab>  
             <Tab value="push">Push Notifications</Tab>
           </TabsList>
 

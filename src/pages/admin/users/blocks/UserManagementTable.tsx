@@ -28,6 +28,13 @@ interface IUserManagementTableProps {
   onPageChange?: (page: number) => void;
 }
 
+const truncateText = (text: string, maxLength: number) => {
+  if (!text) return 'N/A';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+};
+
+
 const UserManagementTable = ({
   users,
   pagination,
@@ -130,7 +137,11 @@ const UserManagementTable = ({
                             <KeenIcon icon="user" className="text-primary text-sm" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">{user.name || 'N/A'}</div>
+                            {/* <div className="font-medium truncate">{user.name || 'N/A'}</div> */}
+                            <div className="font-medium" title={user.name}>
+                              {truncateText(user.name || 'N/A', 40)}
+                            </div>
+
                             <div className="text-sm text-gray-500 hidden sm:block">
                               Joined {formatDate(user.joined_at || user.joinDate)}
                             </div>
