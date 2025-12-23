@@ -29,6 +29,29 @@ import type {
 const COUPON_BASE_URL = `${API_URL}/admin/coupons`;
 
 /**
+ * Helper to handle API errors and extract detailed validation messages
+ */
+const handleApiError = (error: any, defaultMessage: string): never => {
+  if (axios.isAxiosError(error)) {
+    const errorData = error.response?.data;
+
+    // Check for validation errors array first
+    if (errorData?.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+      // Return the first validation error message
+      const firstError = errorData.errors[0];
+      if (firstError.message) {
+        throw new Error(firstError.message);
+      }
+    }
+
+    // Fallback to top-level message or string error
+    const message = errorData?.message || errorData?.error || defaultMessage;
+    throw new Error(message);
+  }
+  throw new Error(`An unexpected error occurred: ${defaultMessage}`);
+};
+
+/**
  * Get all coupons with filters
  * 
  * @param params - Query parameters for filtering and pagination
@@ -162,10 +185,7 @@ export const getCouponStats = async (): Promise<ICouponStatsResponse['data']> =>
     // Backend returns { status: 1, message, data: { total_redemptions, revenue_impact, active_coupons } }
     return response.data.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch coupon stats');
-    }
-    throw new Error('An unexpected error occurred while fetching coupon stats');
+    return handleApiError(error, 'Failed to fetch coupon stats');
   }
 };
 
@@ -183,10 +203,7 @@ export const createCoupon = async (
     const response = await axios.post<ICreateCouponResponse>(COUPON_BASE_URL, data);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to create coupon');
-    }
-    throw new Error('An unexpected error occurred while creating coupon');
+    return handleApiError(error, 'Failed to create coupon');
   }
 };
 
@@ -204,10 +221,7 @@ export const getCouponById = async (
     const response = await axios.get<IGetCouponDetailResponse>(`${COUPON_BASE_URL}/${couponId}`);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch coupon details');
-    }
-    throw new Error('An unexpected error occurred while fetching coupon details');
+    return handleApiError(error, 'Failed to fetch coupon details');
   }
 };
 
@@ -227,10 +241,7 @@ export const updateCoupon = async (
     const response = await axios.put<IUpdateCouponResponse>(`${COUPON_BASE_URL}/${couponId}`, data);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to update coupon');
-    }
-    throw new Error('An unexpected error occurred while updating coupon');
+    return handleApiError(error, 'Failed to update coupon');
   }
 };
 
@@ -248,10 +259,7 @@ export const deleteCoupon = async (
     const response = await axios.delete<IDeleteCouponResponse>(`${COUPON_BASE_URL}/${couponId}`);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to delete coupon');
-    }
-    throw new Error('An unexpected error occurred while deleting coupon');
+    return handleApiError(error, 'Failed to delete coupon');
   }
 };
 

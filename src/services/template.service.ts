@@ -24,6 +24,29 @@ import type {
 const TEMPLATE_BASE_URL = `${API_URL}/admin/templates`;
 
 /**
+ * Helper to handle API errors and extract detailed validation messages
+ */
+const handleApiError = (error: any, defaultMessage: string): never => {
+    if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data;
+
+        // Check for validation errors array first
+        if (errorData?.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+            // Return the first validation error message
+            const firstError = errorData.errors[0];
+            if (firstError.message) {
+                throw new Error(firstError.message);
+            }
+        }
+
+        // Fallback to top-level message or string error
+        const message = errorData?.message || errorData?.error || defaultMessage;
+        throw new Error(message);
+    }
+    throw new Error(`An unexpected error occurred: ${defaultMessage}`);
+};
+
+/**
  * Get all notification templates with optional filters
  * 
  * @param params - Query parameters (channel, search)
@@ -39,10 +62,7 @@ export const getTemplates = async (
         // Backend returns { status: 1, message, data: { templates } }
         return { templates: response.data.data.templates };
     } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || 'Failed to fetch templates');
-        }
-        throw new Error('An unexpected error occurred while fetching templates');
+        return handleApiError(error, 'Failed to fetch templates');
     }
 };
 
@@ -60,10 +80,7 @@ export const getTemplateById = async (
         // Backend returns { status: 1, message, data: { template } }
         return { template: response.data.data.template };
     } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || 'Failed to fetch template details');
-        }
-        throw new Error('An unexpected error occurred while fetching template details');
+        return handleApiError(error, 'Failed to fetch template details');
     }
 };
 
@@ -81,10 +98,7 @@ export const createTemplate = async (
         // Backend returns { status: 1, message, data: { template_id } }
         return { template_id: response.data.data.template_id };
     } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || 'Failed to create template');
-        }
-        throw new Error('An unexpected error occurred while creating template');
+        return handleApiError(error, 'Failed to create template');
     }
 };
 
@@ -104,10 +118,7 @@ export const updateTemplate = async (
         // Backend returns { status: 1, message, data: { template_id } }
         return { template_id: response.data.data.template_id };
     } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || 'Failed to update template');
-        }
-        throw new Error('An unexpected error occurred while updating template');
+        return handleApiError(error, 'Failed to update template');
     }
 };
 
@@ -125,10 +136,7 @@ export const deleteTemplate = async (
         // Backend returns { status: 1, message, data: null }
         return null;
     } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || 'Failed to delete template');
-        }
-        throw new Error('An unexpected error occurred while deleting template');
+        return handleApiError(error, 'Failed to delete template');
     }
 };
 
