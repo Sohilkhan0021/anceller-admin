@@ -10,6 +10,8 @@ import { API_URL } from '@/config/api.config';
 import type {
   IGetServicesParams,
   IGetServicesResponse,
+  ICreateServiceRequest,
+  ICreateServiceResponse,
   IUpdateServiceRequest,
   IUpdateServiceResponse,
   IDeleteServiceResponse,
@@ -105,6 +107,98 @@ export const getServices = async (
 
     // Handle unexpected errors
     throw new Error('An unexpected error occurred while fetching services');
+  }
+};
+
+/**
+ * Create a new service
+ * 
+ * @param data - Service data to create
+ * @returns Promise resolving to create response
+ */
+export const createService = async (
+  data: ICreateServiceRequest
+): Promise<ICreateServiceResponse> => {
+  try {
+    const formData = new FormData();
+
+    if (data.category_id) {
+      formData.append('category_id', data.category_id);
+    }
+
+    if (data.name) {
+      formData.append('name', data.name);
+    }
+
+    if (data.description !== undefined) {
+      formData.append('description', data.description || '');
+    }
+
+    if (data.image) {
+      formData.append('image', data.image);
+    }
+
+    if (data.base_price !== undefined) {
+      formData.append('base_price', data.base_price.toString());
+    }
+
+    if (data.currency) {
+      formData.append('currency', data.currency);
+    }
+
+    if (data.estimated_duration_minutes !== undefined) {
+      formData.append('estimated_duration_minutes', data.estimated_duration_minutes.toString());
+    }
+
+    if (data.is_active !== undefined) {
+      formData.append('is_active', data.is_active.toString());
+    }
+
+    if (data.sort_order !== undefined) {
+      formData.append('sort_order', data.sort_order.toString());
+    }
+
+    if (data.meta_data) {
+      formData.append('meta_data', typeof data.meta_data === 'string' 
+        ? data.meta_data 
+        : JSON.stringify(data.meta_data));
+    }
+
+    // Log request for debugging
+    if (import.meta.env.DEV) {
+      console.log('Create Service API Request:', {
+        url: SERVICE_BASE_URL,
+        data: Object.fromEntries((formData as any).entries()),
+      });
+    }
+
+    const response = await axios.post<ICreateServiceResponse>(
+      SERVICE_BASE_URL,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data;
+      let errorMessage = 'An error occurred while creating service';
+
+      if (responseData) {
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (typeof responseData === 'string') {
+          errorMessage = responseData;
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
+    throw new Error('An unexpected error occurred while creating service');
   }
 };
 
@@ -240,6 +334,7 @@ export const deleteService = async (
  */
 export const serviceService = {
   getServices,
+  createService,
   updateService,
   deleteService,
   // Future methods can be added here:

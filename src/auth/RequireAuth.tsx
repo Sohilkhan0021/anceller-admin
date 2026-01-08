@@ -12,7 +12,9 @@ const RequireAuth = () => {
     return <ScreenLoader />;
   }
 
-  return auth ? <Outlet /> : <Navigate to="/auth/login" state={{ from: location }} replace />;
+  // If not authenticated, redirect to root path (which shows login)
+  // Preserve the intended destination so user can be redirected after login
+  return auth ? <Outlet /> : <Navigate to="/" state={{ from: location }} replace />;
 };
 
 export { RequireAuth };

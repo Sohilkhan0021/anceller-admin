@@ -18,6 +18,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useSubServiceById } from '@/services/subservice.hooks';
 
 interface ISubServiceFormProps {
   isOpen: boolean;
@@ -42,19 +43,55 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // Fetch sub-service details when editing
+  const subServiceId = subServiceData?.id || subServiceData?.sub_service_id || null;
+  const { data: subServiceDetails, isLoading: isLoadingDetails } = useSubServiceById(
+    subServiceId,
+    { enabled: !!subServiceId && isOpen }
+  );
+
   useEffect(() => {
-    if (subServiceData) {
+    if (subServiceDetails?.data) {
+      // Map API response to form data
+      const apiData = subServiceDetails.data;
+      const categoryId = apiData.category?.category_id || apiData.service?.category?.category_id || '';
+      const serviceId = apiData.service?.service_id || '';
+      const imageUrl = apiData.image_url || '';
+      
+      setFormData({
+        name: apiData.name || '',
+        serviceId: serviceId,
+        categoryId: categoryId,
+        icon: 'category',
+        image: imageUrl,
+        status: apiData.is_active ? 'active' : 'inactive',
+        displayOrder: apiData.sort_order || 1
+      });
+      
+      // Set image preview if image exists
+      if (imageUrl) {
+        // If it's a full URL, use it directly; otherwise construct the full URL
+        const fullImageUrl = imageUrl.startsWith('http') 
+          ? imageUrl 
+          : `${import.meta.env.VITE_API_URL || ''}${imageUrl}`;
+        setImagePreview(fullImageUrl);
+      } else {
+        setImagePreview(null);
+      }
+    } else if (subServiceData) {
+      // Fallback to passed subServiceData (for backward compatibility)
       setFormData({
         name: subServiceData.name || '',
-        serviceId: subServiceData.serviceId || '',
-        categoryId: subServiceData.categoryId || '',
+        serviceId: subServiceData.serviceId || subServiceData.service_id || '',
+        categoryId: subServiceData.categoryId || subServiceData.category?.category_id || '',
         icon: subServiceData.icon || 'category',
-        image: subServiceData.image || '',
-        status: subServiceData.status || 'active',
-        displayOrder: subServiceData.displayOrder || 1
+        image: subServiceData.image || subServiceData.image_url || '',
+        status: subServiceData.status || (subServiceData.is_active ? 'active' : 'inactive'),
+        displayOrder: subServiceData.displayOrder || subServiceData.sort_order || 1
       });
-      setImagePreview(subServiceData.image || null);
+      setImagePreview(subServiceData.image || subServiceData.image_url || null);
     } else {
+      // Reset form for new sub-service
       setFormData({
         name: '',
         serviceId: '',
@@ -67,7 +104,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
       setImagePreview(null);
     }
     setErrors({});
-  }, [subServiceData, isOpen]);
+  }, [subServiceDetails, subServiceData, isOpen]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -150,10 +187,8 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
       newErrors.serviceId = 'Service is required';
     }
 
-
-    if (!formData.categoryId) {
-      newErrors.categoryId = 'Category is required';
-    }
+    // Category is optional - it will be auto-filled from service if not provided
+    // Removed category validation requirement
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -184,6 +219,14 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         </DialogHeader>
 
         <DialogBody>
+          {isLoadingDetails && subServiceId ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Loading sub-service details...</p>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Sub-Service Name */}
             <div>
@@ -210,7 +253,14 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
               <Select
                 value={formData.serviceId}
-                onValueChange={(value) => handleInputChange('serviceId', value)}
+                onValueChange={(value) => {
+                  handleInputChange('serviceId', value);
+                  // Auto-fill category from selected service
+                  const selectedService = availableServices.find(s => s.id === value);
+                  if (selectedService && selectedService.category_id) {
+                    handleInputChange('categoryId', selectedService.category_id);
+                  }
+                }}
               >
                 <SelectTrigger className={`mt-2 ${errors.serviceId ? 'border-danger' : ''}`}>
                   <SelectValue placeholder="Select service" />
@@ -231,17 +281,17 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
             </div>
 
 
-            {/* Category */}
+            {/* Category - Auto-filled from service, but can be overridden */}
             <div>
               <Label htmlFor="categoryId">
-                Category <span className="text-danger">*</span>
+                Category <span className="text-muted text-xs">(Auto-filled from service)</span>
               </Label>
               <Select
                 value={formData.categoryId}
                 onValueChange={(value) => handleInputChange('categoryId', value)}
               >
                 <SelectTrigger className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder="Select category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableCategories.map((category) => (
@@ -332,6 +382,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               </Button>
             </div>
           </form>
+          )}
         </DialogBody>
       </DialogContent>
     </Dialog>

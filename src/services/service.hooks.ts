@@ -14,6 +14,8 @@ import type {
   IService,
   ServiceStatus,
   IPaginationMeta,
+  ICreateServiceRequest,
+  ICreateServiceResponse,
   IUpdateServiceRequest,
   IUpdateServiceResponse,
   IDeleteServiceResponse,
@@ -151,6 +153,32 @@ export const useServices = (
     refetch: queryResult.refetch,
     isFetching: queryResult.isFetching,
   };
+};
+
+/**
+ * Custom hook to create a service
+ * 
+ * @returns Mutation result for creating a service
+ */
+export const useCreateService = (options?: {
+  onSuccess?: (data: ICreateServiceResponse) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<ICreateServiceResponse, Error, ICreateServiceRequest> => {
+  return useMutation(
+    (data: ICreateServiceRequest) => serviceService.createService(data),
+    {
+      onSuccess: (data) => {
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
 };
 
 /**

@@ -16,6 +16,41 @@ import type {
   IApiError,
 } from './subservice.types';
 
+export interface IGetSubServiceByIdResponse {
+  status: number;
+  message: string;
+  data: {
+    sub_service_id: string;
+    name: string;
+    description?: string;
+    image_url?: string;
+    base_price?: string;
+    currency?: string;
+    duration_minutes?: number;
+    skills_tags?: any;
+    max_add_count?: number;
+    is_active?: boolean;
+    sort_order?: number;
+    meta_data?: any;
+    service?: {
+      service_id: string;
+      name: string;
+      category?: {
+        category_id: string;
+        name: string;
+      };
+    };
+    category?: {
+      category_id: string;
+      name: string;
+    };
+    bookings?: number;
+    revenue?: number;
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
 /**
  * Base URL for sub-service management endpoints
  */
@@ -209,6 +244,41 @@ export const updateSubService = async (
 };
 
 /**
+ * Get a single sub-service by ID
+ * 
+ * @param subServiceId - Public ID of the sub-service
+ * @returns Promise resolving to sub-service data
+ * @throws Error if API request fails
+ */
+export const getSubServiceById = async (
+  subServiceId: string
+): Promise<IGetSubServiceByIdResponse> => {
+  try {
+    const response = await axios.get<IGetSubServiceByIdResponse>(
+      `${SUB_SERVICE_BASE_URL}/${subServiceId}`
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data;
+      let errorMessage = 'An error occurred while fetching sub-service';
+
+      if (responseData) {
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (typeof responseData === 'string') {
+          errorMessage = responseData;
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
+    throw new Error('An unexpected error occurred while fetching sub-service');
+  }
+};
+
+/**
  * Sub-Service Service Object
  * 
  * Centralized service object for all sub-service-related operations
@@ -216,6 +286,7 @@ export const updateSubService = async (
  */
 export const subServiceService = {
   getSubServices,
+  getSubServiceById,
   deleteSubService,
   updateSubService,
 };

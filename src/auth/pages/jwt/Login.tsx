@@ -33,7 +33,8 @@ const Login = () => {
   const { login } = useAuthContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
+  // After login, redirect to dashboard (or the original intended path)
+  const from = location.state?.from?.pathname || '/admin-dashboard';
   const [showPassword, setShowPassword] = useState(false);
   const { currentLayout } = useLayout();
 

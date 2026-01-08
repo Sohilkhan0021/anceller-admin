@@ -82,6 +82,22 @@ export interface IGetServicesResponse {
 }
 
 /**
+ * Request structure for creating a service
+ */
+export interface ICreateServiceRequest {
+  category_id: string; // Category ID
+  name: string;
+  description?: string;
+  image?: File;
+  base_price?: number;
+  currency?: string;
+  estimated_duration_minutes?: number;
+  is_active?: boolean;
+  sort_order?: number;
+  meta_data?: string;
+}
+
+/**
  * Request structure for updating a service
  */
 export interface IUpdateServiceRequest {
@@ -96,6 +112,15 @@ export interface IUpdateServiceRequest {
   is_active?: boolean;
   sort_order?: number;
   meta_data?: string;
+}
+
+/**
+ * Response structure for create service endpoint
+ */
+export interface ICreateServiceResponse {
+  status: number;
+  message: string;
+  data: IService | null;
 }
 
 /**

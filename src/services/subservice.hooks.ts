@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation, UseQueryResult, UseMutationResult } from 'react-query';
-import { subServiceService } from './subservice.service';
+import { subServiceService, IGetSubServiceByIdResponse } from './subservice.service';
 import type {
   IGetSubServicesParams,
   IGetSubServicesResponse,
@@ -154,6 +154,30 @@ export const useUpdateSubService = (options?: {
           options.onError(error);
         }
       },
+    }
+  );
+};
+
+/**
+ * Custom hook to fetch a single sub-service by ID
+ * 
+ * @param subServiceId - Public ID of the sub-service
+ * @param options - Additional React Query options
+ * @returns Query result with sub-service data
+ */
+export const useSubServiceById = (
+  subServiceId: string | null,
+  options?: {
+    enabled?: boolean;
+  }
+): UseQueryResult<IGetSubServiceByIdResponse, Error> => {
+  return useQuery(
+    ['sub-service', subServiceId],
+    () => subServiceService.getSubServiceById(subServiceId!),
+    {
+      enabled: options?.enabled !== false && !!subServiceId,
+      staleTime: 30000,
+      cacheTime: 300000,
     }
   );
 };

@@ -78,6 +78,7 @@ import { AuthPage } from '@/auth';
 import { RequireAuth } from '@/auth/RequireAuth';
 import { Demo1Layout } from '@/layouts/demo1';
 import { ErrorsRouting } from '@/errors';
+import { RootRouteGuard } from './RootRouteGuard';
 import {
   AuthenticationWelcomeMessagePage,
   AuthenticationAccountDeactivatedPage,
@@ -87,9 +88,12 @@ import {
 const AppRoutingSetup = (): ReactElement => {
   return (
     <Routes>
+      {/* Root path - shows login if not authenticated, redirects to dashboard if authenticated */}
+      <Route path="/" element={<RootRouteGuard />} />
+      
+      {/* Protected routes - require authentication */}
       <Route element={<RequireAuth />}>
         <Route element={<Demo1Layout />}>
-          <Route path="/" element={<AdminDashboardPage />} />
           <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/users" element={<UserManagementPage />} />
           <Route path="/admin/providers" element={<ProviderManagementPage />} />
