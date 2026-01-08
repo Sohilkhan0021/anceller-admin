@@ -71,9 +71,10 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
       // Set image preview if image exists
       if (imageUrl) {
         // If it's a full URL, use it directly; otherwise construct the full URL
+        const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || '';
         const fullImageUrl = imageUrl.startsWith('http') 
           ? imageUrl 
-          : `${import.meta.env.VITE_API_URL || ''}${imageUrl}`;
+          : `${baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
         setImagePreview(fullImageUrl);
       } else {
         setImagePreview(null);

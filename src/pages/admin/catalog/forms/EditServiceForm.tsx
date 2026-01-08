@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useSnackbar } from 'notistack';
+import { useUpdateService } from '@/services/service.hooks';
 
 interface IEditServiceFormProps {
   isOpen: boolean;
@@ -32,78 +32,63 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
   const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     name: '',
-    subServiceId: '', // Service belongs to a sub-service
-    category: '', // Auto-filled from sub-service
+    categoryId: '',
     description: '',
-    basePrice: '',
-    duration: '60',
     status: 'active',
-    isPopular: false,
-    materials: '',
-    requirements: '',
-    notes: '',
-    image: '',
     displayOrder: 1,
-    skills: ''
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Mock sub-services - in real app, this would come from API based on selected category
-  const subServices = [
-    { id: '1', name: 'Fan Installation', categoryId: 'electrical', category: 'Electrical' },
-    { id: '2', name: 'Electrical Wiring', categoryId: 'electrical', category: 'Electrical' },
-    { id: '3', name: 'Switch Board Repair', categoryId: 'electrical', category: 'Electrical' },
-    { id: '4', name: 'Pipe Repair', categoryId: 'plumbing', category: 'Plumbing' },
-    { id: '5', name: 'Tap Repair', categoryId: 'plumbing', category: 'Plumbing' },
-    { id: '6', name: 'AC Deep Service', categoryId: 'ac', category: 'AC Services' },
-    { id: '7', name: 'Home Cleaning', categoryId: 'cleaning', category: 'Cleaning' },
-    { id: '8', name: 'Furniture Repair', categoryId: 'carpentry', category: 'Carpentry' },
-    { id: '9', name: 'Door Repair', categoryId: 'carpentry', category: 'Carpentry' },
-    { id: '10', name: 'Washing Machine Repair', categoryId: 'appliance', category: 'Appliance' }
-  ];
+  const updateServiceMutation = useUpdateService({
+    onSuccess: (data) => {
+      enqueueSnackbar('Service updated successfully', { 
+        variant: 'solid', 
+        state: 'success',
+        icon: 'check-circle'
+      });
+      onSave(data);
+      handleClose();
+    },
+    onError: (error) => {
+      enqueueSnackbar(error.message || 'Failed to update service', { 
+        variant: 'solid', 
+        state: 'danger',
+        icon: 'cross-circle'
+      });
+    }
+  });
 
-  // Get sub-services filtered by category when category is selected
-  const availableSubServices = formData.category 
-    ? subServices.filter(sub => sub.categoryId === formData.category.toLowerCase())
-    : subServices;
 
   useEffect(() => {
     if (serviceData) {
-      // Convert duration from minutes to string format if it's a number
-      let durationValue = '60';
-      if (serviceData.duration) {
-        if (typeof serviceData.duration === 'number') {
-          durationValue = serviceData.duration.toString();
-        } else {
-          durationValue = serviceData.duration.toString();
-        }
-      }
-
       setFormData({
         name: serviceData.name || '',
-        subServiceId: serviceData.subServiceId || '',
-        category: serviceData.category ? serviceData.category.toLowerCase() : '',
+        categoryId: serviceData.category_id || serviceData.categoryId || serviceData.category?.category_id || '',
         description: serviceData.description || '',
-        basePrice: serviceData.basePrice?.toString() || serviceData.estimatedPrice?.toString() || '',
-        duration: durationValue,
-        status: serviceData.status || 'active',
-        isPopular: serviceData.isPopular || false,
-        materials: serviceData.materials || '',
-        requirements: serviceData.requirements || '',
-        notes: serviceData.notes || '',
-        image: serviceData.image || '',
-        displayOrder: serviceData.displayOrder || 1,
-        skills: serviceData.skills || ''
+        status: serviceData.is_active === false ? 'inactive' : (serviceData.status || 'active'),
+        displayOrder: serviceData.sort_order || serviceData.displayOrder || 1,
       });
+      
       // Set image preview if existing image
-      if (serviceData.image) {
-        setImagePreview(serviceData.image);
+      const imageUrl = serviceData.image_url || serviceData.image;
+      if (imageUrl) {
+        // If it's a full URL, use it directly; otherwise construct the full URL
+        const fullImageUrl = imageUrl.startsWith('http') 
+          ? imageUrl 
+          : `${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || ''}${imageUrl}`;
+        setImagePreview(fullImageUrl);
+      } else {
+        setImagePreview(null);
       }
+      
       // Clear errors when service data changes
       setErrors({});
+      setImageFile(null);
+      setIsDragging(false);
     }
   }, [serviceData, isOpen]);
 
@@ -114,31 +99,80 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
     }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setImagePreview(result);
-        setFormData(prev => ({
-          ...prev,
-          image: result
-        }));
-      };
-      reader.readAsDataURL(file);
+  const handleImageUpload = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      enqueueSnackbar('Please select an image file', { 
+        variant: 'solid', 
+        state: 'warning',
+        icon: 'information-2'
+      });
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      enqueueSnackbar('Image size must be less than 5MB', { 
+        variant: 'solid', 
+        state: 'warning',
+        icon: 'information-2'
+      });
+      return;
+    }
+    
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setImagePreview(result);
+    };
+    reader.readAsDataURL(file);
+  }, [enqueueSnackbar]);
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleImageUpload(event.target.files);
+    // Reset input value to allow re-uploading the same file
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    setFormData(prev => ({
-      ...prev,
-      image: ''
-    }));
   };
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleImageUpload(e.dataTransfer.files);
+    }
+  }, [handleImageUpload]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -147,24 +181,12 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
       newErrors.name = 'Service name is required';
     }
 
-    if (!formData.category) {
-      newErrors.category = 'Category is required';
+    if (!formData.categoryId) {
+      newErrors.categoryId = 'Category is required';
     }
 
-    if (!formData.subServiceId) {
-      newErrors.subServiceId = 'Sub-service is required';
-    }
-
-    if (!formData.description.trim()) {
+    if (!formData.description?.trim()) {
       newErrors.description = 'Description is required';
-    }
-
-    if (!formData.basePrice || parseFloat(formData.basePrice) <= 0) {
-      newErrors.basePrice = 'Price must be greater than 0';
-    }
-
-    if (!formData.duration) {
-      newErrors.duration = 'Duration is required';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -175,7 +197,22 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
     return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleClose = () => {
+    setFormData({
+      name: '',
+      categoryId: '',
+      description: '',
+      status: 'active',
+      displayOrder: 1,
+    });
+    setImagePreview(null);
+    setImageFile(null);
+    setErrors({});
+    setIsDragging(false);
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -187,13 +224,25 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
       return;
     }
 
-    onSave({ ...serviceData, ...formData });
-    enqueueSnackbar('Service updated successfully', { 
-      variant: 'solid', 
-      state: 'success',
-      icon: 'check-circle'
+    if (!serviceData?.id && !serviceData?.service_id) {
+      enqueueSnackbar('Service ID is missing', { 
+        variant: 'solid', 
+        state: 'danger',
+        icon: 'cross-circle'
+      });
+      return;
+    }
+
+    // Update service with FormData
+    updateServiceMutation.mutate({
+      id: serviceData.id || serviceData.service_id || serviceData.public_id,
+      category_id: formData.categoryId,
+      name: formData.name,
+      description: formData.description || '',
+      image: imageFile || undefined,
+      is_active: formData.status === 'active',
+      sort_order: formData.displayOrder,
     });
-    onClose();
   };
 
   return (
@@ -228,60 +277,26 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
               </div>
               
               <div>
-                <Label htmlFor="category">Category *</Label>
+                <Label htmlFor="categoryId">Category *</Label>
                 <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => {
-                    handleInputChange('category', value);
-                    handleInputChange('subServiceId', ''); // Reset sub-service when category changes
-                  }}
+                  value={formData.categoryId} 
+                  onValueChange={(value) => handleInputChange('categoryId', value)}
                 >
-                  <SelectTrigger className={`mt-2 ${errors.category ? 'border-danger' : ''}`}>
+                  <SelectTrigger className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="electrical">Electrical</SelectItem>
-                    <SelectItem value="plumbing">Plumbing</SelectItem>
-                    <SelectItem value="ac">AC Services</SelectItem>
-                    <SelectItem value="cleaning">Cleaning</SelectItem>
-                    <SelectItem value="carpentry">Carpentry</SelectItem>
-                    <SelectItem value="appliance">Appliance</SelectItem>
+                    {/* TODO: Fetch categories from API */}
+                    <SelectItem value="CAT_ELECTRICAL">Electrical</SelectItem>
+                    <SelectItem value="CAT_PLUMBING">Plumbing</SelectItem>
+                    <SelectItem value="CAT_AC">AC Services</SelectItem>
+                    <SelectItem value="CAT_CLEANING">Cleaning</SelectItem>
+                    <SelectItem value="CAT_CARPENTRY">Carpentry</SelectItem>
+                    <SelectItem value="CAT_APPLIANCE">Appliance</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.category && (
-                  <p className="text-danger text-sm mt-1">{errors.category}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="subServiceId">Sub-Service *</Label>
-                <Select 
-                  value={formData.subServiceId} 
-                  onValueChange={(value) => {
-                    const selectedSubService = subServices.find(s => s.id === value);
-                    handleInputChange('subServiceId', value);
-                    if (selectedSubService) {
-                      handleInputChange('category', selectedSubService.categoryId);
-                    }
-                  }}
-                  disabled={!formData.category}
-                >
-                  <SelectTrigger className={`mt-2 ${errors.subServiceId ? 'border-danger' : ''}`}>
-                    <SelectValue placeholder={formData.category ? "Select sub-service" : "Select category first"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableSubServices.map((subService) => (
-                      <SelectItem key={subService.id} value={subService.id}>
-                        {subService.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.subServiceId && (
-                  <p className="text-danger text-sm mt-1">{errors.subServiceId}</p>
-                )}
-                {!formData.category && (
-                  <p className="text-xs text-gray-500 mt-1">Please select a category first</p>
+                {errors.categoryId && (
+                  <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
                 )}
               </div>
             </div>
@@ -341,126 +356,32 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
                   </div>
                 ) : (
                   <div 
-                    className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                    className={`w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      isDragging 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-gray-300 hover:border-primary'
+                    }`}
                     onClick={() => document.getElementById('image-upload-edit')?.click()}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                   >
-                    <KeenIcon icon="image" className="text-gray-400 text-2xl mb-2" />
-                    <p className="text-sm text-gray-600">Click to upload service image</p>
-                    <p className="text-xs text-gray-500">PNG, JPG up to 2MB</p>
+                    <KeenIcon icon="image" className={`text-2xl mb-2 ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
+                    <p className={`text-sm ${isDragging ? 'text-primary font-medium' : 'text-gray-600'}`}>
+                      {isDragging ? 'Drop image here' : 'Click to upload or drag and drop'}
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 5MB</p>
                   </div>
                 )}
                 <input
-                  id="image-upload"
+                  id="image-upload-edit"
                   type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleFileInputChange}
                   className="hidden"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Pricing & Duration */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Pricing & Duration</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="basePrice">Base Price (₹) *</Label>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.basePrice}
-                  onChange={(e) => handleInputChange('basePrice', e.target.value)}
-                  className={`mt-2 ${errors.basePrice ? 'border-danger' : ''}`}
-                  placeholder="e.g., 500"
-                />
-                {errors.basePrice && (
-                  <p className="text-danger text-sm mt-1">{errors.basePrice}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="duration">Estimated Duration (minutes) *</Label>
-                <Select 
-                  value={formData.duration} 
-                  onValueChange={(value) => handleInputChange('duration', value)}
-                >
-                  <SelectTrigger className={`mt-2 ${errors.duration ? 'border-danger' : ''}`}>
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">1 hour</SelectItem>
-                    <SelectItem value="90">1.5 hours</SelectItem>
-                    <SelectItem value="120">2 hours</SelectItem>
-                    <SelectItem value="180">3 hours</SelectItem>
-                    <SelectItem value="240">4 hours</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.duration && (
-                  <p className="text-danger text-sm mt-1">{errors.duration}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Service Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Service Details</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="skills">Required Skills / Tags (Display Only)</Label>
-                <Input
-                  id="skills"
-                  value={formData.skills}
-                  onChange={(e) => handleInputChange('skills', e.target.value)}
-                  className="mt-2"
-                  placeholder="e.g., Licensed, Certified, Experienced"
-                />
-                <p className="text-xs text-gray-500 mt-1">For display purposes only</p>
-              </div>
-
-              <div>
-                <Label htmlFor="displayOrder">Display Order</Label>
-                <Input
-                  id="displayOrder"
-                  type="number"
-                  min="1"
-                  value={formData.displayOrder}
-                  onChange={(e) => handleInputChange('displayOrder', parseInt(e.target.value) || 1)}
-                  className="mt-2"
-                  placeholder="1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="materials">Materials / Recommended Consumption</Label>
-              <Textarea
-                id="materials"
-                value={formData.materials}
-                onChange={(e) => handleInputChange('materials', e.target.value)}
-                rows={3}
-                className="mt-2"
-                placeholder="List materials or recommended consumption/parts..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="requirements">Special Requirements</Label>
-              <Textarea
-                id="requirements"
-                value={formData.requirements}
-                onChange={(e) => handleInputChange('requirements', e.target.value)}
-                rows={3}
-                className="mt-2"
-                placeholder="Any special requirements or conditions..."
-              />
             </div>
           </div>
 
@@ -478,41 +399,42 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="maintenance">Under Maintenance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              <div className="flex items-center space-x-2 pt-6">
-                <Switch
-                  checked={formData.isPopular}
-                  onCheckedChange={(checked) => handleInputChange('isPopular', checked)}
+              <div>
+                <Label htmlFor="displayOrder">Display Order</Label>
+                <Input
+                  id="displayOrder"
+                  type="number"
+                  min="1"
+                  value={formData.displayOrder}
+                  onChange={(e) => handleInputChange('displayOrder', parseInt(e.target.value) || 1)}
+                  className="mt-2"
+                  placeholder="1"
                 />
-                <Label>Popular Service</Label>
               </div>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Admin Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                rows={3}
-                className="mt-2"
-                placeholder="Internal notes about this service..."
-              />
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={updateServiceMutation.isLoading}>
               Cancel
             </Button>
-            <Button type="submit">
-              <KeenIcon icon="check" className="me-2" />
-              Update Service
+            <Button type="submit" disabled={updateServiceMutation.isLoading}>
+              {updateServiceMutation.isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <KeenIcon icon="check" className="me-2" />
+                  Update Service
+                </>
+              )}
             </Button>
           </div>
           </form>
