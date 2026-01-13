@@ -25,7 +25,7 @@ const UserManagementContent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  const { createUser } = useUserManage();
+  const { createUser, updateUser } = useUserManage();
 
   // Fetch users with filters
   const {
@@ -82,13 +82,41 @@ const UserManagementContent = () => {
     // Form closing is handled in AddUserForm via onClose() after successful await
   };
 
-  const handleUpdateUser = (userData: any) => {
-    console.log('Updating user:', userData);
-    // TODO: Implement API call to update user
-    setIsEditFormOpen(false);
-    setEditUser(null);
-    // Refetch users after update
-    refetch();
+  const handleUpdateUser = async (userData: any) => {
+    try {
+      const userId = userData.user_id || userData.id;
+      if (!userId) {
+        console.error('User ID is missing');
+        return;
+      }
+      
+      // Transform form data to API format
+      const updateData: any = {
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        email: userData.email,
+        phone_number: userData.phone,
+      };
+      
+      // Add optional fields
+      if (userData.address) updateData.address = userData.address;
+      if (userData.city) updateData.city = userData.city;
+      if (userData.state) updateData.state = userData.state;
+      if (userData.pincode) updateData.pincode = userData.pincode;
+      if (userData.notes) updateData.notes = userData.notes;
+      if (userData.status) updateData.status = userData.status;
+      if (typeof userData.isVerified === 'boolean') {
+        updateData.is_verified = userData.isVerified;
+      }
+      
+      await updateUser(userId, updateData);
+      setIsEditFormOpen(false);
+      setEditUser(null);
+      refetch();
+    } catch (error) {
+      // Error is handled by provider (toast)
+      console.error('Failed to update user:', error);
+    }
   };
 
 

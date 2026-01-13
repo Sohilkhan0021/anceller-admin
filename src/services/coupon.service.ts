@@ -86,16 +86,50 @@ export const getCoupons = async (
       });
     }
 
-    const response = await axios.get<{ status: number; message: string; data: { coupons: ICoupon[]; pagination: IPaginationMeta } }>(COUPON_BASE_URL, {
+    const response = await axios.get<{ status: number; message: string; data: { coupons: any[]; pagination: IPaginationMeta } }>(COUPON_BASE_URL, {
       params: queryParams,
     });
 
     // Backend returns { status: 1, message, data: { coupons, pagination } }
-    // Transform to match IGetCouponsResponse format
+    // Backend coupons have nested usage object: { usage: { current, limit, percentage }, redemptions_count, ... }
+    // Transform to match frontend ICoupon interface
+    const transformedCoupons: ICoupon[] = (response.data.data.coupons || []).map((coupon: any) => ({
+      id: coupon.coupon_id || coupon.id,
+      code: coupon.code,
+      name: coupon.name,
+      type: (coupon.type || coupon.coupon_type || '').toLowerCase() as any,
+      discount_type: coupon.coupon_type,
+      value: coupon.value ? parseFloat(coupon.value) : undefined,
+      discount_value: coupon.discount_value ? parseFloat(coupon.discount_value) : undefined,
+      expiry: coupon.expiry ? new Date(coupon.expiry).toLocaleDateString() : undefined,
+      expiry_date: coupon.expiry,
+      expires_at: coupon.expiry,
+      // Map usage data from nested object to flat fields
+      usageCount: coupon.usage?.current || coupon.redemptions_count || coupon.usage_count || 0,
+      usage_count: coupon.usage?.current || coupon.redemptions_count || coupon.usage_count || 0,
+      maxUsage: coupon.usage?.limit || coupon.max_usage || null,
+      max_usage: coupon.usage?.limit || coupon.max_usage || null,
+      status: (coupon.status || 'deactivated').toLowerCase() as any,
+      createdAt: coupon.created_at ? new Date(coupon.created_at).toLocaleDateString() : undefined,
+      created_at: coupon.created_at,
+      revenueImpact: coupon.revenue_impact || 0,
+      revenue_impact: coupon.revenue_impact || 0,
+      redemptions: coupon.redemptions_count || coupon.usage?.current || 0,
+      public_id: coupon.coupon_id,
+      description: coupon.description,
+      min_order_amount: coupon.min_order_amount,
+      minOrderAmount: coupon.min_order_amount,
+      is_active: coupon.is_active,
+      updated_at: coupon.updated_at,
+      is_deleted: coupon.is_deleted,
+      coupon_type: coupon.coupon_type,
+      coupon_id: coupon.coupon_id
+    }));
+
     return {
       success: response.data.status === 1,
       data: {
-        coupons: response.data.data.coupons,
+        coupons: transformedCoupons,
         pagination: response.data.data.pagination
       },
       message: response.data.message

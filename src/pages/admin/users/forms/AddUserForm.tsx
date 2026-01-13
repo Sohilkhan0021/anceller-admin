@@ -19,6 +19,8 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import * as Yup from 'yup';
+import { useFormik } from 'formik';
 
 interface IAddUserFormProps {
   isOpen: boolean;
@@ -26,51 +28,109 @@ interface IAddUserFormProps {
   onSave: (userData: any) => Promise<void> | void;
 }
 
+const addUserSchema = Yup.object().shape({
+  firstName: Yup.string()
+    .min(2, 'First name must be at least 2 characters')
+    .max(100, 'First name must not exceed 100 characters')
+    .trim()
+    .required('First name is required'),
+  lastName: Yup.string()
+    .min(2, 'Last name must be at least 2 characters')
+    .max(100, 'Last name must not exceed 100 characters')
+    .trim()
+    .required('Last name is required'),
+  email: Yup.string()
+    .email('Please enter a valid email address')
+    .max(255, 'Email must not exceed 255 characters')
+    .required('Email is required'),
+  phone: Yup.string()
+    .required('Phone number is required')
+    .matches(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number (starting with 6-9)'),
+  countryCode: Yup.string()
+    .matches(/^\+\d{1,4}$/, 'Country code must be in E.164 format (e.g., +91)')
+    .default('+91'),
+  address: Yup.string()
+    .min(10, 'Address must be at least 10 characters long')
+    .max(500, 'Address must not exceed 500 characters'),
+  city: Yup.string()
+    .min(2, 'City must be at least 2 characters long')
+    .max(50, 'City must not exceed 50 characters'),
+  state: Yup.string()
+    .min(2, 'State must be at least 2 characters long')
+    .max(50, 'State must not exceed 50 characters'),
+  pincode: Yup.string()
+    .matches(/^\d{6}$/, 'Pincode must be exactly 6 digits')
+    .required('Pincode is required'),
+  status: Yup.string().required('Status is required'),
+  notes: Yup.string().max(1000, 'Notes must not exceed 1000 characters')
+});
+
 const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-    status: 'active',
-    isVerified: true,
-    notes: ''
+  const formik = useFormik({
+    initialValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+      status: 'active',
+      isVerified: true,
+      notes: ''
+    },
+    validationSchema: addUserSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+      try {
+        await onSave(values);
+        formik.resetForm();
+        onClose();
+      } catch (error: any) {
+        // Handle API validation errors - check both error.errors and error.response.data.errors
+        const apiErrors = error?.errors || error?.response?.data?.errors;
+        
+        if (apiErrors && typeof apiErrors === 'object') {
+          Object.keys(apiErrors).forEach((field) => {
+            const fieldName = field === 'email' ? 'email' : 
+                             field === 'phone_number' ? 'phone' :
+                             field === 'first_name' ? 'firstName' :
+                             field === 'last_name' ? 'lastName' :
+                             field === 'postal_code' ? 'pincode' : field;
+            const errorMessage = Array.isArray(apiErrors[field]) 
+              ? apiErrors[field][0] 
+              : apiErrors[field];
+            setFieldError(fieldName, errorMessage || 'Invalid value');
+          });
+        } else if (error?.response?.data?.message || error?.message) {
+          // Handle single error message
+          const errorMessage = error.response?.data?.message || error.message;
+          // Try to extract field from error message
+          if (errorMessage.toLowerCase().includes('email')) {
+            setFieldError('email', errorMessage);
+          } else if (errorMessage.toLowerCase().includes('phone')) {
+            setFieldError('phone', errorMessage);
+          } else if (errorMessage.toLowerCase().includes('first name') || errorMessage.toLowerCase().includes('first_name')) {
+            setFieldError('firstName', errorMessage);
+          } else if (errorMessage.toLowerCase().includes('last name') || errorMessage.toLowerCase().includes('last_name')) {
+            setFieldError('lastName', errorMessage);
+          } else {
+            // Show general error on email field as fallback
+            setFieldError('email', errorMessage);
+          }
+        } else {
+          console.error('Failed to create user:', error);
+        }
+      } finally {
+        setSubmitting(false);
+      }
+    }
   });
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await onSave(formData);
-      onClose();
-      // Reset form
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        pincode: '',
-        status: 'active',
-        isVerified: true,
-        notes: ''
-      });
-    } catch (error) {
-      // Error is handled by provider (toast), form stays open
-      console.error('Failed to create user:', error);
-    }
+    formik.setFieldValue(field, value);
   };
 
   return (
@@ -84,7 +144,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
         </DialogHeader>
 
         <DialogBody>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
@@ -94,22 +154,32 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="firstName">First Name *</Label>
                   <Input
                     id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    required
-                    className="mt-2"
+                    value={formik.values.firstName}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`mt-2 ${formik.touched.firstName && formik.errors.firstName ? 'border-danger' : ''}`}
                   />
+                  {formik.touched.firstName && formik.errors.firstName && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.firstName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="lastName">Last Name *</Label>
                   <Input
                     id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    required
-                    className="mt-2"
+                    value={formik.values.lastName}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`mt-2 ${formik.touched.lastName && formik.errors.lastName ? 'border-danger' : ''}`}
                   />
+                  {formik.touched.lastName && formik.errors.lastName && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.lastName}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -119,11 +189,30 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Input
                     id="email"
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    required
-                    className="mt-2"
+                    value={formik.values.email}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Limit to 255 characters to prevent UI breaking
+                      if (value.length <= 255) {
+                        formik.handleChange(e);
+                        // Validate email format in real-time
+                        if (value.length > 0) {
+                          formik.setFieldTouched('email', true, false);
+                        }
+                      }
+                    }}
+                    onBlur={formik.handleBlur}
+                    maxLength={255}
+                    className={`mt-2 ${formik.touched.email && formik.errors.email ? 'border-danger' : ''}`}
+                    placeholder="user@example.com"
                   />
+                  {formik.touched.email && formik.errors.email && (
+                    <div className="mt-1 min-h-[20px]">
+                      <p className="text-danger text-xs break-words overflow-wrap-anywhere max-w-full">
+                        {formik.errors.email}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -131,11 +220,16 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Input
                     id="phone"
                     type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    required
-                    className="mt-2"
+                    value={formik.values.phone}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`mt-2 ${formik.touched.phone && formik.errors.phone ? 'border-danger' : ''}`}
                   />
+                  {formik.touched.phone && formik.errors.phone && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.phone}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -148,11 +242,17 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                 <Label htmlFor="address">Address</Label>
                 <Textarea
                   id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  value={formik.values.address}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   rows={3}
-                  className="mt-2"
+                  className={`mt-2 ${formik.touched.address && formik.errors.address ? 'border-danger' : ''}`}
                 />
+                {formik.touched.address && formik.errors.address && (
+                  <p className="text-danger text-xs mt-1 break-words max-w-full">
+                    {formik.errors.address}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -160,30 +260,48 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="city">City</Label>
                   <Input
                     id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="mt-2"
+                    value={formik.values.city}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`mt-2 ${formik.touched.city && formik.errors.city ? 'border-danger' : ''}`}
                   />
+                  {formik.touched.city && formik.errors.city && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.city}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="state">State</Label>
                   <Input
                     id="state"
-                    value={formData.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                    className="mt-2"
+                    value={formik.values.state}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`mt-2 ${formik.touched.state && formik.errors.state ? 'border-danger' : ''}`}
                   />
+                  {formik.touched.state && formik.errors.state && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.state}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="pincode">Pincode</Label>
                   <Input
                     id="pincode"
-                    value={formData.pincode}
-                    onChange={(e) => handleInputChange('pincode', e.target.value)}
-                    className="mt-2"
+                    value={formik.values.pincode}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`mt-2 ${formik.touched.pincode && formik.errors.pincode ? 'border-danger' : ''}`}
                   />
+                  {formik.touched.pincode && formik.errors.pincode && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.pincode}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -194,22 +312,29 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                    <SelectTrigger className="mt-2">
+                  <Label htmlFor="status">Status *</Label>
+                  <Select 
+                    value={formik.values.status} 
+                    onValueChange={(value) => handleInputChange('status', value)}
+                  >
+                    <SelectTrigger className={`mt-2 ${formik.touched.status && formik.errors.status ? 'border-danger' : ''}`}>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="blocked">Blocked</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formik.touched.status && formik.errors.status && (
+                    <p className="text-danger text-xs mt-1 break-words max-w-full">
+                      {formik.errors.status}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2 pt-6">
                   <Switch
-                    checked={formData.isVerified}
+                    checked={formik.values.isVerified}
                     onCheckedChange={(checked) => handleInputChange('isVerified', checked)}
                   />
                   <Label>Email Verified</Label>
@@ -220,23 +345,38 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  value={formik.values.notes}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   rows={3}
-                  className="mt-2"
+                  className={`mt-2 ${formik.touched.notes && formik.errors.notes ? 'border-danger' : ''}`}
                   placeholder="Additional notes about the user..."
                 />
+                {formik.touched.notes && formik.errors.notes && (
+                  <p className="text-danger text-xs mt-1 break-words max-w-full">
+                    {formik.errors.notes}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={formik.isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">
-                <KeenIcon icon="check" className="me-2" />
-                Create User
+              <Button type="submit" disabled={formik.isSubmitting}>
+                {formik.isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <KeenIcon icon="check" className="me-2" />
+                    Create User
+                  </>
+                )}
               </Button>
             </div>
           </form>

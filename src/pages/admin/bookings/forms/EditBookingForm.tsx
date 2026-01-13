@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useBookingDetail } from '@/services/booking.hooks';
+import { ContentLoader } from '@/components/loaders';
 
 interface IEditBookingFormProps {
   isOpen: boolean;
@@ -55,6 +57,13 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
+  // Fetch full booking details if bookingData has an ID
+  const bookingId = bookingData?.id || bookingData?.booking_id || null;
+  const { booking: fullBookingDetails, isLoading: isLoadingDetails } = useBookingDetail(
+    bookingId,
+    { enabled: isOpen && !!bookingId }
+  );
+
   const paymentMethods = [
     'Credit Card',
     'Debit Card',
@@ -73,27 +82,99 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
   ];
 
   useEffect(() => {
-    if (bookingData) {
+    // Use full booking details if available, otherwise use bookingData prop
+    const dataToUse = fullBookingDetails || bookingData;
+    
+    if (dataToUse) {
+      // Extract data from full booking details structure
+      const booking = fullBookingDetails || bookingData;
+      
+      // Parse scheduled date and time
+      let bookingDate = new Date();
+      let bookingTime = '';
+      
+      if (booking.scheduled_date) {
+        bookingDate = new Date(booking.scheduled_date);
+      } else if (booking.dateTime) {
+        const dateTime = new Date(booking.dateTime);
+        bookingDate = dateTime;
+        bookingTime = dateTime.toTimeString().slice(0, 5); // HH:mm format
+      } else if (booking.bookingDate) {
+        bookingDate = new Date(booking.bookingDate);
+      }
+      
+      // Extract time from scheduled_time_start if available
+      if (booking.scheduled_time_start) {
+        const timeDate = new Date(booking.scheduled_time_start);
+        bookingTime = timeDate.toTimeString().slice(0, 5);
+      } else if (booking.bookingTime) {
+        bookingTime = booking.bookingTime;
+      }
+      
+      // Extract address components
+      const addressObj = booking.address || {};
+      const addressString = typeof addressObj === 'string' 
+        ? addressObj 
+        : addressObj.full_address || addressObj.address || '';
+      
+      // Parse address string if it's a single string (format: "street, city, state postal_code")
+      let city = addressObj.city || '';
+      let state = addressObj.state || '';
+      let pincode = addressObj.postal_code || '';
+      
+      if (!city && addressString) {
+        // Try to parse from address string
+        const parts = addressString.split(',').map((p: string) => p.trim());
+        if (parts.length >= 2) {
+          city = parts[parts.length - 2] || '';
+          const lastPart = parts[parts.length - 1] || '';
+          const statePostal = lastPart.split(' ');
+          state = statePostal[0] || '';
+          pincode = statePostal[1] || '';
+        }
+      }
+      
+      // Get service name from items if available
+      const serviceName = booking.items?.[0]?.service_name 
+        || booking.items?.[0]?.sub_service?.name
+        || booking.service
+        || booking.serviceName
+        || '';
+      
+      // Get service ID
+      const serviceId = booking.items?.[0]?.sub_service?.sub_service_id
+        || booking.serviceId
+        || '';
+      
       setFormData({
-        userId: bookingData.userId || '',
-        providerId: bookingData.providerId || '',
-        serviceId: bookingData.serviceId || '',
-        serviceName: bookingData.serviceName || '',
-        bookingDate: bookingData.bookingDate ? new Date(bookingData.bookingDate) : new Date(),
-        bookingTime: bookingData.bookingTime || '',
-        address: bookingData.address || '',
-        city: bookingData.city || '',
-        state: bookingData.state || '',
-        pincode: bookingData.pincode || '',
-        amount: bookingData.amount || '',
-        paymentMethod: bookingData.paymentMethod || '',
-        status: bookingData.status || 'pending',
-        specialInstructions: bookingData.specialInstructions || '',
-        notes: bookingData.notes || ''
+        userId: booking.user?.user_id || booking.userId || booking.user_id || '',
+        providerId: booking.provider?.provider_id || booking.providerId || '',
+        serviceId: serviceId,
+        serviceName: serviceName,
+        bookingDate: bookingDate,
+        bookingTime: bookingTime,
+        address: addressString,
+        city: city,
+        state: state,
+        pincode: pincode,
+        amount: booking.pricing?.total?.toString() 
+          || booking.amount?.toString() 
+          || booking.final_amount?.toString() 
+          || '',
+        paymentMethod: booking.payment?.gateway 
+          || booking.payment_method 
+          || booking.paymentMethod 
+          || '',
+        status: (booking.status || 'pending').toLowerCase(),
+        specialInstructions: booking.special_instructions 
+          || booking.specialInstructions 
+          || '',
+        notes: booking.notes || booking.admin_notes || ''
       });
-      setSelectedDate(bookingData.bookingDate ? new Date(bookingData.bookingDate) : new Date());
+      
+      setSelectedDate(bookingDate);
     }
-  }, [bookingData]);
+  }, [bookingData, fullBookingDetails, isOpen]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -119,6 +200,11 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
         </DialogHeader>
 
         <DialogBody>
+          {isLoadingDetails ? (
+            <div className="flex items-center justify-center py-8">
+              <ContentLoader />
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
           {/* Booking Information */}
           <div className="space-y-4">
@@ -367,6 +453,7 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
             </Button>
           </div>
           </form>
+          )}
         </DialogBody>
       </DialogContent>
     </Dialog>

@@ -44,6 +44,7 @@ import { IService } from '@/services/service.types';
 import { toast } from 'sonner';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
+import { getImageUrl } from '@/utils/imageUrl';
 
 interface IServiceTableProps {
   onEditService?: (service: IService) => void;
@@ -177,7 +178,20 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   const handleEditService = (serviceId: string) => {
     const service = services.find(s => s.id === serviceId);
     if (service && onEditService) {
-      onEditService(service);
+      // Ensure all fields are properly mapped for editing
+      const serviceWithData: any = {
+        ...service,
+        id: service.id || service.public_id || (service as any).service_id,
+        // Map all fields properly
+        name: service.name,
+        categoryId: service.category_id || service.categoryId || (typeof service.category === 'object' && service.category?.category_id) || '',
+        description: service.description,
+        image_url: service.image_url || service.image,
+        status: service.status || ((service as any).is_active === false ? 'inactive' : 'active'),
+        displayOrder: service.displayOrder || service.display_order || (service as any).sort_order || 1,
+        is_active: service.status === 'active' || ((service as any).is_active !== false && service.status !== 'inactive')
+      };
+      onEditService(serviceWithData);
     }
   };
 
@@ -509,20 +523,38 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                       {columnVisibility.service && (
                         <TableCell className="w-[200px]">
                           <div className="flex items-center gap-2">
-                            {(service.image || service.image_url) && (
-                              <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                                <img
-                                  src={service.image || service.image_url}
-                                  alt={service.name || 'Service'}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&crop=center';
-                                    target.onerror = null; // Prevent infinite loop
-                                  }}
-                                />
-                              </div>
-                            )}
+                            {(() => {
+                              // Try multiple possible image field names - same as category implementation
+                              const imageUrl = (service as any).image_url || (service as any).imageUrl || (service as any).image || '';
+                              const fullImageUrl = getImageUrl(imageUrl);
+                              
+                              // If image URL is invalid (local path, etc.), show placeholder
+                              if (!fullImageUrl && imageUrl) {
+                                return (
+                                  <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 border border-gray-200 flex items-center justify-center">
+                                    <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                                  </div>
+                                );
+                              }
+                              
+                              return fullImageUrl ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                  <img
+                                    src={fullImageUrl}
+                                    alt={service.name || 'Service'}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 border border-gray-200 flex items-center justify-center">
+                                  <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                                </div>
+                              );
+                            })()}
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-sm truncate">{service.name || 'N/A'}</div>
                               <div className="text-xs text-gray-500 truncate">ID: {service.id || 'N/A'}</div>

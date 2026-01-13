@@ -4,7 +4,7 @@ export const MENU_SIDEBAR: TMenuConfig = [
   {
     title: 'Dashboard',
     icon: 'element-11',
-    path: '/'
+    path: '/admin-dashboard'
   },
   {
     heading: 'ADMIN'

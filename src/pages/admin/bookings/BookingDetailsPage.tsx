@@ -203,7 +203,7 @@ const BookingDetailsPage = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700">Pincode</label>
-                        <p className="text-sm text-gray-900">{booking.address.pincode || 'N/A'}</p>
+                        <p className="text-sm text-gray-900">{booking.address?.postal_code || booking.address?.pincode || 'N/A'}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700">Landmark</label>

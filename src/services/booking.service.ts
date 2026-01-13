@@ -67,11 +67,67 @@ export const getBookings = async (
       });
     }
 
-    const response = await axios.get<IGetBookingsResponse>(BOOKING_BASE_URL, {
+    const response = await axios.get<any>(BOOKING_BASE_URL, {
       params: queryParams,
     });
 
-    return response.data;
+    // Transform backend response to match frontend interface
+    // Backend returns: { status: 1, message: "...", data: { bookings: [...], pagination: {...} } }
+    const backendData = response.data.data || response.data;
+    const bookings = backendData?.bookings || [];
+    const pagination = backendData?.pagination || {};
+    
+    const transformedData: IGetBookingsResponse = {
+      success: response.data.status === 1 || response.data.success === true,
+      data: {
+        bookings: bookings.map((booking: any) => {
+          // Combine scheduled_date and scheduled_time for dateTime
+          let dateTime = '';
+          if (booking.scheduled_date) {
+            dateTime = booking.scheduled_date;
+            if (booking.scheduled_time) {
+              dateTime += ` ${booking.scheduled_time}`;
+            } else if (booking.scheduled_time_start) {
+              const timeStart = new Date(booking.scheduled_time_start);
+              dateTime += ` ${timeStart.toTimeString().slice(0, 5)}`;
+            }
+          } else if (booking.created_at) {
+            dateTime = booking.created_at;
+          }
+          
+          return {
+            id: booking.booking_id || booking.id,
+            userName: booking.user?.name || booking.userName || 'N/A',
+            providerName: booking.provider?.name || booking.providerName || booking.provider?.business_name || 'N/A',
+            service: booking.service || booking.service_name || 'N/A',
+            dateTime: dateTime,
+            status: (booking.status || 'pending').toLowerCase(),
+            amount: booking.amount || 0,
+            paymentType: booking.payment_method || booking.paymentType || 'N/A',
+            paymentStatus: (booking.payment_status || 'pending').toLowerCase() as any,
+            address: booking.address || booking.address?.full_address || 'N/A',
+            phone: booking.user?.phone || booking.phone || 'N/A',
+            userId: booking.user?.user_id || booking.userId,
+            providerId: booking.provider?.provider_id || booking.providerId,
+            serviceId: booking.service_id,
+            createdAt: booking.created_at,
+            updatedAt: booking.updated_at,
+            notes: booking.notes
+          };
+        }),
+        pagination: {
+          page: pagination.page || 1,
+          limit: pagination.limit || 20,
+          total: pagination.total || 0,
+          totalPages: pagination.totalPages || 0,
+          hasNextPage: pagination.hasNextPage ?? (pagination.page < pagination.totalPages),
+          hasPreviousPage: pagination.hasPreviousPage ?? (pagination.page > 1)
+        }
+      },
+      message: response.data.message
+    };
+
+    return transformedData;
   } catch (error) {
     // Handle axios errors with better error messages
     if (axios.isAxiosError(error)) {

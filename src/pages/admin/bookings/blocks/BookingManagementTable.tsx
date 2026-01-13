@@ -104,6 +104,18 @@ const BookingManagementTable = ({
     if (!dateTime) return 'N/A';
     try {
       const date = new Date(dateTime);
+      if (isNaN(date.getTime())) {
+        // Try parsing as date string without time
+        const dateOnly = new Date(dateTime.split(' ')[0]);
+        if (!isNaN(dateOnly.getTime())) {
+          return dateOnly.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+        }
+        return 'N/A';
+      }
       return date.toLocaleString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -112,7 +124,7 @@ const BookingManagementTable = ({
         minute: '2-digit',
       });
     } catch {
-      return dateTime;
+      return 'N/A';
     }
   };
 
@@ -176,11 +188,11 @@ const BookingManagementTable = ({
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                <TableHead className="hidden sm:table-cell">Booking ID</TableHead>
-                <TableHead className="w-[180px] sm:w-[200px]">Booking</TableHead>
-                <TableHead className="hidden md:table-cell w-[150px]">Provider</TableHead>
-                <TableHead className="hidden lg:table-cell w-[120px]">Service</TableHead>
-                <TableHead className="hidden md:table-cell w-[150px]">Date-Time</TableHead>
+                <TableHead className="hidden sm:table-cell w-[120px]">Booking ID</TableHead>
+                <TableHead className="w-[180px] sm:w-[200px]">Customer</TableHead>
+                <TableHead className="hidden md:table-cell w-[140px]">Provider</TableHead>
+                <TableHead className="hidden lg:table-cell w-[100px]">Service</TableHead>
+                <TableHead className="hidden md:table-cell w-[160px]">Date-Time</TableHead>
                 <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
                 <TableHead className="hidden lg:table-cell w-[100px]">Amount</TableHead>
                 <TableHead className="hidden lg:table-cell w-[120px]">Payment</TableHead>
@@ -196,16 +208,26 @@ const BookingManagementTable = ({
                       onCheckedChange={(checked) => handleSelectBooking(booking.id, checked as boolean)}
                     />
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell font-medium">{booking.id}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <div className="font-medium text-xs max-w-[120px] truncate" title={booking.id}>
+                      {booking.id || 'N/A'}
+                    </div>
+                  </TableCell>
                   <TableCell className="w-[180px] sm:w-[200px]">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
                         <KeenIcon icon="user" className="text-primary text-xs" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate text-sm">{booking.userName || 'N/A'}</div>
-                        <div className="text-xs text-gray-500 hidden sm:block">{booking.phone || 'N/A'}</div>
-                        <div className="text-xs text-gray-500 sm:hidden">{booking.id || 'N/A'}</div>
+                        <div className="font-medium truncate text-sm" title={booking.userName || 'N/A'}>
+                          {booking.userName || 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-500 hidden sm:block truncate" title={booking.phone || 'N/A'}>
+                          {booking.phone || 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-500 sm:hidden truncate max-w-[100px]" title={booking.id || 'N/A'}>
+                          {booking.id ? booking.id.substring(0, 15) + '...' : 'N/A'}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -221,14 +243,16 @@ const BookingManagementTable = ({
                     </div>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    <Badge variant="outline" className="badge-outline">
+                    <Badge variant="outline" className="badge-outline max-w-[120px] truncate" title={booking.service || 'N/A'}>
                       {booking.service || 'N/A'}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <div>
-                      <div className="font-medium">{formatDateTime(booking.dateTime)}</div>
-                      <div className="text-sm text-gray-500 truncate max-w-[200px]" title={booking.address}>
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate" title={formatDateTime(booking.dateTime) !== 'N/A' ? formatDateTime(booking.dateTime) : booking.dateTime}>
+                        {formatDateTime(booking.dateTime) !== 'Invalid Date' ? formatDateTime(booking.dateTime) : (booking.dateTime ? new Date(booking.dateTime).toLocaleDateString() : 'N/A')}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate max-w-[180px]" title={booking.address || 'N/A'}>
                         {booking.address || 'N/A'}
                       </div>
                     </div>

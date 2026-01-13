@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -55,12 +56,12 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
 
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const promoTypes = [
     { value: 'percentage', label: 'Percentage Discount' },
-    { value: 'fixed', label: 'Fixed Amount Discount' },
-    { value: 'free_delivery', label: 'Free Delivery' },
-    { value: 'buy_one_get_one', label: 'Buy One Get One' }
+    { value: 'fixed', label: 'Fixed Amount Discount' }
+    // Removed: free_delivery, buy_one_get_one
   ];
 
   const handleInputChange = (field: string, value: any) => {
@@ -68,10 +69,190 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
       ...prev,
       [field]: value
     }));
+    // Clear error when field is changed
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleStartDateChange = (date: Date | undefined) => {
+    if (date) {
+      // Prevent selecting past dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setErrors(prev => ({
+          ...prev,
+          startDate: 'Start date cannot be in the past'
+        }));
+        return;
+      }
+      
+      // If end date is before new start date, update end date
+      if (endDate && selectedDate > endDate) {
+        setEndDate(selectedDate);
+      }
+      
+      setStartDate(date);
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.startDate;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleEndDateChange = (date: Date | undefined) => {
+    if (date) {
+      // Prevent selecting past dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setErrors(prev => ({
+          ...prev,
+          endDate: 'End date cannot be in the past'
+        }));
+        return;
+      }
+      
+      // Ensure end date is after start date
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < start) {
+          setErrors(prev => ({
+            ...prev,
+            endDate: 'End date must be after start date'
+          }));
+          return;
+        }
+      }
+      
+      setEndDate(date);
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.endDate;
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate promo code
+    if (!formData.code || formData.code.trim() === '') {
+      newErrors.code = 'Promo code is required';
+    } else if (formData.code.length < 3) {
+      newErrors.code = 'Promo code must be at least 3 characters';
+    } else if (formData.code.length > 20) {
+      newErrors.code = 'Promo code must not exceed 20 characters';
+    }
+
+    // Validate promo name
+    if (!formData.name || formData.name.trim() === '') {
+      newErrors.name = 'Promo name is required';
+    }
+
+    // Validate discount value
+    if (!formData.value || formData.value.trim() === '') {
+      newErrors.value = 'Discount value is required';
+    } else {
+      const value = parseFloat(formData.value);
+      if (isNaN(value) || value < 0) {
+        newErrors.value = 'Discount value must be a positive number';
+      } else if (formData.type === 'percentage' && value > 100) {
+        newErrors.value = 'Percentage discount cannot exceed 100%';
+      }
+    }
+
+    // Validate min order amount
+    if (formData.minOrderAmount && formData.minOrderAmount.trim() !== '') {
+      const minAmount = parseFloat(formData.minOrderAmount);
+      if (isNaN(minAmount) || minAmount < 0) {
+        newErrors.minOrderAmount = 'Minimum order amount must be a positive number';
+      }
+    }
+
+    // Validate max discount
+    if (formData.maxDiscount && formData.maxDiscount.trim() !== '') {
+      const maxDiscount = parseFloat(formData.maxDiscount);
+      if (isNaN(maxDiscount) || maxDiscount < 0) {
+        newErrors.maxDiscount = 'Maximum discount must be a positive number';
+      } else if (formData.minOrderAmount && formData.minOrderAmount.trim() !== '') {
+        const minAmount = parseFloat(formData.minOrderAmount);
+        if (maxDiscount > minAmount) {
+          newErrors.maxDiscount = 'Maximum discount cannot be greater than minimum order amount';
+        }
+      }
+    }
+
+    // Validate usage limit
+    if (formData.usageLimit && formData.usageLimit.trim() !== '') {
+      const usageLimit = parseInt(formData.usageLimit);
+      if (isNaN(usageLimit) || usageLimit < 1) {
+        newErrors.usageLimit = 'Usage limit must be at least 1';
+      }
+    }
+
+    // Validate dates
+    if (!startDate) {
+      newErrors.startDate = 'Start date is required';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (start < today) {
+        newErrors.startDate = 'Start date cannot be in the past';
+      }
+    }
+
+    if (!endDate) {
+      newErrors.endDate = 'End date is required';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
+      if (end < today) {
+        newErrors.endDate = 'End date cannot be in the past';
+      } else if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (end < start) {
+          newErrors.endDate = 'End date must be after start date';
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      // Show first error message
+      const firstError = Object.values(errors)[0];
+      if (firstError) {
+        toast.error(firstError);
+      }
+      return;
+    }
+    
     onSave({ 
       ...formData, 
       startDate, 
@@ -80,6 +261,8 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
     });
     onClose();
     // Reset form
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     setFormData({
       code: '',
       name: '',
@@ -90,15 +273,16 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
       maxDiscount: '',
       usageLimit: '',
       usageCount: '0',
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      startDate: today,
+      endDate: new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000),
       isActive: true,
       applicableServices: '',
       userRestrictions: '',
       terms: ''
     });
-    setStartDate(new Date());
-    setEndDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    setStartDate(today);
+    setEndDate(new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000));
+    setErrors({});
   };
 
   return (
@@ -125,10 +309,13 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                   value={formData.code}
                   onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
                   required
-                  className="mt-2"
+                  className={`mt-2 ${errors.code ? 'border-danger' : ''}`}
                   placeholder="e.g., SAVE20"
                   maxLength={20}
                 />
+                {errors.code && (
+                  <p className="text-danger text-xs mt-1">{errors.code}</p>
+                )}
               </div>
               
               <div>
@@ -138,9 +325,12 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   required
-                  className="mt-2"
+                  className={`mt-2 ${errors.name ? 'border-danger' : ''}`}
                   placeholder="e.g., Summer Sale 20% Off"
                 />
+                {errors.name && (
+                  <p className="text-danger text-xs mt-1">{errors.name}</p>
+                )}
               </div>
             </div>
 
@@ -188,11 +378,15 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                   value={formData.value}
                   onChange={(e) => handleInputChange('value', e.target.value)}
                   required
-                  className="mt-2"
+                  className={`mt-2 ${errors.value ? 'border-danger' : ''}`}
                   placeholder={formData.type === 'percentage' ? 'e.g., 20' : 'e.g., 100'}
                   min="0"
                   max={formData.type === 'percentage' ? '100' : undefined}
+                  step={formData.type === 'percentage' ? '0.01' : '1'}
                 />
+                {errors.value && (
+                  <p className="text-danger text-xs mt-1">{errors.value}</p>
+                )}
               </div>
             </div>
 
@@ -204,10 +398,14 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                   type="number"
                   value={formData.minOrderAmount}
                   onChange={(e) => handleInputChange('minOrderAmount', e.target.value)}
-                  className="mt-2"
+                  className={`mt-2 ${errors.minOrderAmount ? 'border-danger' : ''}`}
                   placeholder="e.g., 500"
                   min="0"
+                  step="0.01"
                 />
+                {errors.minOrderAmount && (
+                  <p className="text-danger text-xs mt-1">{errors.minOrderAmount}</p>
+                )}
               </div>
               
               <div>
@@ -217,10 +415,14 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                   type="number"
                   value={formData.maxDiscount}
                   onChange={(e) => handleInputChange('maxDiscount', e.target.value)}
-                  className="mt-2"
+                  className={`mt-2 ${errors.maxDiscount ? 'border-danger' : ''}`}
                   placeholder="e.g., 200"
                   min="0"
+                  step="0.01"
                 />
+                {errors.maxDiscount && (
+                  <p className="text-danger text-xs mt-1">{errors.maxDiscount}</p>
+                )}
               </div>
             </div>
           </div>
@@ -237,10 +439,13 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                   type="number"
                   value={formData.usageLimit}
                   onChange={(e) => handleInputChange('usageLimit', e.target.value)}
-                  className="mt-2"
+                  className={`mt-2 ${errors.usageLimit ? 'border-danger' : ''}`}
                   placeholder="e.g., 1000 (leave empty for unlimited)"
                   min="1"
                 />
+                {errors.usageLimit && (
+                  <p className="text-danger text-xs mt-1">{errors.usageLimit}</p>
+                )}
               </div>
               
               <div>
@@ -272,7 +477,8 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal mt-2",
-                        !startDate && "text-muted-foreground"
+                        !startDate && "text-muted-foreground",
+                        errors.startDate && "border-danger"
                       )}
                     >
                       <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
@@ -283,11 +489,19 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                     <Calendar
                       mode="single"
                       selected={startDate}
-                      onSelect={setStartDate}
+                      onSelect={handleStartDateChange}
                       initialFocus
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
+                {errors.startDate && (
+                  <p className="text-danger text-xs mt-1">{errors.startDate}</p>
+                )}
               </div>
               
               <div>
@@ -298,7 +512,8 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal mt-2",
-                        !endDate && "text-muted-foreground"
+                        !endDate && "text-muted-foreground",
+                        errors.endDate && "border-danger"
                       )}
                     >
                       <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
@@ -309,11 +524,21 @@ const AddPromoForm = ({ isOpen, onClose, onSave }: IAddPromoFormProps) => {
                     <Calendar
                       mode="single"
                       selected={endDate}
-                      onSelect={setEndDate}
+                      onSelect={handleEndDateChange}
                       initialFocus
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const minDate = startDate ? new Date(startDate) : today;
+                        minDate.setHours(0, 0, 0, 0);
+                        return date < minDate;
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
+                {errors.endDate && (
+                  <p className="text-danger text-xs mt-1">{errors.endDate}</p>
+                )}
               </div>
             </div>
           </div>

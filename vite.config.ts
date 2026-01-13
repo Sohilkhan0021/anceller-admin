@@ -23,8 +23,8 @@ export default defineConfig({
     port:3000,
     proxy: {
       '/api/v1': {
-        // target: 'http://localhost:3000',
-        target: 'https://ancellor.duckdns.org',
+        // target: 'http://localhost:8000',
+        target: 'https://api.anceller.com',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path,

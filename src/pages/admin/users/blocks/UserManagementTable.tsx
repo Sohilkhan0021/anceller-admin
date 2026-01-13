@@ -128,8 +128,8 @@ const UserManagementTable = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
+                  {users.map((user, index) => (
+                    <TableRow key={user.user_id || user.id || `user-${index}`}>
                       {/* <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell> */}
                       <TableCell>
                         <div className="flex items-center gap-3">

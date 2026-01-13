@@ -42,6 +42,7 @@ import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory 
 import { ICategory, ICreateCategoryRequest, IUpdateCategoryRequest } from '@/services/category.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
+import { getImageUrl } from '@/utils/imageUrl';
 
 // interface ICategory {
 //   id: string;
@@ -64,24 +65,28 @@ const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
 }) => {
   // Priority: imageUrl > iconUrl > lucideIcon > icon
   if (imageUrl || iconUrl) {
-    const imageSrc = imageUrl || iconUrl;
-    return (
-      <img
-        src={imageSrc}
-        alt="Category icon"
-        className={className || "w-5 h-5 object-cover"}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          // Fallback to icon if image fails
-          if (lucideIcon || icon) {
-            target.style.display = 'none';
-            // Will render icon below
-          } else {
-            target.src = 'https://via.placeholder.com/40x40?text=?';
-          }
-        }}
-      />
-    );
+    const imageSrc = getImageUrl(imageUrl || iconUrl);
+    if (!imageSrc) {
+      // If image URL is invalid, fall through to icon rendering
+    } else {
+      return (
+        <img
+          src={imageSrc}
+          alt="Category icon"
+          className={className || "w-5 h-5 object-cover"}
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            // Fallback to icon if image fails
+            if (lucideIcon || icon) {
+              target.style.display = 'none';
+              // Will render icon below
+            } else {
+              target.src = 'https://via.placeholder.com/40x40?text=?';
+            }
+          }}
+        />
+      );
+    }
   }
 
   // Try Lucide icon first if provided
@@ -225,34 +230,9 @@ const CategoryManagement = ({
   };
 
   const handleSaveCategory = (categoryData: any) => {
-    if (editingCategory) {
-      // Update existing
-      const request: IUpdateCategoryRequest = {
-        id: editingCategory.id,
-        name: categoryData.name,
-        description: categoryData.description,
-        icon: categoryData.iconFile,
-        sort_order: categoryData.displayOrder,
-        is_active: categoryData.status === 'active',
-        meta_data: JSON.stringify({ preset_icon: categoryData.icon })
-      };
-
-      updateCategory(request);
-      // Note: We don't close the form here; it's handled in onSuccess
-    } else {
-      // Create new
-      const request: ICreateCategoryRequest = {
-        name: categoryData.name,
-        description: categoryData.description,
-        icon: categoryData.iconFile,
-        sort_order: categoryData.displayOrder,
-        is_active: categoryData.status === 'active',
-        meta_data: JSON.stringify({ preset_icon: categoryData.icon })
-      };
-
-      createCategory(request);
-      // Note: We don't close the form here; it's handled in onSuccess
-    }
+    // This function is called from CategoryForm's onSave, but CategoryForm now handles mutations directly
+    // So this is just a placeholder - the actual save happens in CategoryForm
+    // We keep this for compatibility but it won't be called anymore
   };
 
   const handleToggleStatus = useCallback((categoryId: string, checked: boolean) => {
@@ -275,11 +255,27 @@ const CategoryManagement = ({
     setCategoryToDelete(null);
   };
 
-  const handleUpdateDisplayOrder = (categoryId: string, newOrder: number) => {
-    // TODO: Implement API call to update display order
-    toast.info('Display order updated');
-    // Refetch after order change
-    refetch();
+  const handleUpdateDisplayOrder = async (categoryId: string, newOrder: number) => {
+    try {
+      // Find the category to update
+      const category = categories.find(cat => cat.id === categoryId);
+      if (!category) {
+        toast.error('Category not found');
+        return;
+      }
+
+      // Update the display order via API
+      await updateCategory({
+        id: categoryId,
+        sort_order: newOrder,
+        is_active: category.status === 'active' || (category as any).is_active !== false
+      });
+      
+      toast.success('Display order updated');
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update display order');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -376,8 +372,8 @@ const CategoryManagement = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[80px]">Image</TableHead>
                       <TableHead className="w-[50px]">Order</TableHead>
-                      {/* <TableHead className="w-[80px]">Icon</TableHead> */}
                       <TableHead>Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="w-[100px]">Status</TableHead>
@@ -389,10 +385,34 @@ const CategoryManagement = ({
                       // Handle displayOrder - might be undefined or use snake_case from API
                       const displayOrder = category.displayOrder ??
                         (category as any).display_order ??
+                        (category as any).sort_order ??
                         (index + 1);
+                      
+                      // Get image URL for display
+                      const imageUrl = (category as any).image_url || (category as any).imageUrl || (category as any).icon_url || (category as any).image;
+                      const fullImageUrl = getImageUrl(imageUrl);
 
                       return (
                         <TableRow key={category.id}>
+                          <TableCell>
+                            {fullImageUrl ? (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                <img
+                                  src={fullImageUrl}
+                                  alt={category.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Select
                               value={displayOrder.toString()}
@@ -410,22 +430,6 @@ const CategoryManagement = ({
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          {/* <TableCell className="text-center align-middle">
-                            <div className="p-2 bg-primary-light rounded-lg inline-flex items-center justify-center">
-                              <CategoryIcon
-                                // icon={category.icon}
-                                // lucideIcon={category.lucideIcon}
-                                // iconUrl={category.iconUrl || category.icon_url}
-                                // imageUrl={category.imageUrl || category.image_url}
-                                lucideIcon={
-                                  category?.meta_data
-                                    ? JSON.parse(category.meta_data)?.preset_icon
-                                    : undefined
-                                }
-                                className="text-primary w-5 h-5"
-                              />
-                            </div>
-                          </TableCell> */}
                           <TableCell>
                             <div className="font-medium">{category.name || 'N/A'}</div>
                           </TableCell>
@@ -436,9 +440,9 @@ const CategoryManagement = ({
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {getStatusBadge(category.status || 'inactive')}
+                              {getStatusBadge(category.status || ((category as any).is_active === false ? 'inactive' : 'active'))}
                               <Switch
-                                checked={category.status === 'active'}
+                                checked={category.status === 'active' || ((category as any).is_active !== false && category.status !== 'inactive')}
                                 onCheckedChange={(checked) => handleToggleStatus(category.id, checked)}
                               />
                             </div>
@@ -522,6 +526,7 @@ const CategoryManagement = ({
         onClose={() => {
           setIsFormOpen(false);
           setEditingCategory(null);
+          refetch(); // Refetch categories when form closes
         }}
         onSave={handleSaveCategory}
         categoryData={editingCategory}

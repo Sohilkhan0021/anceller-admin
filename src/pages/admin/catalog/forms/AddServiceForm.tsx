@@ -21,6 +21,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useSnackbar } from 'notistack';
 import { useCreateService } from '@/services/service.hooks';
+import { useCategories } from '@/services/category.hooks';
+import { ContentLoader } from '@/components/loaders';
 
 interface IAddServiceFormProps {
   isOpen: boolean;
@@ -36,6 +38,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
     description: '',
     status: 'active',
     displayOrder: 1,
+    base_price: '' as string | number,
+    currency: 'INR',
+    estimated_duration_minutes: '' as string | number
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -43,6 +48,12 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Fetch categories for dropdown
+  const { categories, isLoading: isLoadingCategories } = useCategories(
+    { status: 'active', limit: 100 },
+    { enabled: isOpen }
+  );
 
   const createServiceMutation = useCreateService({
     onSuccess: (data) => {
@@ -151,6 +162,10 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
 
     if (!formData.name.trim()) {
       newErrors.name = 'Service name is required';
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Service name must be at least 2 characters long';
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = 'Service name must not exceed 100 characters';
     }
 
     if (!formData.categoryId) {
@@ -159,6 +174,18 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
 
     if (!formData.description?.trim()) {
       newErrors.description = 'Description is required';
+    }
+
+    if (!formData.base_price || formData.base_price === '') {
+      newErrors.base_price = 'Base price is required';
+    } else if (isNaN(Number(formData.base_price)) || Number(formData.base_price) < 0) {
+      newErrors.base_price = 'Base price must be a valid number greater than or equal to 0';
+    }
+
+    if (!formData.estimated_duration_minutes || formData.estimated_duration_minutes === '') {
+      newErrors.estimated_duration_minutes = 'Duration (minutes) is required';
+    } else if (isNaN(Number(formData.estimated_duration_minutes)) || Number(formData.estimated_duration_minutes) < 0) {
+      newErrors.estimated_duration_minutes = 'Duration must be a valid number greater than or equal to 0';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -177,6 +204,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
       description: '',
       status: 'active',
       displayOrder: 1,
+      base_price: '',
+      currency: 'INR',
+      estimated_duration_minutes: ''
     });
     setImagePreview(null);
     setImageFile(null);
@@ -214,6 +244,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
       image: imageFile,
       is_active: formData.status === 'active',
       sort_order: formData.displayOrder,
+      base_price: formData.base_price ? parseFloat(formData.base_price.toString()) : 0,
+      currency: 'INR', // Currency is always INR
+      estimated_duration_minutes: formData.estimated_duration_minutes ? parseInt(formData.estimated_duration_minutes.toString(), 10) : 0,
     });
   };
 
@@ -258,13 +291,19 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* TODO: Fetch categories from API */}
-                    <SelectItem value="CAT_ELECTRICAL">Electrical</SelectItem>
-                    <SelectItem value="CAT_PLUMBING">Plumbing</SelectItem>
-                    <SelectItem value="CAT_AC">AC Services</SelectItem>
-                    <SelectItem value="CAT_CLEANING">Cleaning</SelectItem>
-                    <SelectItem value="CAT_CARPENTRY">Carpentry</SelectItem>
-                    <SelectItem value="CAT_APPLIANCE">Appliance</SelectItem>
+                    {isLoadingCategories ? (
+                      <div className="p-4">
+                        <ContentLoader />
+                      </div>
+                    ) : categories.length === 0 ? (
+                      <div className="p-4 text-sm text-gray-500">No categories available</div>
+                    ) : (
+                      categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id || category.public_id || ''}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.categoryId && (
@@ -286,6 +325,53 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
               {errors.description && (
                 <p className="text-danger text-sm mt-1">{errors.description}</p>
               )}
+            </div>
+
+            {/* Base Price, Currency, and Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="base_price">Base Price *</Label>
+                <Input
+                  id="base_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.base_price}
+                  onChange={(e) => handleInputChange('base_price', e.target.value)}
+                  className={`mt-2 ${errors.base_price ? 'border-danger' : ''}`}
+                  placeholder="0.00"
+                />
+                {errors.base_price && (
+                  <p className="text-danger text-sm mt-1">{errors.base_price}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="currency">Currency *</Label>
+                <Input
+                  id="currency"
+                  value="INR"
+                  disabled
+                  className="mt-2 bg-gray-100"
+                  readOnly
+                />
+                <p className="text-xs text-gray-500 mt-1">Currency is fixed to INR</p>
+              </div>
+              <div>
+                <Label htmlFor="estimated_duration_minutes">Duration (Minutes) *</Label>
+                <Input
+                  id="estimated_duration_minutes"
+                  type="number"
+                  min="0"
+                  max="1440"
+                  value={formData.estimated_duration_minutes}
+                  onChange={(e) => handleInputChange('estimated_duration_minutes', e.target.value)}
+                  className={`mt-2 ${errors.estimated_duration_minutes ? 'border-danger' : ''}`}
+                  placeholder="0"
+                />
+                {errors.estimated_duration_minutes && (
+                  <p className="text-danger text-sm mt-1">{errors.estimated_duration_minutes}</p>
+                )}
+              </div>
             </div>
           </div>
 

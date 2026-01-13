@@ -5,7 +5,7 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, useMutation, UseQueryResult, UseMutationResult } from 'react-query';
+import { useQuery, useMutation, UseQueryResult, UseMutationResult, useQueryClient } from 'react-query';
 import { categoryService } from './category.service';
 import type {
   IGetCategoriesParams,
@@ -133,10 +133,14 @@ export const useCreateCategory = (options?: {
   onSuccess?: (data: ICreateCategoryResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<ICreateCategoryResponse, Error, ICreateCategoryRequest> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (data: ICreateCategoryRequest) => categoryService.createCategory(data),
     {
       onSuccess: (data) => {
+        // Invalidate categories query to refresh the list
+        queryClient.invalidateQueries(['categories']);
         if (options?.onSuccess) {
           options.onSuccess(data);
         }
@@ -159,10 +163,14 @@ export const useUpdateCategory = (options?: {
   onSuccess?: (data: IUpdateCategoryResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<IUpdateCategoryResponse, Error, IUpdateCategoryRequest> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (data: IUpdateCategoryRequest) => categoryService.updateCategory(data),
     {
       onSuccess: (data) => {
+        // Invalidate categories query to refresh the list
+        queryClient.invalidateQueries(['categories']);
         if (options?.onSuccess) {
           options.onSuccess(data);
         }

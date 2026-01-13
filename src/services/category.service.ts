@@ -117,30 +117,36 @@ export const createCategory = async (
   data: ICreateCategoryRequest
 ): Promise<ICreateCategoryResponse> => {
   try {
-    const formData = new FormData();
-    formData.append('name', data.name);
+    // Validate name is provided
+    if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
+      throw new Error('Category name is required');
+    }
 
-    if (data.description) {
-      formData.append('description', data.description);
+    const formData = new FormData();
+    formData.append('name', data.name.trim());
+
+    if (data.description && data.description.trim()) {
+      formData.append('description', data.description.trim());
     }
 
     if (data.image) {
       formData.append('image', data.image);
     }
 
-    if (data.icon) {
-      formData.append('icon', data.icon);
-    }
+    // Icon commented out - icon not working
+    // if (data.icon) {
+    //   formData.append('icon', data.icon);
+    // }
 
-    if (data.sort_order !== undefined) {
+    if (data.sort_order !== undefined && data.sort_order !== null) {
       formData.append('sort_order', data.sort_order.toString());
     }
 
-    if (data.is_active !== undefined) {
-      formData.append('is_active', data.is_active.toString());
-    }
+    // Always append is_active - explicitly set as boolean string
+    const isActive = data.is_active !== undefined ? data.is_active : true;
+    formData.append('is_active', isActive.toString());
 
-    if (data.meta_data) {
+    if (data.meta_data && data.meta_data.trim()) {
       formData.append('meta_data', data.meta_data);
     }
 
@@ -186,31 +192,37 @@ export const updateCategory = async (
   try {
     const formData = new FormData();
 
-    if (data.name) {
-      formData.append('name', data.name);
+    // Validate name if provided
+    if (data.name !== undefined) {
+      if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
+        throw new Error('Category name cannot be empty');
+      }
+      formData.append('name', data.name.trim());
     }
 
     if (data.description !== undefined) {
-      formData.append('description', data.description || '');
+      formData.append('description', data.description ? data.description.trim() : '');
     }
 
     if (data.image) {
       formData.append('image', data.image);
     }
 
-    if (data.icon) {
-      formData.append('icon', data.icon);
-    }
+    // Icon commented out - icon not working
+    // if (data.icon) {
+    //   formData.append('icon', data.icon);
+    // }
 
-    if (data.sort_order !== undefined) {
+    if (data.sort_order !== undefined && data.sort_order !== null) {
       formData.append('sort_order', data.sort_order.toString());
     }
 
+    // Always append is_active if provided - explicitly set as boolean string
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
     }
 
-    if (data.meta_data) {
+    if (data.meta_data && data.meta_data.trim()) {
       formData.append('meta_data', data.meta_data);
     }
 

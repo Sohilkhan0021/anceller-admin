@@ -25,7 +25,6 @@ const UserManagementHeader = ({
 }: IUserManagementHeaderProps) => {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
-  const [userTypeFilter, setUserTypeFilter] = useState('all');
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -102,7 +101,7 @@ const UserManagementHeader = ({
       </div>
 
       <div className="card-body">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search Bar */}
           <div className="lg:col-span-2">
             <div className="relative">
@@ -127,22 +126,6 @@ const UserManagementHeader = ({
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="SUSPENDED">Inactive</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* User Type Filter */}
-          <div>
-            <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="high-spending">High-Spending Users</SelectItem>
-                <SelectItem value="new">New Users</SelectItem>
-                <SelectItem value="inactive">Inactive Users</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -14,6 +14,8 @@ interface IUserManageContext {
     userDetailsLoading: boolean;
     updateUserStatus: (userId: string, status: 'ACTIVE' | 'SUSPENDED') => Promise<void>;
     isUpdatingStatus: boolean;
+    updateUser: (userId: string, userData: any) => Promise<void>;
+    isUpdatingUser: boolean;
 }
 
 const UserManageContext = createContext<IUserManageContext | undefined>(undefined);
@@ -30,8 +32,30 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
             // Invalidate users query to refetch the list so the new user appears
             queryClient.invalidateQueries(['users']);
         },
-        onError: (error: Error) => {
-            toast.error(error.message || 'Failed to create user');
+        onError: (error: any) => {
+            // Extract detailed validation errors
+            let errorMessage = error.message || 'Failed to create user';
+            
+            if (error.errors && typeof error.errors === 'object') {
+                // Format validation errors into a readable message
+                const errorMessages: string[] = [];
+                Object.keys(error.errors).forEach((field) => {
+                    const fieldErrors = error.errors[field];
+                    if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+                        errorMessages.push(`${field}: ${fieldErrors.join(', ')}`);
+                    }
+                });
+                
+                if (errorMessages.length > 0) {
+                    errorMessage = errorMessages.join('; ');
+                }
+            }
+            
+            toast.error(errorMessage);
+            // Re-throw with errors object for form handling
+            const enhancedError: any = new Error(errorMessage);
+            enhancedError.errors = error.errors;
+            throw enhancedError;
         }
     });
 
@@ -100,6 +124,49 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         await statusMutation.mutateAsync({ userId, status });
     };
 
+    const updateUserMutation = useMutation(
+        ({ userId, userData }: { userId: string; userData: any }) =>
+            userService.updateUser(userId, userData),
+        {
+            onSuccess: (data) => {
+                toast.success(data.message || 'User updated successfully');
+                queryClient.invalidateQueries(['users']);
+                if (currentUserDetails) {
+                    fetchUserDetails(currentUserDetails.user_id || currentUserDetails.id);
+                }
+            },
+            onError: (error: any) => {
+                // Extract detailed validation errors
+                let errorMessage = error.message || 'Failed to update user';
+                
+                if (error.errors && typeof error.errors === 'object') {
+                    // Format validation errors into a readable message
+                    const errorMessages: string[] = [];
+                    Object.keys(error.errors).forEach((field) => {
+                        const fieldErrors = error.errors[field];
+                        if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+                            errorMessages.push(`${field}: ${fieldErrors.join(', ')}`);
+                        }
+                    });
+                    
+                    if (errorMessages.length > 0) {
+                        errorMessage = errorMessages.join('; ');
+                    }
+                }
+                
+                toast.error(errorMessage);
+                // Re-throw with errors object for form handling
+                const enhancedError: any = new Error(errorMessage);
+                enhancedError.errors = error.errors;
+                throw enhancedError;
+            }
+        }
+    );
+
+    const updateUser = async (userId: string, userData: any) => {
+        await updateUserMutation.mutateAsync({ userId, userData });
+    };
+
     return (
         <UserManageContext.Provider value={{
             createUser,
@@ -108,7 +175,9 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
             fetchUserDetails,
             userDetailsLoading,
             updateUserStatus,
-            isUpdatingStatus: statusMutation.isLoading
+            isUpdatingStatus: statusMutation.isLoading,
+            updateUser,
+            isUpdatingUser: updateUserMutation.isLoading
         }}>
             {children}
         </UserManageContext.Provider>

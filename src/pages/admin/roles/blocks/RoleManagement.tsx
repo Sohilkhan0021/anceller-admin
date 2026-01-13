@@ -391,7 +391,6 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                             variant="outline"
                             onClick={() => handleEditRole(role)}
                             className="flex-shrink-0 p-1"
-                            disabled={role.is_system}
                           >
                             <KeenIcon icon="pencil" className="text-sm" />
                             Edit

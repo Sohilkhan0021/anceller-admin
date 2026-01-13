@@ -105,6 +105,30 @@ export interface IUpdateSubServiceResponse {
   message: string;
   data: {
     sub_service_id: string;
+    name?: string;
+    description?: string;
+    image_url?: string | null;
+    base_price?: string;
+    currency?: string;
+    duration_minutes?: number;
+    is_active?: boolean;
+    sort_order?: number;
+    service?: {
+      service_id: string;
+      name: string;
+      category?: {
+        category_id: string;
+        name: string;
+        icon_url?: string | null;
+      } | null;
+    };
+    category?: {
+      category_id: string;
+      name: string;
+      icon_url?: string | null;
+    } | null;
+    created_at?: string;
+    updated_at?: string;
   };
 }
 

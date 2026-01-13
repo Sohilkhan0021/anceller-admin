@@ -71,37 +71,63 @@ const CouponsManagementContent = () => {
   };
 
   const handleSavePromo = (promoData: any) => {
+    // Validate max discount <= min order amount if both are provided
+    if (promoData.minOrderAmount && promoData.maxDiscount) {
+      const minAmount = parseFloat(promoData.minOrderAmount);
+      const maxDiscount = parseFloat(promoData.maxDiscount);
+      if (maxDiscount > minAmount) {
+        toast.error('Maximum discount cannot be greater than minimum order amount');
+        return;
+      }
+    }
+    
     // Transform UI data to API request format
-    const apiData = {
+    const apiData: any = {
       code: promoData.code,
       name: promoData.name,
-      coupon_type: promoData.type === 'percentage' ? 'PERCENTAGE' as const : 'FLAT_AMOUNT' as const,
+      coupon_type: promoData.type === 'percentage' ? 'PERCENTAGE' : 'FLAT_AMOUNT',
       discount_value: parseFloat(promoData.value),
-      max_usage: parseInt(promoData.usageLimit || promoData.maxUsage || '0'),
+      max_usage: promoData.usageLimit ? parseInt(promoData.usageLimit) : undefined,
       valid_until: promoData.endDate ? new Date(promoData.endDate).toISOString() : new Date().toISOString(),
       description: promoData.description,
       min_order_amount: promoData.minOrderAmount ? parseFloat(promoData.minOrderAmount) : undefined,
+      max_discount: promoData.maxDiscount ? parseFloat(promoData.maxDiscount) : undefined
     };
 
     createCoupon(apiData);
   };
 
   const handleUpdatePromo = (promoData: any) => {
+    // Validate max discount <= min order amount if both are provided
+    if (promoData.minOrderAmount && promoData.maxDiscount) {
+      const minAmount = parseFloat(promoData.minOrderAmount);
+      const maxDiscount = parseFloat(promoData.maxDiscount);
+      if (maxDiscount > minAmount) {
+        toast.error('Maximum discount cannot be greater than minimum order amount');
+        return;
+      }
+    }
+    
     // Transform UI data to API request format
-    const apiData = {
+    const apiData: any = {
       code: promoData.code,
       name: promoData.name,
-      coupon_type: promoData.type === 'percentage' ? 'PERCENTAGE' as const : 'FLAT_AMOUNT' as const,
+      coupon_type: promoData.type === 'percentage' ? 'PERCENTAGE' : 'FLAT_AMOUNT',
       discount_value: parseFloat(promoData.value),
-      max_usage: parseInt(promoData.usageLimit || promoData.maxUsage || '0'),
+      max_usage: promoData.usageLimit ? parseInt(promoData.usageLimit) : undefined,
       valid_until: promoData.endDate ? new Date(promoData.endDate).toISOString() : new Date().toISOString(),
       description: promoData.description,
       min_order_amount: promoData.minOrderAmount ? parseFloat(promoData.minOrderAmount) : undefined,
-      status: promoData.isActive ? 'active' as const : 'deactivated' as const,
+      max_discount: promoData.maxDiscount ? parseFloat(promoData.maxDiscount) : undefined,
+      is_active: promoData.isActive !== false
     };
 
-    if (editPromo?.id) {
-      updateCoupon({ id: editPromo.id, data: apiData });
+    if (editPromo?.id || editPromo?.coupon_id) {
+      const couponId = editPromo.id || editPromo.coupon_id;
+      if (!couponId) {
+        throw new Error('Coupon ID is required for update');
+      }
+      updateCoupon({ id: couponId, data: apiData });
     }
   };
 

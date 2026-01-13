@@ -143,7 +143,7 @@ export const createService = async (
     }
 
     if (data.currency) {
-      formData.append('currency', data.currency);
+      formData.append('currency', 'INR'); // Currency is always INR
     }
 
     if (data.estimated_duration_minutes !== undefined) {
@@ -235,7 +235,7 @@ export const updateService = async (
     }
 
     if (data.currency) {
-      formData.append('currency', data.currency);
+      formData.append('currency', 'INR'); // Currency is always INR
     }
 
     if (data.estimated_duration_minutes !== undefined) {

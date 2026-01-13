@@ -11,13 +11,10 @@ import { Alert } from '@/components';
 
 const loginSchema = Yup.object().shape({
   email: Yup.string()
-    .email('Wrong email format')
-    .min(3, 'Minimum 3 symbols')
-    .max(50, 'Maximum 50 symbols')
+    .email('Please enter a valid email address')
     .required('Email is required'),
   password: Yup.string()
-    .min(3, 'Minimum 3 symbols')
-    .max(50, 'Maximum 50 symbols')
+    .min(8, 'Password must be at least 8 characters long')
     .required('Password is required'),
   remember: Yup.boolean()
 });
@@ -137,7 +134,8 @@ const Login = () => {
           <label className="form-label text-gray-900">Email</label>
           <label className="input">
             <input
-              placeholder="Enter username"
+              placeholder="Enter email"
+              type="email"
               autoComplete="off"
               {...formik.getFieldProps('email')}
               className={clsx('form-control', {
@@ -146,7 +144,7 @@ const Login = () => {
             />
           </label>
           {formik.touched.email && formik.errors.email && (
-            <span role="alert" className="text-danger text-xs mt-1">
+            <span role="alert" className="text-danger text-xs mt-1 break-words max-w-full">
               {formik.errors.email}
             </span>
           )}
@@ -185,7 +183,7 @@ const Login = () => {
             </button>
           </label>
           {formik.touched.password && formik.errors.password && (
-            <span role="alert" className="text-danger text-xs mt-1">
+            <span role="alert" className="text-danger text-xs mt-1 break-words max-w-full">
               {formik.errors.password}
             </span>
           )}

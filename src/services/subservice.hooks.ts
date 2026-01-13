@@ -5,7 +5,7 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, useMutation, UseQueryResult, UseMutationResult } from 'react-query';
+import { useQuery, useMutation, UseQueryResult, UseMutationResult, useQueryClient } from 'react-query';
 import { subServiceService, IGetSubServiceByIdResponse } from './subservice.service';
 import type {
   IGetSubServicesParams,
@@ -108,13 +108,23 @@ export const useSubServices = (
       normalizedStatus = 'inactive';
     }
     
+    // Extract categoryId from nested service.category structure
+    const categoryId = subService.categoryId 
+      ?? subService.service?.category?.category_id 
+      ?? subService.service?.category?.public_id 
+      ?? subService.category?.category_id 
+      ?? subService.category?.public_id 
+      ?? undefined;
+    
     return {
       ...subService,
       id: subService.id || subService.public_id || subService.sub_service_id || subService.subServiceId,
-      serviceId: subService.serviceId ?? subService.service_id ?? undefined,
-      categoryId: subService.categoryId ?? subService.serviceId ?? subService.service_id ?? undefined, // For backward compatibility
+      serviceId: subService.serviceId ?? subService.service_id ?? subService.service?.service_id ?? undefined,
+      categoryId: categoryId, // Extract from nested structure
+      categoryName: subService.service?.category?.name ?? subService.category?.name ?? undefined, // Extract category name
       displayOrder: subService.displayOrder ?? subService.display_order ?? undefined,
       image: subService.image ?? subService.image_url ?? undefined,
+      image_url: subService.image_url ?? null, // Preserve image_url from API (can be null)
       status: normalizedStatus,
       is_active: normalizedStatus === 'active',
     };
@@ -140,11 +150,17 @@ export const useUpdateSubService = (options?: {
   onSuccess?: (data: IUpdateSubServiceResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<IUpdateSubServiceResponse, Error, { subServiceId: string; data: IUpdateSubServiceRequest }> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     ({ subServiceId, data }: { subServiceId: string; data: IUpdateSubServiceRequest }) => 
       subServiceService.updateSubService(subServiceId, data),
     {
-      onSuccess: (data) => {
+      onSuccess: (data, variables) => {
+        // Invalidate queries to ensure fresh data is fetched
+        queryClient.invalidateQueries(['sub-services']);
+        queryClient.invalidateQueries(['sub-service', variables.subServiceId]);
+        
         if (options?.onSuccess) {
           options.onSuccess(data);
         }

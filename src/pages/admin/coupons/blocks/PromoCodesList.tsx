@@ -106,9 +106,13 @@ const PromoCodesList = ({ onEditPromo, onDeletePromo }: IPromoCodesListProps) =>
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
-  const getTypeDisplay = (type?: string, value?: number) => {
-    if (!type || value === undefined) return 'N/A';
-    return type === 'percentage' ? `${value}%` : `₹${value}`;
+  const getTypeDisplay = (type?: string, value?: number | string) => {
+    if (!type || value === undefined || value === null) return 'N/A';
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(numValue)) return 'N/A';
+    // Check if type is percentage (case-insensitive)
+    const isPercentage = type?.toLowerCase() === 'percentage' || type === 'PERCENTAGE';
+    return isPercentage ? `${numValue}%` : `₹${numValue}`;
   };
 
   const getUsagePercentage = (usageCount?: number, maxUsage?: number) => {
@@ -324,17 +328,27 @@ const PromoCodesList = ({ onEditPromo, onDeletePromo }: IPromoCodesListProps) =>
                         <TableCell className="hidden sm:table-cell">
                           <div className="text-center">
                             <div className="font-semibold">
-                              {promo.usageCount || 0}/{promo.maxUsage || 0}
+                              {promo.usageCount || promo.usage_count || promo.redemptions || 0}
+                              {promo.maxUsage || promo.max_usage ? `/${promo.maxUsage || promo.max_usage}` : ' (Unlimited)'}
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                              <div
-                                className="bg-primary h-2 rounded-full"
-                                style={{ width: `${getUsagePercentage(promo.usageCount, promo.maxUsage)}%` }}
-                              ></div>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {getUsagePercentage(promo.usageCount, promo.maxUsage)}% used
-                            </div>
+                            {(promo.maxUsage || promo.max_usage) && (
+                              <>
+                                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                  <div
+                                    className="bg-primary h-2 rounded-full"
+                                    style={{ width: `${getUsagePercentage(promo.usageCount || promo.usage_count || promo.redemptions, promo.maxUsage || promo.max_usage)}%` }}
+                                  ></div>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {getUsagePercentage(promo.usageCount || promo.usage_count || promo.redemptions, promo.maxUsage || promo.max_usage)}% used
+                                </div>
+                              </>
+                            )}
+                            {!promo.maxUsage && !promo.max_usage && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                No limit
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">

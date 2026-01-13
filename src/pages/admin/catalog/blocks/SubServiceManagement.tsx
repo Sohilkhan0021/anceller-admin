@@ -30,10 +30,12 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useSubServices, useDeleteSubService, useUpdateSubService } from '@/services';
+import { subServiceService } from '@/services/subservice.service';
 import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { useServices } from '@/services/service.hooks';
+import { getImageUrl } from '@/utils/imageUrl';
 
 // interface ISubService {
 //   id: string;
@@ -110,14 +112,88 @@ const SubServiceManagement = ({
   });
 
   // Update sub-service mutation
-  const { mutate: updateSubService } = useUpdateSubService({
-    onSuccess: () => {
-      refetch();
+  const { mutate: updateSubService, isLoading: isUpdating } = useUpdateSubService({
+    onSuccess: async (data) => {
+      console.log('Sub-service update success - Full response:', JSON.stringify(data, null, 2));
+      console.log('Sub-service update success - Image URL:', data?.data?.image_url);
+      console.log('Sub-service update success - Response structure:', {
+        status: data?.status,
+        message: data?.message,
+        hasData: !!data?.data,
+        dataKeys: data?.data ? Object.keys(data.data) : [],
+        image_url: data?.data?.image_url,
+        sub_service_id: data?.data?.sub_service_id
+      });
+      
+      // VERIFY: Check if response has all expected fields
+      const responseData = data?.data;
+      if (!responseData) {
+        console.error('❌ ERROR: Response data is missing!');
+        toast.error('Update failed: Invalid response from server');
+        return;
+      }
+      
+      const responseKeys = Object.keys(responseData);
+      const subServiceId = responseData.sub_service_id || editingSubService?.id;
+      
+      // If response is incomplete (only has sub_service_id), fetch the full sub-service data
+      // This handles cases where the backend returns a minimal response
+      if (responseKeys.length < 5 || responseKeys.length === 1) {
+        console.warn('⚠️ WARNING: Response is incomplete, fetching full sub-service data', {
+          keys: responseKeys,
+          subServiceId,
+          note: 'This is expected behavior - backend may return minimal response after update'
+        });
+        
+        // Always show success and refetch - the list will have the correct data with image
+        // The refetch will get the updated sub-service with the image_url from the database
+        toast.success('Sub-service updated successfully');
+        refetch(); // Refresh the list to show updated data including image
+        setIsFormOpen(false);
+        setEditingSubService(null);
+        
+        // Optionally try to fetch full data for logging, but don't block on it
+        if (subServiceId) {
+          subServiceService.getSubServiceById(subServiceId)
+            .then((fullSubService) => {
+              console.log('✅ Fetched full sub-service data after update:', fullSubService);
+              if (fullSubService?.data?.image_url) {
+                console.log('✅ Image URL confirmed:', fullSubService.data.image_url);
+              }
+            })
+            .catch((fetchError) => {
+              console.warn('Could not fetch full sub-service data (non-critical):', fetchError);
+            });
+        }
+        
+        return;
+      }
+      
+      // Check if image_url is present (can be null if no image was uploaded)
+      const hasImageUrl = 'image_url' in responseData;
+      if (!hasImageUrl) {
+        console.warn('⚠️ WARNING: image_url field missing from response');
+      }
+      
+      // Success - show appropriate message
+      if (responseData.image_url) {
+        toast.success(`Sub-service updated successfully. Image: ${responseData.image_url}`);
+      } else {
+        toast.success('Sub-service updated successfully');
+      }
+      
+      refetch(); // Refresh the list to show updated data including image
+      setIsFormOpen(false);
+      setEditingSubService(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update sub-service status');
+      console.error('Sub-service update error', { error: error.message, stack: error.stack });
+      toast.error(error.message || 'Failed to update sub-service');
     }
   });
+
+  // Create sub-service state
+  const [isCreating, setIsCreating] = useState(false);
 
   // Delete sub-service mutation
   const { mutate: deleteSubService, isLoading: isDeleting } = useDeleteSubService({
@@ -149,22 +225,140 @@ const SubServiceManagement = ({
   };
 
   const handleEditSubService = (subService: ISubService) => {
-    setEditingSubService(subService);
+    // Ensure all fields are properly mapped for editing
+    const subServiceWithData: any = {
+      ...subService,
+      id: subService.id || subService.public_id || (subService as any).sub_service_id || (subService as any).public_id,
+      // Map all fields properly
+      name: subService.name,
+      serviceId: subService.serviceId || subService.service_id || (subService as any).service?.service_id,
+      categoryId: subService.categoryId || (subService as any).category?.category_id || (subService as any).category_id,
+      image_url: (subService as any).image_url || (subService as any).imageUrl || (subService as any).image,
+      status: subService.status || ((subService as any).is_active === false ? 'inactive' : 'active'),
+      displayOrder: subService.displayOrder || subService.display_order || (subService as any).sort_order || 1,
+      is_active: subService.status === 'active' || ((subService as any).is_active !== false && subService.status !== 'inactive')
+    };
+    setEditingSubService(subServiceWithData);
     setIsFormOpen(true);
   };
 
-  const handleSaveSubService = (subServiceData: any) => {
+  const handleSaveSubService = async (subServiceData: any) => {
     if (editingSubService) {
-      onUpdateSubService?.(subServiceData);
-      toast.success('Sub-service updated successfully');
+      // Update existing sub-service
+      const subServiceId = editingSubService.id || editingSubService.public_id || (editingSubService as any).sub_service_id;
+      if (!subServiceId) {
+        toast.error('Sub-service ID is missing');
+        return;
+      }
+
+      // Debug: Log the incoming form data to see what we're receiving
+      console.log('handleSaveSubService - Received form data:', {
+        hasImage: !!subServiceData.image,
+        imageType: typeof subServiceData.image,
+        isFile: subServiceData.image instanceof File,
+        imageValue: subServiceData.image,
+        imageKeys: subServiceData.image && typeof subServiceData.image === 'object' ? Object.keys(subServiceData.image) : 'not an object',
+        image_url: subServiceData.image_url
+      });
+
+      // Format data for API
+      const updateData: any = {
+        service_id: subServiceData.serviceId,
+        name: subServiceData.name,
+        description: subServiceData.description || '',
+        is_active: subServiceData.status === 'active',
+        sort_order: subServiceData.displayOrder || 1,
+        base_price: subServiceData.base_price ? parseFloat(subServiceData.base_price.toString()) : 0,
+        currency: 'INR', // Currency is always INR
+        duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
+      };
+
+      // Include image if a new file was uploaded
+      // CRITICAL: Check if image is a File object (not an empty object or null)
+      if (subServiceData.image && subServiceData.image instanceof File) {
+        updateData.image = subServiceData.image;
+        console.log('✅ Sub-service update: New image file provided', { 
+          fileName: subServiceData.image.name,
+          fileSize: subServiceData.image.size,
+          fileType: subServiceData.image.type,
+          isFile: subServiceData.image instanceof File,
+          note: 'File will be uploaded - backend will set image_url after processing'
+        });
+        // Explicitly do NOT set image_url when sending a file - backend will handle it
+      } else if (subServiceData.image && typeof subServiceData.image === 'object' && Object.keys(subServiceData.image).length === 0) {
+        // Image is an empty object {} - this means no new file was selected, keep existing image_url
+        console.log('⚠️ Sub-service update: Empty image object detected - keeping existing image_url');
+        // Don't include image or image_url - backend will keep the existing one
+      } else if (subServiceData.image === null || subServiceData.image === undefined) {
+        // No image file provided - use existing image_url if available
+        if (subServiceData.image_url !== undefined) {
+          updateData.image_url = subServiceData.image_url || null;
+          console.log('Sub-service update: No new file, using image_url', { image_url: updateData.image_url });
+        } else {
+          console.log('Sub-service update: No image file and no image_url - backend will keep existing');
+        }
+      } else if (subServiceData.image_url !== undefined) {
+        // Always send image_url if it's defined (even if null/empty) to preserve or clear it
+        // This is only used when NOT uploading a new file
+        updateData.image_url = subServiceData.image_url || null;
+        console.log('Sub-service update: image_url provided (no file upload)', { image_url: updateData.image_url });
+      }
+
+      // base_price, currency, and duration_minutes are now always included (required fields)
+
+      updateSubService({
+        subServiceId,
+        data: updateData
+      });
     } else {
-      onCreateSubService?.(subServiceData);
-      toast.success('Sub-service created successfully');
+      // Create new sub-service
+      setIsCreating(true);
+      try {
+        const createData: any = {
+          service_id: subServiceData.serviceId,
+          name: subServiceData.name,
+          description: subServiceData.description || '',
+          is_active: subServiceData.status === 'active',
+          sort_order: subServiceData.displayOrder || 1,
+          base_price: subServiceData.base_price ? parseFloat(subServiceData.base_price.toString()) : 0,
+          currency: subServiceData.currency || 'INR',
+          duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
+        };
+
+        // Include image if uploaded
+        if (subServiceData.image instanceof File) {
+          createData.image = subServiceData.image;
+          console.log('Sub-service create: Image file provided', {
+            fileName: subServiceData.image.name,
+            fileSize: subServiceData.image.size,
+            fileType: subServiceData.image.type,
+            isFile: subServiceData.image instanceof File
+          });
+        } else if (subServiceData.image_url) {
+          createData.image_url = subServiceData.image_url;
+          console.log('Sub-service create: image_url provided', { image_url: subServiceData.image_url });
+        } else {
+          console.log('Sub-service create: No image provided');
+        }
+
+        console.log('Sub-service create: Sending data to service', {
+          hasImage: !!createData.image,
+          hasImageUrl: !!createData.image_url,
+          imageType: createData.image instanceof File ? 'File' : typeof createData.image
+        });
+
+        await subServiceService.createSubService(createData);
+        toast.success('Sub-service created successfully');
+        refetch();
+        setIsFormOpen(false);
+        setEditingSubService(null);
+        onCreateSubService?.(subServiceData);
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to create sub-service');
+      } finally {
+        setIsCreating(false);
+      }
     }
-    setIsFormOpen(false);
-    setEditingSubService(null);
-    // Refetch sub-services after save
-    refetch();
   };
 
   const handleToggleStatus = useCallback((subServiceId: string, checked: boolean) => {
@@ -195,14 +389,22 @@ const SubServiceManagement = ({
     );
   };
 
-  const getCategoryName = (categoryId?: string, serviceId?: string) => {
-    if (categoryId) {
-      return availableCategories.find(c => c.id === categoryId)?.name || 'Unknown';
+  const getCategoryName = (subService: ISubService) => {
+    // First try to get categoryName from the normalized data
+    if ((subService as any).categoryName) {
+      return (subService as any).categoryName;
     }
-    if (serviceId) {
-      // If we have serviceId, we might need to look it up differently
-      // For now, return serviceId or Unknown
-      return serviceId || 'Unknown';
+    // Then try to get from nested service.category structure
+    if ((subService as any).service?.category?.name) {
+      return (subService as any).service.category.name;
+    }
+    // Then try to get from nested category structure
+    if ((subService as any).category?.name) {
+      return (subService as any).category.name;
+    }
+    // Fallback to availableCategories lookup
+    if (subService.categoryId) {
+      return availableCategories.find(c => c.id === subService.categoryId)?.name || 'Unknown';
     }
     return 'Unknown';
   };
@@ -328,32 +530,45 @@ const SubServiceManagement = ({
                             <div className="text-sm font-medium text-center">{displayOrder}</div>
                           </TableCell>
                           <TableCell>
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                              {(subService.image || subService.image_url) ? (
-                                <img
-                                  src={subService.image || subService.image_url}
-                                  alt={subService.name || 'Sub-service'}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    // Fallback to placeholder if image fails to load
-                                    target.src = `https://via.placeholder.com/100x100?text=${encodeURIComponent((subService.name || 'S').substring(0, 1))}`;
-                                    target.onerror = null; // Prevent infinite loop
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                                  <KeenIcon icon={subService.icon || 'category'} className="text-2xl" />
+                            {(() => {
+                              // Use sub-service's own image_url only (no fallback to icon_url)
+                              const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image || (subService as any).image_path || '';
+                              const fullImageUrl = getImageUrl(imageUrl);
+                              
+                              // If image URL is invalid (local path, etc.), show placeholder
+                              if (!fullImageUrl && imageUrl) {
+                                return (
+                                  <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                    <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                                  </div>
+                                );
+                              }
+                              
+                              return fullImageUrl ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                  <img
+                                    src={fullImageUrl}
+                                    alt={subService.name || 'Sub-service'}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
                                 </div>
-                              )}
-                            </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                  <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">{subService.name || 'N/A'}</div>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm text-gray-600">
-                              {getCategoryName(subService.categoryId, subService.serviceId)}
+                              {getCategoryName(subService)}
                             </div>
                           </TableCell>
                           <TableCell>

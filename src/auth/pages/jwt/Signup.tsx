@@ -18,19 +18,17 @@ const initialValues = {
 
 const signupSchema = Yup.object().shape({
   email: Yup.string()
-    .email('Wrong email format')
-    .min(3, 'Minimum 3 symbols')
-    .max(50, 'Maximum 50 symbols')
+    .email('Please enter a valid email address')
     .required('Email is required'),
   password: Yup.string()
-    .min(3, 'Minimum 3 symbols')
-    .max(50, 'Maximum 50 symbols')
+    .min(8, 'Password must be at least 8 characters long')
+    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .matches(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .matches(/[0-9]/, 'Password must contain at least one number')
     .required('Password is required'),
   changepassword: Yup.string()
-    .min(3, 'Minimum 3 symbols')
-    .max(50, 'Maximum 50 symbols')
     .required('Password confirmation is required')
-    .oneOf([Yup.ref('password')], "Password and Confirm Password didn't match"),
+    .oneOf([Yup.ref('password')], "Passwords do not match"),
   acceptTerms: Yup.bool().required('You must accept the terms and conditions')
 });
 
@@ -142,7 +140,7 @@ const Signup = () => {
             />
           </label>
           {formik.touched.email && formik.errors.email && (
-            <span role="alert" className="text-danger text-xs mt-1">
+            <span role="alert" className="text-danger text-xs mt-1 break-words max-w-full">
               {formik.errors.email}
             </span>
           )}
@@ -175,7 +173,7 @@ const Signup = () => {
             </button>
           </label>
           {formik.touched.password && formik.errors.password && (
-            <span role="alert" className="text-danger text-xs mt-1">
+            <span role="alert" className="text-danger text-xs mt-1 break-words max-w-full">
               {formik.errors.password}
             </span>
           )}
@@ -211,7 +209,7 @@ const Signup = () => {
             </button>
           </label>
           {formik.touched.changepassword && formik.errors.changepassword && (
-            <span role="alert" className="text-danger text-xs mt-1">
+            <span role="alert" className="text-danger text-xs mt-1 break-words max-w-full">
               {formik.errors.changepassword}
             </span>
           )}

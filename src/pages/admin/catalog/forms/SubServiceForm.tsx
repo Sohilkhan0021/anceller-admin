@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useSubServiceById } from '@/services/subservice.hooks';
+import { getImageUrl } from '@/utils/imageUrl';
 
 interface ISubServiceFormProps {
   isOpen: boolean;
@@ -35,76 +36,110 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     serviceId: '',
     categoryId: '',
     icon: 'category', // Keep for backward compatibility
-    image: '',
+    image: null as File | null,
+    image_url: '',
     status: 'active' as 'active' | 'inactive',
-    displayOrder: 1
+    displayOrder: 1,
+    base_price: '' as string | number,
+    currency: 'INR',
+    duration_minutes: '' as string | number
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Fetch sub-service details when editing
-  const subServiceId = subServiceData?.id || subServiceData?.sub_service_id || null;
+  const subServiceId = subServiceData?.id || subServiceData?.sub_service_id || subServiceData?.public_id || null;
   const { data: subServiceDetails, isLoading: isLoadingDetails } = useSubServiceById(
     subServiceId,
     { enabled: !!subServiceId && isOpen }
   );
 
   useEffect(() => {
-    if (subServiceDetails?.data) {
-      // Map API response to form data
-      const apiData = subServiceDetails.data;
-      const categoryId = apiData.category?.category_id || apiData.service?.category?.category_id || '';
-      const serviceId = apiData.service?.service_id || '';
-      const imageUrl = apiData.image_url || '';
+    if (isOpen) {
+      // Priority: API response > passed subServiceData > reset form
+      // Handle nested response structure: data.sub_service (from getSubServiceById)
+      const responseData = (subServiceDetails as any)?.data;
+      const apiData = responseData?.sub_service || responseData?.data?.sub_service || responseData?.data || responseData || subServiceDetails;
       
-      setFormData({
-        name: apiData.name || '',
-        serviceId: serviceId,
-        categoryId: categoryId,
-        icon: 'category',
-        image: imageUrl,
-        status: apiData.is_active ? 'active' : 'inactive',
-        displayOrder: apiData.sort_order || 1
-      });
-      
-      // Set image preview if image exists
-      if (imageUrl) {
-        // If it's a full URL, use it directly; otherwise construct the full URL
-        const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || '';
-        const fullImageUrl = imageUrl.startsWith('http') 
-          ? imageUrl 
-          : `${baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
+      // Debug: Log to see the structure
+      if (import.meta.env.DEV && responseData) {
+        console.log('SubService API Response:', { 
+          responseData, 
+          apiData,
+          hasImageUrl: 'image_url' in (apiData || {}),
+          imageUrlValue: apiData?.image_url,
+          imageUrlType: typeof apiData?.image_url,
+          allKeys: apiData ? Object.keys(apiData) : []
+        });
+      }
+      if (apiData && apiData.name) {
+        // Map API response to form data
+        const categoryId = apiData.category?.category_id || apiData.service?.category?.category_id || apiData.category_id || '';
+        const serviceId = apiData.service?.service_id || apiData.service_id || '';
+        // Use sub-service's own image_url - handle null, undefined, and empty string
+        // image_url can be null (explicitly cleared), undefined (not set), or a string (URL)
+        const imageUrl = apiData.image_url !== undefined && apiData.image_url !== null && apiData.image_url !== '' 
+          ? apiData.image_url 
+          : (apiData.image || apiData.imageUrl || apiData.image_path || '');
+        
+        setFormData({
+          name: apiData.name || '',
+          serviceId: serviceId,
+          categoryId: categoryId,
+          icon: 'category',
+          image: null,
+          image_url: imageUrl,
+          status: apiData.is_active === false ? 'inactive' : (apiData.status === 'inactive' ? 'inactive' : 'active'),
+          displayOrder: apiData.sort_order || apiData.displayOrder || 1,
+          base_price: apiData.base_price || '',
+          currency: 'INR', // Currency is always INR
+          duration_minutes: apiData.duration_minutes || apiData.estimated_duration_minutes || ''
+        });
+        
+        // Set image preview if image exists
+        const fullImageUrl = getImageUrl(imageUrl);
+        setImagePreview(fullImageUrl);
+      } else if (subServiceData && subServiceData.name) {
+        // Fallback to passed subServiceData (for backward compatibility)
+        // Use sub-service's own image_url only (no fallback to icon_url)
+        const imageUrl = subServiceData.image_url || subServiceData.imageUrl || subServiceData.image || subServiceData.image_path || '';
+        setFormData({
+          name: subServiceData.name || '',
+          serviceId: subServiceData.serviceId || subServiceData.service_id || '',
+          categoryId: subServiceData.categoryId || subServiceData.category?.category_id || '',
+          icon: subServiceData.icon || 'category',
+          image: null,
+          image_url: imageUrl,
+          status: subServiceData.is_active === false ? 'inactive' : (subServiceData.status === 'inactive' ? 'inactive' : 'active'),
+          displayOrder: subServiceData.displayOrder || subServiceData.sort_order || subServiceData.display_order || 1,
+          base_price: subServiceData.base_price || '',
+          currency: 'INR', // Currency is always INR
+          duration_minutes: subServiceData.duration_minutes || subServiceData.estimated_duration_minutes || ''
+        });
+        
+        // Set image preview
+        const fullImageUrl = getImageUrl(imageUrl);
         setImagePreview(fullImageUrl);
       } else {
+        // Reset form for new sub-service
+        setFormData({
+          name: '',
+          serviceId: '',
+          categoryId: '',
+          icon: 'category',
+          image: null,
+          image_url: '',
+          status: 'active',
+          displayOrder: 1,
+          base_price: '',
+          currency: 'INR', // Currency is always INR
+          duration_minutes: ''
+        });
         setImagePreview(null);
       }
-    } else if (subServiceData) {
-      // Fallback to passed subServiceData (for backward compatibility)
-      setFormData({
-        name: subServiceData.name || '',
-        serviceId: subServiceData.serviceId || subServiceData.service_id || '',
-        categoryId: subServiceData.categoryId || subServiceData.category?.category_id || '',
-        icon: subServiceData.icon || 'category',
-        image: subServiceData.image || subServiceData.image_url || '',
-        status: subServiceData.status || (subServiceData.is_active ? 'active' : 'inactive'),
-        displayOrder: subServiceData.displayOrder || subServiceData.sort_order || 1
-      });
-      setImagePreview(subServiceData.image || subServiceData.image_url || null);
-    } else {
-      // Reset form for new sub-service
-      setFormData({
-        name: '',
-        serviceId: '',
-        categoryId: '',
-        icon: 'category',
-        image: '',
-        status: 'active',
-        displayOrder: 1
-      });
-      setImagePreview(null);
+      setErrors({});
     }
-    setErrors({});
   }, [subServiceDetails, subServiceData, isOpen]);
 
   const handleInputChange = (field: string, value: any) => {
@@ -149,7 +184,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         setImagePreview(result);
         setFormData(prev => ({
           ...prev,
-          image: result // Store as base64 or you can upload to server
+          image: file // Store the File object for upload
         }));
       };
       reader.readAsDataURL(file);
@@ -169,7 +204,8 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     setImagePreview(null);
     setFormData(prev => ({
       ...prev,
-      image: ''
+      image: null,
+      image_url: ''
     }));
     // Reset file input
     const fileInput = document.getElementById('image-upload') as HTMLInputElement;
@@ -183,9 +219,23 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
     if (!formData.name.trim()) {
       newErrors.name = 'Sub-service name is required';
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Sub-service name must be at least 2 characters long';
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = 'Sub-service name must not exceed 100 characters';
     }
     if (!formData.serviceId) {
       newErrors.serviceId = 'Service is required';
+    }
+    if (!formData.base_price || formData.base_price === '') {
+      newErrors.base_price = 'Base price is required';
+    } else if (isNaN(Number(formData.base_price)) || Number(formData.base_price) < 0) {
+      newErrors.base_price = 'Base price must be a valid number greater than or equal to 0';
+    }
+    if (!formData.duration_minutes || formData.duration_minutes === '') {
+      newErrors.duration_minutes = 'Duration (minutes) is required';
+    } else if (isNaN(Number(formData.duration_minutes)) || Number(formData.duration_minutes) < 1) {
+      newErrors.duration_minutes = 'Duration must be at least 1 minute';
     }
 
     // Category is optional - it will be auto-filled from service if not provided
@@ -206,7 +256,27 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
       return;
     }
 
-    onSave(formData);
+    // CRITICAL: Ensure File object is preserved when passing to onSave
+    // Log to verify File object is still intact
+    if (import.meta.env.DEV) {
+      console.log('SubServiceForm - Submitting form data:', {
+        hasImage: !!formData.image,
+        imageType: typeof formData.image,
+        isFile: formData.image instanceof File,
+        imageName: formData.image instanceof File ? formData.image.name : 'not a file',
+        imageSize: formData.image instanceof File ? formData.image.size : 'not a file',
+        image_url: formData.image_url
+      });
+    }
+
+    // Create a copy of formData to ensure File object is preserved
+    const dataToSave = {
+      ...formData,
+      // Explicitly preserve the File object if it exists
+      image: formData.image instanceof File ? formData.image : (formData.image || null)
+    };
+
+    onSave(dataToSave);
   };
 
   return (
@@ -248,7 +318,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
             {/* Service */}
             <div>
-              <Label>
+              <Label htmlFor="serviceId">
                 Service <span className="text-danger">*</span>
               </Label>
 
@@ -263,7 +333,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                   }
                 }}
               >
-                <SelectTrigger className={`mt-2 ${errors.serviceId ? 'border-danger' : ''}`}>
+                <SelectTrigger id="serviceId" className={`mt-2 ${errors.serviceId ? 'border-danger' : ''}`}>
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
 
@@ -283,28 +353,89 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
 
             {/* Category - Auto-filled from service, but can be overridden */}
+            {/* Commented out for edit mode - category should not be editable */}
+            {!subServiceData && (
+              <div>
+                <Label htmlFor="categoryId">
+                  Category <span className="text-muted text-xs">(Auto-filled from service)</span>
+                </Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => handleInputChange('categoryId', value)}
+                >
+                  <SelectTrigger id="categoryId" className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
+                    <SelectValue placeholder="Select category (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.categoryId && (
+                  <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
+                )}
+              </div>
+            )}
+
+            {/* Base Price and Currency */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="base_price">
+                  Base Price <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="base_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.base_price}
+                  onChange={(e) => handleInputChange('base_price', e.target.value)}
+                  className={`mt-2 ${errors.base_price ? 'border-danger' : ''}`}
+                  placeholder="0.00"
+                />
+                {errors.base_price && (
+                  <p className="text-danger text-sm mt-1">{errors.base_price}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="currency">
+                  Currency <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="currency"
+                  value="INR"
+                  disabled
+                  className="mt-2 bg-gray-100"
+                  readOnly
+                />
+                <p className="text-xs text-gray-500 mt-1">Currency is fixed to INR</p>
+              </div>
+            </div>
+
+            {/* Duration */}
             <div>
-              <Label htmlFor="categoryId">
-                Category <span className="text-muted text-xs">(Auto-filled from service)</span>
+              <Label htmlFor="duration_minutes">
+                Duration (Minutes) <span className="text-danger">*</span>
               </Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => handleInputChange('categoryId', value)}
-              >
-                <SelectTrigger className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
-                  <SelectValue placeholder="Select category (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.categoryId && (
-                <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
+              <Input
+                id="duration_minutes"
+                type="number"
+                min="1"
+                max="1440"
+                value={formData.duration_minutes}
+                onChange={(e) => handleInputChange('duration_minutes', e.target.value)}
+                className={`mt-2 ${errors.duration_minutes ? 'border-danger' : ''}`}
+                placeholder="e.g., 60"
+              />
+              {errors.duration_minutes && (
+                <p className="text-danger text-sm mt-1">{errors.duration_minutes}</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">
+                Duration in minutes (1-1440 minutes, max 24 hours)
+              </p>
             </div>
 
             {/* Image Upload */}

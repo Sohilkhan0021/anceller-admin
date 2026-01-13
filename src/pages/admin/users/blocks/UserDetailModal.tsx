@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +23,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useUserManage } from '@/providers/userManageProvider';
-import { useEffect } from 'react';
 import { ContentLoader } from '@/components/loaders';
+import { userService } from '@/services/user.service';
 
 interface IUserDetailModalProps {
   user: any | null;
@@ -34,14 +34,51 @@ interface IUserDetailModalProps {
 
 const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
   const { fetchUserDetails, currentUserDetails, userDetailsLoading, updateUserStatus, isUpdatingStatus } = useUserManage();
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [supportTickets, setSupportTickets] = useState<any[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && user?.id) {
       // Use id or user_id depending on what's available physically in the object from Table
       const idToFetch = user.user_id || user.id;
       fetchUserDetails(idToFetch);
+      
+      // Fetch bookings, payments, and support tickets
+      const fetchUserData = async () => {
+        setBookingsLoading(true);
+        setPaymentsLoading(true);
+        setTicketsLoading(true);
+        
+        try {
+          const [bookingsData, paymentsData, ticketsData] = await Promise.all([
+            userService.getUserBookings(idToFetch, { limit: 50 }),
+            userService.getUserPayments(idToFetch, { limit: 50 }),
+            userService.getUserSupportTickets(idToFetch, { limit: 50 })
+          ]);
+          
+          setBookings(bookingsData?.data?.items || bookingsData?.data || []);
+          setPayments(paymentsData?.data?.items || paymentsData?.data || []);
+          setSupportTickets(ticketsData?.data?.items || ticketsData?.data || []);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          // Keep empty arrays on error
+          setBookings([]);
+          setPayments([]);
+          setSupportTickets([]);
+        } finally {
+          setBookingsLoading(false);
+          setPaymentsLoading(false);
+          setTicketsLoading(false);
+        }
+      };
+      
+      fetchUserData();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, fetchUserDetails]);
 
   const handleStatusChange = async () => {
     if (!displayUser) return;
@@ -80,80 +117,6 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
   }
 
   if (!displayUser) return null;
-
-  // Mock data for user details (keep existing mocks if API doesn't provide lists yet)
-  // The API response in screenshot has empty lists for recent_orders and addresses but has stats.
-  // I will map stats if available.
-
-  const bookingHistory = [
-    {
-      id: 'BK001',
-      service: 'Home Cleaning',
-      provider: 'CleanPro Services',
-      date: '2024-01-20',
-      status: 'completed',
-      amount: 500
-    },
-    {
-      id: 'BK002',
-      service: 'Plumbing Repair',
-      provider: 'FixIt Plumbing',
-      date: '2024-01-18',
-      status: 'completed',
-      amount: 800
-    },
-    {
-      id: 'BK003',
-      service: 'Electrical Work',
-      provider: 'PowerTech Electric',
-      date: '2024-01-15',
-      status: 'pending',
-      amount: 1200
-    }
-  ];
-
-  const paymentHistory = [
-    {
-      id: 'PAY001',
-      amount: 500,
-      method: 'Credit Card',
-      date: '2024-01-20',
-      status: 'completed'
-    },
-    {
-      id: 'PAY002',
-      amount: 800,
-      method: 'UPI',
-      date: '2024-01-18',
-      status: 'completed'
-    },
-    {
-      id: 'PAY003',
-      amount: 1200,
-      method: 'Credit Card',
-      date: '2024-01-15',
-      status: 'pending'
-    }
-  ];
-
-  const supportTickets = [
-    {
-      id: 'TKT001',
-      subject: 'Service Quality Issue',
-      status: 'open',
-      priority: 'high',
-      date: '2024-01-19',
-      description: 'The cleaning service was not satisfactory'
-    },
-    {
-      id: 'TKT002',
-      subject: 'Payment Refund Request',
-      status: 'resolved',
-      priority: 'medium',
-      date: '2024-01-10',
-      description: 'Requesting refund for cancelled service'
-    }
-  ];
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -209,7 +172,22 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                   </div>
                   <div className="card-body space-y-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center">
+                      {displayUser.profile_picture_url ? (
+                        <img 
+                          src={displayUser.profile_picture_url.startsWith('http') 
+                            ? displayUser.profile_picture_url 
+                            : `${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || ''}${displayUser.profile_picture_url.startsWith('/') ? displayUser.profile_picture_url : '/' + displayUser.profile_picture_url}`}
+                          alt={displayUser.name}
+                          className="w-16 h-16 rounded-full object-cover"
+                          onError={(e) => {
+                            // Fallback to icon if image fails to load
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-16 h-16 bg-primary-light rounded-full flex items-center justify-center ${displayUser.profile_picture_url ? 'hidden' : ''}`}>
                         <KeenIcon icon="user" className="text-primary text-2xl" />
                       </div>
                       <div>
@@ -230,11 +208,31 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700">Join Date</label>
-                        <p className="text-sm text-gray-900 whitespace-nowrap">{displayUser.joined_at || displayUser.joinDate}</p>
+                        <p className="text-sm text-gray-900 whitespace-nowrap">
+                          {displayUser.joined_at 
+                            ? new Date(displayUser.joined_at).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : displayUser.joinDate || 'N/A'}
+                        </p>
                       </div>
                       <div className='ml-20'>
                         <label className="text-sm font-medium text-gray-700">Last Active</label>
-                        <p className="text-sm text-gray-900">{displayUser.last_login_at || displayUser.lastActive || 'N/A'}</p>
+                        <p className="text-sm text-gray-900">
+                          {displayUser.last_login_at && displayUser.last_login_at !== null && displayUser.last_login_at !== undefined
+                            ? new Date(displayUser.last_login_at).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : 'Never'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -279,16 +277,48 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bookingHistory.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.id}</TableCell>
-                          <TableCell>{booking.service}</TableCell>
-                          <TableCell>{booking.provider}</TableCell>
-                          <TableCell>{booking.date}</TableCell>
-                          <TableCell>₹{booking.amount}</TableCell>
-                          <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                      {bookingsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8">
+                            <ContentLoader />
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      ) : bookings.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                            No bookings found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        bookings.map((booking: any) => (
+                          <TableRow key={booking.order_id || booking.public_id || booking.id}>
+                            <TableCell className="font-medium">{booking.public_id || booking.order_id || booking.id}</TableCell>
+                            <TableCell>
+                              {booking.orderItems?.[0]?.subService?.name || 
+                               booking.service_name || 
+                               booking.service || 
+                               'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {booking.provider?.name || 
+                               booking.provider_name || 
+                               booking.provider || 
+                               'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {booking.created_at 
+                                ? new Date(booking.created_at).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })
+                                : booking.date || 'N/A'}
+                            </TableCell>
+                            <TableCell>₹{booking.final_amount || booking.amount || 0}</TableCell>
+                            <TableCell>{getStatusBadge(booking.status || 'pending')}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -313,15 +343,37 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paymentHistory.map((payment) => (
-                        <TableRow key={payment.id}>
-                          <TableCell className="font-medium">{payment.id}</TableCell>
-                          <TableCell>₹{payment.amount}</TableCell>
-                          <TableCell>{payment.method}</TableCell>
-                          <TableCell>{payment.date}</TableCell>
-                          <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                      {paymentsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            <ContentLoader />
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      ) : payments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                            No payments found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        payments.map((payment: any) => (
+                          <TableRow key={payment.transaction_id || payment.public_id || payment.id}>
+                            <TableCell className="font-medium">{payment.transaction_id || payment.public_id || payment.id}</TableCell>
+                            <TableCell>₹{payment.amount || 0}</TableCell>
+                            <TableCell>{payment.payment_method_display || payment.payment_mode || payment.method || 'N/A'}</TableCell>
+                            <TableCell>
+                              {payment.created_at 
+                                ? new Date(payment.created_at).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })
+                                : payment.date || 'N/A'}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(payment.status || 'pending')}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -346,20 +398,42 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {supportTickets.map((ticket) => (
-                        <TableRow key={ticket.id}>
-                          <TableCell className="font-medium">{ticket.id}</TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{ticket.subject}</div>
-                              <div className="text-sm text-gray-600">{ticket.description}</div>
-                            </div>
+                      {ticketsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            <ContentLoader />
                           </TableCell>
-                          <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
-                          <TableCell>{ticket.date}</TableCell>
-                          <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                         </TableRow>
-                      ))}
+                      ) : supportTickets.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                            No support tickets found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        supportTickets.map((ticket: any) => (
+                          <TableRow key={ticket.dispute_id || ticket.public_id || ticket.id}>
+                            <TableCell className="font-medium">{ticket.dispute_id || ticket.public_id || ticket.id}</TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{ticket.subject || ticket.title || 'N/A'}</div>
+                                <div className="text-sm text-gray-600">{ticket.description || ticket.issue_description || ''}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getPriorityBadge(ticket.priority?.toLowerCase() || 'medium')}</TableCell>
+                            <TableCell>
+                              {ticket.created_at 
+                                ? new Date(ticket.created_at).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })
+                                : ticket.date || 'N/A'}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(ticket.status?.toLowerCase() || 'open')}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>

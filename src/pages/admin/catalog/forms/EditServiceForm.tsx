@@ -20,6 +20,9 @@ import {
 } from '@/components/ui/select';
 import { useSnackbar } from 'notistack';
 import { useUpdateService } from '@/services/service.hooks';
+import { getImageUrl } from '@/utils/imageUrl';
+import { useCategories } from '@/services/category.hooks';
+import { ContentLoader } from '@/components/loaders';
 
 interface IEditServiceFormProps {
   isOpen: boolean;
@@ -36,12 +39,21 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
     description: '',
     status: 'active',
     displayOrder: 1,
+    base_price: '' as string | number,
+    currency: 'INR',
+    estimated_duration_minutes: '' as string | number
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Fetch categories for dropdown
+  const { categories, isLoading: isLoadingCategories } = useCategories(
+    { status: 'active', limit: 100 },
+    { enabled: isOpen }
+  );
 
   const updateServiceMutation = useUpdateService({
     onSuccess: (data) => {
@@ -64,31 +76,53 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
 
 
   useEffect(() => {
-    if (serviceData) {
-      setFormData({
-        name: serviceData.name || '',
-        categoryId: serviceData.category_id || serviceData.categoryId || serviceData.category?.category_id || '',
-        description: serviceData.description || '',
-        status: serviceData.is_active === false ? 'inactive' : (serviceData.status || 'active'),
-        displayOrder: serviceData.sort_order || serviceData.displayOrder || 1,
-      });
-      
-      // Set image preview if existing image
-      const imageUrl = serviceData.image_url || serviceData.image;
-      if (imageUrl) {
-        // If it's a full URL, use it directly; otherwise construct the full URL
-        const fullImageUrl = imageUrl.startsWith('http') 
-          ? imageUrl 
-          : `${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || ''}${imageUrl}`;
+    if (isOpen) {
+      if (serviceData && serviceData.name) {
+        // Determine status - check both is_active and status fields
+        let statusValue = 'active';
+        if (serviceData.is_active === false || serviceData.is_active === 'false') {
+          statusValue = 'inactive';
+        } else if (serviceData.status) {
+          statusValue = serviceData.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
+        }
+        
+        setFormData({
+          name: serviceData.name || '',
+          categoryId: serviceData.category_id || serviceData.categoryId || serviceData.category?.category_id || serviceData.category_id || '',
+          description: serviceData.description || '',
+          status: statusValue as 'active' | 'inactive',
+          displayOrder: serviceData.sort_order || serviceData.displayOrder || serviceData.display_order || 1,
+          base_price: serviceData.base_price || '',
+          currency: 'INR', // Currency is always INR
+          estimated_duration_minutes: serviceData.estimated_duration_minutes || serviceData.duration_minutes || ''
+        });
+        
+        // Set image preview if existing image
+        const imageUrl = serviceData.image_url || serviceData.imageUrl || serviceData.image;
+        const fullImageUrl = getImageUrl(imageUrl);
         setImagePreview(fullImageUrl);
+        
+        // Clear errors when service data changes
+        setErrors({});
+        setImageFile(null);
+        setIsDragging(false);
       } else {
+        // Reset form for new service
+        setFormData({
+          name: '',
+          categoryId: '',
+          description: '',
+          status: 'active',
+          displayOrder: 1,
+          base_price: '',
+          currency: 'INR',
+          estimated_duration_minutes: ''
+        });
         setImagePreview(null);
+        setImageFile(null);
+        setErrors({});
+        setIsDragging(false);
       }
-      
-      // Clear errors when service data changes
-      setErrors({});
-      setImageFile(null);
-      setIsDragging(false);
     }
   }, [serviceData, isOpen]);
 
@@ -179,6 +213,10 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
 
     if (!formData.name.trim()) {
       newErrors.name = 'Service name is required';
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Service name must be at least 2 characters long';
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = 'Service name must not exceed 100 characters';
     }
 
     if (!formData.categoryId) {
@@ -187,6 +225,18 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
 
     if (!formData.description?.trim()) {
       newErrors.description = 'Description is required';
+    }
+
+    if (!formData.base_price || formData.base_price === '') {
+      newErrors.base_price = 'Base price is required';
+    } else if (isNaN(Number(formData.base_price)) || Number(formData.base_price) < 0) {
+      newErrors.base_price = 'Base price must be a valid number greater than or equal to 0';
+    }
+
+    if (!formData.estimated_duration_minutes || formData.estimated_duration_minutes === '') {
+      newErrors.estimated_duration_minutes = 'Duration (minutes) is required';
+    } else if (isNaN(Number(formData.estimated_duration_minutes)) || Number(formData.estimated_duration_minutes) < 0) {
+      newErrors.estimated_duration_minutes = 'Duration must be a valid number greater than or equal to 0';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -204,6 +254,9 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
       description: '',
       status: 'active',
       displayOrder: 1,
+      base_price: '',
+      currency: 'INR',
+      estimated_duration_minutes: ''
     });
     setImagePreview(null);
     setImageFile(null);
@@ -242,6 +295,9 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
       image: imageFile || undefined,
       is_active: formData.status === 'active',
       sort_order: formData.displayOrder,
+      base_price: formData.base_price ? parseFloat(formData.base_price.toString()) : 0,
+      currency: 'INR', // Currency is always INR
+      estimated_duration_minutes: formData.estimated_duration_minutes ? parseInt(formData.estimated_duration_minutes.toString(), 10) : 0,
     });
   };
 
@@ -286,13 +342,19 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* TODO: Fetch categories from API */}
-                    <SelectItem value="CAT_ELECTRICAL">Electrical</SelectItem>
-                    <SelectItem value="CAT_PLUMBING">Plumbing</SelectItem>
-                    <SelectItem value="CAT_AC">AC Services</SelectItem>
-                    <SelectItem value="CAT_CLEANING">Cleaning</SelectItem>
-                    <SelectItem value="CAT_CARPENTRY">Carpentry</SelectItem>
-                    <SelectItem value="CAT_APPLIANCE">Appliance</SelectItem>
+                    {isLoadingCategories ? (
+                      <div className="p-4">
+                        <ContentLoader />
+                      </div>
+                    ) : categories.length === 0 ? (
+                      <div className="p-4 text-sm text-gray-500">No categories available</div>
+                    ) : (
+                      categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id || category.public_id || ''}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.categoryId && (
@@ -314,6 +376,53 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
               {errors.description && (
                 <p className="text-danger text-sm mt-1">{errors.description}</p>
               )}
+            </div>
+
+            {/* Base Price, Currency, and Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="base_price">Base Price *</Label>
+                <Input
+                  id="base_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.base_price}
+                  onChange={(e) => handleInputChange('base_price', e.target.value)}
+                  className={`mt-2 ${errors.base_price ? 'border-danger' : ''}`}
+                  placeholder="0.00"
+                />
+                {errors.base_price && (
+                  <p className="text-danger text-sm mt-1">{errors.base_price}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="currency">Currency *</Label>
+                <Input
+                  id="currency"
+                  value="INR"
+                  disabled
+                  className="mt-2 bg-gray-100"
+                  readOnly
+                />
+                <p className="text-xs text-gray-500 mt-1">Currency is fixed to INR</p>
+              </div>
+              <div>
+                <Label htmlFor="estimated_duration_minutes">Duration (Minutes) *</Label>
+                <Input
+                  id="estimated_duration_minutes"
+                  type="number"
+                  min="0"
+                  max="1440"
+                  value={formData.estimated_duration_minutes}
+                  onChange={(e) => handleInputChange('estimated_duration_minutes', e.target.value)}
+                  className={`mt-2 ${errors.estimated_duration_minutes ? 'border-danger' : ''}`}
+                  placeholder="0"
+                />
+                {errors.estimated_duration_minutes && (
+                  <p className="text-danger text-sm mt-1">{errors.estimated_duration_minutes}</p>
+                )}
+              </div>
             </div>
           </div>
 
