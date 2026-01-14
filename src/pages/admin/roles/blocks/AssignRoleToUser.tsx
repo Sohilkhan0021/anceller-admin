@@ -20,6 +20,7 @@ import {
 import { useRoles } from '@/services';
 import { userService } from '@/services/user.service';
 import { useMutation, useQueryClient } from 'react-query';
+import { toast } from 'sonner';
 
 interface IAssignRoleToUserProps {
   isOpen?: boolean;
@@ -36,6 +37,8 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
     last_name: '',
     phone_number: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const queryClient = useQueryClient();
@@ -52,8 +55,12 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
       status: 'ACTIVE'
     }),
     {
-      onSuccess: () => {
+      onSuccess: (response) => {
+        if (response?.message) {
+          toast.success(response.message);
+        }
         queryClient.invalidateQueries(['users']);
+        queryClient.invalidateQueries(['roles']);
         handleClose();
       },
     }
@@ -88,7 +95,7 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -131,8 +138,8 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
             {createAdminUserMutation.isError && (
               <div className="p-3 bg-danger-light border border-danger rounded">
                 <p className="text-danger text-sm">
-                  {createAdminUserMutation.error instanceof Error 
-                    ? createAdminUserMutation.error.message 
+                  {createAdminUserMutation.error instanceof Error
+                    ? createAdminUserMutation.error.message
                     : 'An error occurred while creating the user'}
                 </p>
               </div>
@@ -145,7 +152,7 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 className="mt-2"
                 placeholder="user@example.com"
                 required
@@ -159,15 +166,24 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({...prev, password: e.target.value}))}
-                  className="mt-2"
-                  placeholder="Minimum 8 characters"
-                  required
-                />
+                <div className="relative mt-2">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    className="pr-10"
+                    placeholder="Minimum 8 characters"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <KeenIcon icon={showPassword ? 'eye-slash' : 'eye'} className="text-sm" />
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-danger text-xs mt-1">{errors.password}</p>
                 )}
@@ -175,15 +191,24 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
 
               <div>
                 <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData(prev => ({...prev, confirmPassword: e.target.value}))}
-                  className="mt-2"
-                  placeholder="Re-enter password"
-                  required
-                />
+                <div className="relative mt-2">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="pr-10"
+                    placeholder="Re-enter password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <KeenIcon icon={showConfirmPassword ? 'eye-slash' : 'eye'} className="text-sm" />
+                  </button>
+                </div>
                 {errors.confirmPassword && (
                   <p className="text-danger text-xs mt-1">{errors.confirmPassword}</p>
                 )}
@@ -195,7 +220,7 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
               <Label htmlFor="role">Assign Role *</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value) => setFormData(prev => ({...prev, role: value}))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
               >
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Select a role" />
@@ -224,7 +249,7 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
                 <Input
                   id="first_name"
                   value={formData.first_name}
-                  onChange={(e) => setFormData(prev => ({...prev, first_name: e.target.value}))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
                   className="mt-2"
                   placeholder="John"
                 />
@@ -235,7 +260,7 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
                 <Input
                   id="last_name"
                   value={formData.last_name}
-                  onChange={(e) => setFormData(prev => ({...prev, last_name: e.target.value}))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
                   className="mt-2"
                   placeholder="Doe"
                 />
@@ -248,22 +273,22 @@ const AssignRoleToUser = ({ isOpen = false, onClose }: IAssignRoleToUserProps) =
                 id="phone_number"
                 type="tel"
                 value={formData.phone_number}
-                onChange={(e) => setFormData(prev => ({...prev, phone_number: e.target.value}))}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
                 className="mt-2"
                 placeholder="+91 9876543210"
               />
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button 
+              <Button
                 type="button"
-                variant="outline" 
+                variant="outline"
                 onClick={handleClose}
                 disabled={createAdminUserMutation.isLoading}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 disabled={createAdminUserMutation.isLoading}
               >

@@ -67,7 +67,7 @@ const CustomerPaymentsTab = () => {
       const data = await exportMutation.mutateAsync({
         status: statusFilter === 'all' ? '' : statusFilter,
       });
-      
+
       // Convert to CSV
       if (data && data.length > 0) {
         const headers = Object.keys(data[0]);
@@ -75,7 +75,7 @@ const CustomerPaymentsTab = () => {
           headers.join(','),
           ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
         ].join('\n');
-        
+
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -102,7 +102,7 @@ const CustomerPaymentsTab = () => {
       failed: { variant: 'destructive', className: '', text: 'Failed' },
       cod: { variant: 'secondary', className: '', text: 'COD' }
     };
-    
+
     const config = statusConfig[status] || { variant: 'secondary', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
@@ -118,7 +118,7 @@ const CustomerPaymentsTab = () => {
       'razorpay': 'credit-card',
       'cash': 'money'
     };
-    
+
     return iconMap[paymentMode] || 'money';
   };
 
@@ -245,54 +245,60 @@ const CustomerPaymentsTab = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto w-full">
-                <Table className="w-full table-auto">
+              <div className="w-full">
+                <Table className="w-full table-fixed" containerClassName="!overflow-x-hidden">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="hidden sm:table-cell min-w-[150px]">Transaction ID</TableHead>
-                      <TableHead className="min-w-[200px]">Transaction</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[100px]">Amount</TableHead>
-                      <TableHead className="hidden lg:table-cell min-w-[120px]">Payment Mode</TableHead>
-                      <TableHead className="hidden sm:table-cell min-w-[100px]">Status</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[150px]">Date</TableHead>
-                      <TableHead className="hidden lg:table-cell min-w-[180px]">Gateway Transaction ID</TableHead>
+                      <TableHead className="hidden sm:table-cell w-[15%]">Transaction ID</TableHead>
+                      <TableHead className="w-[25%] px-4">Transaction</TableHead>
+                      <TableHead className="hidden md:table-cell w-[10%] text-center px-4">Amount</TableHead>
+                      <TableHead className="hidden lg:table-cell w-[12%] px-4">Payment Mode</TableHead>
+                      <TableHead className="hidden sm:table-cell w-[10%] px-4">Status</TableHead>
+                      <TableHead className="hidden md:table-cell w-[13%] px-4">Date</TableHead>
+                      <TableHead className="hidden lg:table-cell w-[15%] px-4">Gateway Transaction ID</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {transactions.map((transaction) => (
                       <TableRow key={transaction.transaction_id}>
-                        <TableCell className="hidden sm:table-cell font-medium">{transaction.transaction_id}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell font-medium break-all whitespace-normal pr-4">
+                          {transaction.transaction_id}
+                        </TableCell>
+                        <TableCell className="px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
                               <KeenIcon icon="user" className="text-primary text-sm" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="font-medium truncate">{transaction.user.name}</div>
-                              <div className="text-sm text-gray-500 hidden sm:block">{transaction.transaction_id}</div>
+                              <div className="font-medium break-words whitespace-normal leading-tight">
+                                {transaction.user.name}
+                              </div>
+                              <div className="text-sm text-gray-500 hidden sm:block break-all whitespace-normal leading-tight mt-1">
+                                {transaction.transaction_id}
+                              </div>
                               <div className="text-xs text-gray-500 sm:hidden">{formatCurrency(transaction.amount)}</div>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell className="hidden md:table-cell px-4">
                           <div className="text-center">
                             <div className="font-semibold">{formatCurrency(transaction.amount)}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="flex items-center gap-2">
-                            <KeenIcon icon={getPaymentModeIcon(transaction.payment_method_display || transaction.payment_mode)} className="text-gray-500 text-sm" />
+                        <TableCell className="hidden lg:table-cell px-4">
+                          <div className="flex items-center gap-2 whitespace-normal break-words leading-tight">
+                            <KeenIcon icon={getPaymentModeIcon(transaction.payment_method_display || transaction.payment_mode)} className="text-gray-500 text-sm flex-shrink-0" />
                             <span className="text-sm">{transaction.payment_method_display || transaction.payment_mode}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">{getStatusBadge(transaction.status)}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="min-w-[150px] whitespace-nowrap text-sm">
+                        <TableCell className="hidden sm:table-cell px-4">{getStatusBadge(transaction.status)}</TableCell>
+                        <TableCell className="hidden md:table-cell px-4">
+                          <div className="text-sm whitespace-normal leading-tight">
                             {formatDateTime(transaction.created_at)}
                           </div>
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="font-mono text-sm min-w-[180px] break-all">
+                        <TableCell className="hidden lg:table-cell px-4">
+                          <div className="font-mono text-sm break-all whitespace-normal leading-tight">
                             {transaction.gateway_transaction_id || 'N/A'}
                           </div>
                         </TableCell>
@@ -301,7 +307,7 @@ const CustomerPaymentsTab = () => {
                   </TableBody>
                 </Table>
               </div>
-              
+
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="card-footer">

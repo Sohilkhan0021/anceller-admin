@@ -19,7 +19,7 @@ interface IProviderManagementHeaderProps {
   initialCategoryId?: string;
 }
 
-const ProviderManagementHeader = ({ 
+const ProviderManagementHeader = ({
   onAddProvider,
   onFiltersChange,
   initialSearch = '',
@@ -64,7 +64,7 @@ const ProviderManagementHeader = ({
   return (
     <div className="card">
       <div className="card-header">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-row items-center justify-between w-full gap-4">
           <div className="flex items-center gap-3">
             <KeenIcon icon="shop" className="text-primary text-2xl" />
             <div>
@@ -72,7 +72,7 @@ const ProviderManagementHeader = ({
               <p className="text-sm text-gray-600">Approve, verify, and monitor service providers</p>
             </div>
           </div>
-          
+
           <div className="flex gap-3">
             <Button onClick={onAddProvider} variant="default" size="sm" className="w-full sm:w-auto">
               <KeenIcon icon="plus" className="me-2" />
@@ -81,7 +81,7 @@ const ProviderManagementHeader = ({
           </div>
         </div>
       </div>
-      
+
       <div className="card-body">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search Bar */}
@@ -116,8 +116,8 @@ const ProviderManagementHeader = ({
 
           {/* Category Filter */}
           <div>
-            <Select 
-              value={categoryFilter} 
+            <Select
+              value={categoryFilter}
               onValueChange={setCategoryFilter}
               disabled={isLoadingCategories}
             >

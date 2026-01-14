@@ -18,14 +18,14 @@ const HeaderLogo = () => {
   return (
     <div className="flex gap-1 items-center">
       {/* Desktop Logo */}
-      <Link to="/" className="hidden lg:flex shrink-0 items-center relative z-10">
+      {/* <Link to="/" className="hidden lg:flex shrink-0 items-center relative z-10">
         <img
           src={toAbsoluteUrl('/media/app/mini-logo-white.svg')}
           className="max-h-[30px] w-auto h-[30px] object-contain block"
           alt="mini-logo-white"
           style={{ minWidth: '40px' }}
         />
-      </Link>
+      </Link> */}
 
       {/* Mobile Logo */}
       <Link to="/" className="lg:hidden shrink-0 flex items-center relative z-10">

@@ -10,7 +10,7 @@ const RolesPermissionsHeader = ({ onAddRole, onAssignUser }: IRolesPermissionsHe
   return (
     <div className="card">
       <div className="card-header">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-row items-center justify-between w-full gap-4">
           <div className="flex items-center gap-3">
             <KeenIcon icon="security-user" className="text-primary text-2xl" />
             <div>
@@ -18,7 +18,7 @@ const RolesPermissionsHeader = ({ onAddRole, onAssignUser }: IRolesPermissionsHe
               <p className="text-sm text-gray-600">Manage admin-level access controls</p>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
             {/* <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <KeenIcon icon="file-down" className="me-2" />

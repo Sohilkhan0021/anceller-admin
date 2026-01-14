@@ -25,6 +25,7 @@ import {
 import { useRoles, usePermissions, useCreateRole, useUpdateRole, useDeleteRole } from '@/services';
 import type { IRole, IPermissionModule } from '@/services/role.types';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface IRoleManagementProps {
   isAddRoleOpen?: boolean;
@@ -127,7 +128,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
 
       if (selectedRole) {
         // Update existing role
-        await updateRoleMutation.mutateAsync({
+        const response = await updateRoleMutation.mutateAsync({
           roleId: selectedRole.role_id,
           roleData: {
             display_name: newRole.display_name || newRole.name,
@@ -136,6 +137,10 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
             permissions: validPermissions
           }
         });
+
+        if (response?.message) {
+          toast.success(response.message);
+        }
       } else {
         // Create new role
         await createRoleMutation.mutateAsync({
@@ -155,10 +160,6 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
   };
 
   const handleDeleteRole = (role: IRole) => {
-    if (role.is_system) {
-      alert('Cannot delete system role');
-      return;
-    }
     setRoleToDelete(role);
     setDeleteDialogOpen(true);
   };
@@ -390,23 +391,21 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                             size="sm"
                             variant="outline"
                             onClick={() => handleEditRole(role)}
-                            className="flex-shrink-0 p-1"
+                            className="flex-shrink-0"
                           >
                             <KeenIcon icon="pencil" className="text-sm" />
                             Edit
                           </Button>
-                          {!role.is_system && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteRole(role)}
-                              className="flex-shrink-0 p-1 text-danger hover:text-danger"
-                              disabled={deleteRoleMutation.isLoading}
-                            >
-                              <KeenIcon icon="trash" className="text-sm" />
-                              Delete
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteRole(role)}
+                            className="flex-shrink-0 text-danger hover:text-danger"
+                            disabled={deleteRoleMutation.isLoading}
+                          >
+                            <KeenIcon icon="trash" className="text-sm" />
+
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -665,13 +664,14 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md pt-8">
+          <DialogHeader className="pr-8">
             <DialogTitle>Delete Role</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this role? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -689,6 +689,7 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

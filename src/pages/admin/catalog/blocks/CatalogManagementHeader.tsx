@@ -1,18 +1,6 @@
 import { KeenIcon } from '@/components';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
-interface ICatalogManagementHeaderProps {
-  onAddService?: () => void;
-  onEditPricing?: () => void;
-}
-
-const CatalogManagementHeader = ({ onAddService, onEditPricing }: ICatalogManagementHeaderProps) => {
+const CatalogManagementHeader = () => {
   return (
     <div className="card">
       <div className="card-header flex items-center justify-between gap-4">
@@ -23,18 +11,9 @@ const CatalogManagementHeader = ({ onAddService, onEditPricing }: ICatalogManage
             <p className="text-sm text-gray-600">Manage categories, sub-services, and pricing</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Button size="sm" onClick={onAddService} className="w-full sm:w-auto">
-            <KeenIcon icon="plus" className="me-2" />
-            Add New Service
-          </Button>
-        </div>
       </div>
     </div>
   );
 };
 
 export { CatalogManagementHeader };
-
-
