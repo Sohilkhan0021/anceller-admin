@@ -124,7 +124,7 @@ const SubServiceManagement = ({
         image_url: data?.data?.image_url,
         sub_service_id: data?.data?.sub_service_id
       });
-      
+
       // VERIFY: Check if response has all expected fields
       const responseData = data?.data;
       if (!responseData) {
@@ -132,10 +132,10 @@ const SubServiceManagement = ({
         toast.error('Update failed: Invalid response from server');
         return;
       }
-      
+
       const responseKeys = Object.keys(responseData);
       const subServiceId = responseData.sub_service_id || editingSubService?.id;
-      
+
       // If response is incomplete (only has sub_service_id), fetch the full sub-service data
       // This handles cases where the backend returns a minimal response
       if (responseKeys.length < 5 || responseKeys.length === 1) {
@@ -144,14 +144,14 @@ const SubServiceManagement = ({
           subServiceId,
           note: 'This is expected behavior - backend may return minimal response after update'
         });
-        
+
         // Always show success and refetch - the list will have the correct data with image
         // The refetch will get the updated sub-service with the image_url from the database
         toast.success('Sub-service updated successfully');
         refetch(); // Refresh the list to show updated data including image
         setIsFormOpen(false);
         setEditingSubService(null);
-        
+
         // Optionally try to fetch full data for logging, but don't block on it
         if (subServiceId) {
           subServiceService.getSubServiceById(subServiceId)
@@ -165,23 +165,23 @@ const SubServiceManagement = ({
               console.warn('Could not fetch full sub-service data (non-critical):', fetchError);
             });
         }
-        
+
         return;
       }
-      
+
       // Check if image_url is present (can be null if no image was uploaded)
       const hasImageUrl = 'image_url' in responseData;
       if (!hasImageUrl) {
         console.warn('⚠️ WARNING: image_url field missing from response');
       }
-      
+
       // Success - show appropriate message
       if (responseData.image_url) {
         toast.success(`Sub-service updated successfully. Image: ${responseData.image_url}`);
       } else {
         toast.success('Sub-service updated successfully');
       }
-      
+
       refetch(); // Refresh the list to show updated data including image
       setIsFormOpen(false);
       setEditingSubService(null);
@@ -277,7 +277,7 @@ const SubServiceManagement = ({
       // CRITICAL: Check if image is a File object (not an empty object or null)
       if (subServiceData.image && subServiceData.image instanceof File) {
         updateData.image = subServiceData.image;
-        console.log('✅ Sub-service update: New image file provided', { 
+        console.log('✅ Sub-service update: New image file provided', {
           fileName: subServiceData.image.name,
           fileSize: subServiceData.image.size,
           fileType: subServiceData.image.type,
@@ -413,7 +413,7 @@ const SubServiceManagement = ({
     <>
       <div className="card">
         <div className="card-header">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
                 Sub-Services {pagination ? `(${pagination.total})` : `(${subServices.length})`}
@@ -534,7 +534,7 @@ const SubServiceManagement = ({
                               // Use sub-service's own image_url only (no fallback to icon_url)
                               const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image || (subService as any).image_path || '';
                               const fullImageUrl = getImageUrl(imageUrl);
-                              
+
                               // If image URL is invalid (local path, etc.), show placeholder
                               if (!fullImageUrl && imageUrl) {
                                 return (
@@ -543,7 +543,7 @@ const SubServiceManagement = ({
                                   </div>
                                 );
                               }
-                              
+
                               return fullImageUrl ? (
                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                                   <img

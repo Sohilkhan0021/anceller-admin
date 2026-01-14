@@ -45,9 +45,19 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
 
 
   const buildHeader = () => {
-    const displayName = profile?.name || 'Admin User';
-    const displayEmail = profile?.email || 'No email';
+    let displayName = profile?.name || 'Admin User';
+    let displayEmail = profile?.email || 'No email';
     const profileImage = profile?.profile_picture_url || toAbsoluteUrl('/media/avatars/300-2.png');
+
+    // Truncate name if > 15 chars
+    if (displayName.length > 15) {
+      displayName = displayName.substring(0, 15) + '...';
+    }
+
+    // Truncate email if > 17 chars
+    if (displayEmail !== 'No email' && displayEmail.length > 17) {
+      displayEmail = displayEmail.substring(0, 17) + '...';
+    }
 
     return (
       <div className="flex items-center px-5 py-1.5 gap-2">

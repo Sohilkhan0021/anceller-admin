@@ -91,25 +91,47 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
       } catch (error: any) {
         // Handle API validation errors - check both error.errors and error.response.data.errors
         const apiErrors = error?.errors || error?.response?.data?.errors;
-        
-        if (apiErrors && typeof apiErrors === 'object') {
-          Object.keys(apiErrors).forEach((field) => {
-            const fieldName = field === 'email' ? 'email' : 
-                             field === 'phone_number' ? 'phone' :
-                             field === 'first_name' ? 'firstName' :
-                             field === 'last_name' ? 'lastName' :
-                             field === 'postal_code' ? 'pincode' : field;
-            const errorMessage = Array.isArray(apiErrors[field]) 
-              ? apiErrors[field][0] 
-              : apiErrors[field];
-            setFieldError(fieldName, errorMessage || 'Invalid value');
-          });
+
+        if (apiErrors) {
+          if (Array.isArray(apiErrors)) {
+            apiErrors.forEach((err: any) => {
+              const field = err.field;
+              const msg = err.message || 'Invalid value';
+              const fieldName = field === 'email' ? 'email' :
+                field === 'phone_number' ? 'phone' :
+                  field === 'first_name' ? 'firstName' :
+                    field === 'last_name' ? 'lastName' :
+                      field === 'postal_code' ? 'pincode' : field;
+
+              if (fieldName === 'email') {
+                setFieldError('email', 'Please enter a valid email address');
+              } else {
+                setFieldError(fieldName, msg);
+              }
+            });
+          } else if (typeof apiErrors === 'object') {
+            Object.keys(apiErrors).forEach((field) => {
+              const fieldName = field === 'email' ? 'email' :
+                field === 'phone_number' ? 'phone' :
+                  field === 'first_name' ? 'firstName' :
+                    field === 'last_name' ? 'lastName' :
+                      field === 'postal_code' ? 'pincode' : field;
+              const errorMessage = Array.isArray(apiErrors[field])
+                ? apiErrors[field][0]
+                : apiErrors[field];
+              if (fieldName === 'email') {
+                setFieldError('email', 'Please enter a valid email address');
+              } else {
+                setFieldError(fieldName, errorMessage || 'Invalid value');
+              }
+            });
+          }
         } else if (error?.response?.data?.message || error?.message) {
           // Handle single error message
           const errorMessage = error.response?.data?.message || error.message;
           // Try to extract field from error message
           if (errorMessage.toLowerCase().includes('email')) {
-            setFieldError('email', errorMessage);
+            setFieldError('email', 'Please enter a valid email address');
           } else if (errorMessage.toLowerCase().includes('phone')) {
             setFieldError('phone', errorMessage);
           } else if (errorMessage.toLowerCase().includes('first name') || errorMessage.toLowerCase().includes('first_name')) {
@@ -118,7 +140,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
             setFieldError('lastName', errorMessage);
           } else {
             // Show general error on email field as fallback
-            setFieldError('email', errorMessage);
+            setFieldError('email', 'Please enter a valid email address');
           }
         } else {
           console.error('Failed to create user:', error);
@@ -144,7 +166,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
         </DialogHeader>
 
         <DialogBody>
-          <form onSubmit={formik.handleSubmit} className="space-y-6">
+          <form onSubmit={formik.handleSubmit} className="space-y-6" noValidate>
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
@@ -289,7 +311,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                 </div>
 
                 <div>
-                  <Label htmlFor="pincode">Pincode</Label>
+                  <Label htmlFor="pincode">Pincode *</Label>
                   <Input
                     id="pincode"
                     value={formik.values.pincode}
@@ -313,8 +335,8 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="status">Status *</Label>
-                  <Select 
-                    value={formik.values.status} 
+                  <Select
+                    value={formik.values.status}
                     onValueChange={(value) => handleInputChange('status', value)}
                   >
                     <SelectTrigger className={`mt-2 ${formik.touched.status && formik.errors.status ? 'border-danger' : ''}`}>

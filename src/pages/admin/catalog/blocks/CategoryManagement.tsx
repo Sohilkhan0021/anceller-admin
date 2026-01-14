@@ -270,7 +270,7 @@ const CategoryManagement = ({
         sort_order: newOrder,
         is_active: category.status === 'active' || (category as any).is_active !== false
       });
-      
+
       toast.success('Display order updated');
       refetch();
     } catch (error: any) {
@@ -290,7 +290,7 @@ const CategoryManagement = ({
     <>
       <div className="card">
         <div className="card-header">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
                 Categories {pagination ? `(${pagination.total})` : `(${categories.length})`}
@@ -387,7 +387,7 @@ const CategoryManagement = ({
                         (category as any).display_order ??
                         (category as any).sort_order ??
                         (index + 1);
-                      
+
                       // Get image URL for display
                       const imageUrl = (category as any).image_url || (category as any).imageUrl || (category as any).icon_url || (category as any).image;
                       const fullImageUrl = getImageUrl(imageUrl);

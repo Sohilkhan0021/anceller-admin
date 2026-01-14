@@ -23,20 +23,22 @@ const BookingDetailsPage = () => {
   const { booking, isLoading, isError, error, refetch } = useBookingDetail(id || null);
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: string; text: string }> = {
-      completed: { variant: 'success', text: 'Completed' },
-      pending: { variant: 'warning', text: 'Pending' },
-      cancelled: { variant: 'destructive', text: 'Cancelled' },
-      'in-progress': { variant: 'info', text: 'In Progress' },
-      accepted: { variant: 'secondary', text: 'Accepted' },
-      CONFIRMED: { variant: 'success', text: 'Confirmed' },
-      PENDING: { variant: 'warning', text: 'Pending' },
-      CANCELLED: { variant: 'destructive', text: 'Cancelled' },
-      COMPLETED: { variant: 'success', text: 'Completed' },
+    const statusConfig: Record<string, { variant: string; className: string; text: string }> = {
+      completed: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Completed' },
+      pending: { variant: 'warning', className: 'bg-warning text-black font-semibold', text: 'Pending' },
+      cancelled: { variant: 'destructive', className: 'bg-danger text-white font-semibold', text: 'Cancelled' },
+      'in-progress': { variant: 'info', className: 'bg-primary text-white font-semibold', text: 'In Progress' },
+      accepted: { variant: 'secondary', className: 'bg-info text-white font-semibold', text: 'Accepted' },
+      CONFIRMED: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Confirmed' },
+      PENDING: { variant: 'warning', className: 'bg-warning text-black font-semibold', text: 'Pending' },
+      CANCELLED: { variant: 'destructive', className: 'bg-danger text-white font-semibold', text: 'Cancelled' },
+      COMPLETED: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Completed' },
+      active: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Active' },
     };
     
-    const config = statusConfig[status] || { variant: 'secondary', text: status };
-    return <Badge variant={config.variant as any}>{config.text}</Badge>;
+    const normalizedStatus = status?.toLowerCase();
+    const config = statusConfig[normalizedStatus] || statusConfig[status] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: status };
+    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
   const formatCurrency = (amount: number) => {

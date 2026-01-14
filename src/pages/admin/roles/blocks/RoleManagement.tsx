@@ -335,10 +335,10 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                   <TableRow>
                     <TableHead className="w-[200px] sm:w-[250px]">Role</TableHead>
                     <TableHead className="hidden md:table-cell w-[200px]">Description</TableHead>
-                    <TableHead className="hidden sm:table-cell w-[100px]">Users</TableHead>
+                    <TableHead className="hidden sm:table-cell w-[60px]">Users</TableHead>
                     <TableHead className="hidden lg:table-cell w-[120px]">Permissions</TableHead>
                     <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead className="w-[60px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

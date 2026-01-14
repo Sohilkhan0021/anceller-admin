@@ -21,7 +21,7 @@ const PersonalInfo = () => {
     onError: (error: any) => {
       // Show validation errors if available
       if (error.validationErrors && error.validationErrors.length > 0) {
-        const errorMessages = error.validationErrors.map((err: any) => 
+        const errorMessages = error.validationErrors.map((err: any) =>
           `${err.field || 'Field'}: ${err.message}`
         ).join('\n');
         toast.error(errorMessages, { duration: 5000 });
@@ -32,9 +32,9 @@ const PersonalInfo = () => {
           const validationErrors = error.response.data.errors;
           const errorMessages = Array.isArray(validationErrors)
             ? validationErrors.map((err: any) => `${err.field || 'Field'}: ${err.message}`).join('\n')
-            : Object.entries(validationErrors).map(([field, messages]: [string, any]) => 
-                `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
-              ).join('\n');
+            : Object.entries(validationErrors).map(([field, messages]: [string, any]) =>
+              `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
+            ).join('\n');
           toast.error(errorMessages, { duration: 5000 });
         } else if (error.response?.data?.message) {
           toast.error(error.response.data.message);
@@ -60,7 +60,7 @@ const PersonalInfo = () => {
       const newName = profile.name || '';
       const newPhone = profile.phone || '';
       const newAvatarUrl = profile.profile_picture_url || toAbsoluteUrl('/media/avatars/300-2.png');
-      
+
       if (nameValue !== newName) {
         setNameValue(newName);
       }
@@ -77,6 +77,10 @@ const PersonalInfo = () => {
   }, [profile?.user_id, profile?.name, profile?.phone, profile?.profile_picture_url]);
 
   const handleNameChange = (value: string) => {
+    if (value.length > 40) {
+      toast.error('The name limit is 40 characters');
+      return;
+    }
     setNameValue(value);
     setHasChanges(true);
   };
@@ -88,16 +92,19 @@ const PersonalInfo = () => {
 
   const handleSaveAll = () => {
     if (!profile) return;
-    
+
     const updateData: any = {};
-    
+
     // Handle name
     if (isEditingName || nameValue !== profile.name) {
-      const nameParts = nameValue.trim().split(' ');
+      const nameParts = nameValue.trim().split(/\s+/);
       updateData.first_name = nameParts[0] || '';
-      updateData.last_name = nameParts.slice(1).join(' ') || '';
+      const lastName = nameParts.slice(1).join(' ');
+      if (lastName) {
+        updateData.last_name = lastName;
+      }
     }
-    
+
     // Handle phone
     if (isEditingPhone || phoneValue !== profile.phone) {
       const phoneParts = phoneValue.trim().split(' ');
@@ -110,11 +117,11 @@ const PersonalInfo = () => {
         phone_country_code = existingParts[0] || '';
         phone_number = existingParts.slice(1).join(' ') || phoneValue.trim();
       }
-      
+
       updateData.phone_number = phone_number;
       updateData.phone_country_code = phone_country_code || undefined;
     }
-    
+
     // Handle image upload
     if (pendingImageFile) {
       updateData.profile_picture = pendingImageFile;
@@ -122,7 +129,7 @@ const PersonalInfo = () => {
       // Avatar was removed
       updateData.profile_picture_url = null;
     }
-    
+
     if (Object.keys(updateData).length > 0) {
       updateProfile.mutate(updateData);
     } else {
@@ -134,7 +141,7 @@ const PersonalInfo = () => {
   const handleAvatarChange = (selectedAvatar: IImageInputFile[]) => {
     setAvatar(selectedAvatar);
     setHasChanges(true);
-    
+
     if (selectedAvatar.length > 0 && selectedAvatar[0].dataURL) {
       // Check if it's a base64 data URL (new upload) or existing URL
       if (selectedAvatar[0].dataURL.startsWith('data:')) {

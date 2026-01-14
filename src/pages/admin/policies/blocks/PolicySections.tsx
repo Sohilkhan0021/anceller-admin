@@ -244,7 +244,7 @@ const PolicySections = () => {
         <div className="prose max-w-none">
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-sm text-gray-700 whitespace-pre-wrap">
-              {policy?.content || 'Click Edit to add content for this policy.'}
+              {policy?.content || 'Click Create to add content for this policy.'}
             </p>
           </div>
         </div>
@@ -313,13 +313,17 @@ const PolicySections = () => {
                     <TableRow key={index}>
                       <TableCell className="w-[80px] sm:w-[100px] font-medium text-sm">{version.version}</TableCell>
                       <TableCell className="hidden sm:table-cell w-[100px] text-sm">{new Date(version.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="hidden md:table-cell w-[120px] text-sm">{version.author}</TableCell>
+                      <TableCell className="hidden md:table-cell w-[120px] text-sm" title={version.author}>
+                        {version.author.length > 15 ? version.author.substring(0, 15) + '...' : version.author}
+                      </TableCell>
                       <TableCell className="w-[200px] sm:w-[250px]">
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm" title={version.changes}>
                             {version.changes}
                           </div>
-                          <div className="text-xs text-gray-500 sm:hidden">{new Date(version.date).toLocaleDateString()} • {version.author}</div>
+                          <div className="text-xs text-gray-500 sm:hidden">
+                            {new Date(version.date).toLocaleDateString()} • {version.author.length > 15 ? version.author.substring(0, 15) + '...' : version.author}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
