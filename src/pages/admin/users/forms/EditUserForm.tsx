@@ -42,19 +42,33 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
     notes: ''
   });
 
+  // Helper function to extract phone number without country code and spaces
+  const extractPhoneNumber = (phone: string): string => {
+    if (!phone) return '';
+    // Remove all spaces, dashes, and parentheses
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    // Remove country codes (common formats: +91, +1, etc.)
+    cleaned = cleaned.replace(/^\+?\d{1,4}/, '');
+    return cleaned;
+  };
+
   useEffect(() => {
     if (userData) {
+      // Extract phone number without country code and spaces
+      const phoneNumber = userData.phone || userData.phone_number || '';
+      const cleanedPhone = extractPhoneNumber(phoneNumber);
+      
       setFormData({
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
+        firstName: userData.firstName || userData.first_name || '',
+        lastName: userData.lastName || userData.last_name || '',
         email: userData.email || '',
-        phone: userData.phone || '',
+        phone: cleanedPhone,
         address: userData.address || '',
         city: userData.city || '',
         state: userData.state || '',
-        pincode: userData.pincode || '',
-        status: userData.status || 'active',
-        isVerified: userData.isVerified || false,
+        pincode: userData.pincode || userData.postal_code || '',
+        status: (userData.status || 'active').toLowerCase(),
+        isVerified: userData.isVerified || userData.is_verified || false,
         notes: userData.notes || ''
       });
     }
