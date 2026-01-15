@@ -65,14 +65,11 @@ const CatalogManagementContent = () => {
   return (
     <div className="grid gap-5 lg:gap-7.5 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <CatalogManagementHeader 
-        onAddService={handleAddService} 
-        onEditPricing={handleEditPricing}
-      />
+      <CatalogManagementHeader />
 
       {/* Tabs Navigation */}
-      <Tabs 
-        value={activeTab} 
+      <Tabs
+        value={activeTab}
         onChange={(event, newValue) => setActiveTab(String(newValue) || 'categories')}
         className="w-full max-w-full overflow-x-hidden"
       >
@@ -107,7 +104,7 @@ const CatalogManagementContent = () => {
 
         {/* Services Tab */}
         <TabPanel value="services" className="mt-6 w-full max-w-full overflow-x-hidden">
-          <ServiceTable onEditService={handleEditService} />
+          <ServiceTable onEditService={handleEditService} onAddService={handleAddService} />
         </TabPanel>
 
         {/* Add-Ons Tab */}
@@ -117,14 +114,14 @@ const CatalogManagementContent = () => {
       </Tabs>
 
       {/* Add Service Form */}
-      <AddServiceForm 
+      <AddServiceForm
         isOpen={isAddFormOpen}
         onClose={handleCloseAddForm}
         onSave={handleSaveService}
       />
 
       {/* Edit Service Form */}
-      <EditServiceForm 
+      <EditServiceForm
         isOpen={isEditFormOpen}
         onClose={handleCloseEditForm}
         onSave={handleUpdateService}
@@ -132,7 +129,7 @@ const CatalogManagementContent = () => {
       />
 
       {/* Pricing Editor Modal */}
-      <PricingEditorModal 
+      <PricingEditorModal
         isOpen={isPricingEditorOpen}
         onClose={handleClosePricingEditor}
         onSave={handleSavePricing}

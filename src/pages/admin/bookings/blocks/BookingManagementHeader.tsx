@@ -22,8 +22,8 @@ import { useCategories } from '@/services';
 
 interface IBookingManagementHeaderProps {
   onAddBooking?: () => void;
-  onFiltersChange?: (filters: { 
-    search: string; 
+  onFiltersChange?: (filters: {
+    search: string;
     status: string;
     payment_status: string;
     start_date: string;
@@ -40,7 +40,7 @@ interface IBookingManagementHeaderProps {
   };
 }
 
-const BookingManagementHeader = ({ 
+const BookingManagementHeader = ({
   onAddBooking,
   onFiltersChange,
   initialFilters
@@ -57,7 +57,7 @@ const BookingManagementHeader = ({
     limit: 100, // Get all categories for filter
     status: 'active'
   });
-  
+
   // Initialize date range from initial filters
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (initialFilters?.start_date && initialFilters?.end_date) {
@@ -75,7 +75,7 @@ const BookingManagementHeader = ({
       if (onFiltersChange) {
         const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
         const endDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '';
-        
+
         onFiltersChange({
           search: searchTerm,
           status: statusFilter === 'all' ? '' : statusFilter,
@@ -114,7 +114,7 @@ const BookingManagementHeader = ({
   return (
     <div className="card">
       <div className="card-header">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-row items-center justify-between w-full gap-4">
           <div className="flex items-center gap-3">
             <KeenIcon icon="calendar-8" className="text-primary text-2xl" />
             <div>
@@ -122,10 +122,10 @@ const BookingManagementHeader = ({
               <p className="text-sm text-gray-600">Monitor and manage all bookings</p>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="default" 
+            <Button
+              variant="default"
               size="sm"
               onClick={onAddBooking}
               className="w-full sm:w-auto"
@@ -133,7 +133,7 @@ const BookingManagementHeader = ({
               <KeenIcon icon="plus" className="me-2" />
               Add Booking
             </Button>
-            <Button 
+            {/* <Button 
               variant="outline" 
               size="sm"
               onClick={() => handleBulkAction('cancel')}
@@ -141,7 +141,7 @@ const BookingManagementHeader = ({
             >
               <KeenIcon icon="cross-circle" className="me-2" />
               Cancel Selected
-            </Button>
+            </Button> */}
             {/* <Button 
               variant="outline" 
               size="sm"
@@ -154,7 +154,7 @@ const BookingManagementHeader = ({
           </div>
         </div>
       </div>
-      
+
       <div className="card-body">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search Bar */}
@@ -207,8 +207,8 @@ const BookingManagementHeader = ({
 
           {/* Category Filter */}
           <div>
-            <Select 
-              value={categoryFilter} 
+            <Select
+              value={categoryFilter}
               onValueChange={setCategoryFilter}
               disabled={isLoadingCategories}
             >

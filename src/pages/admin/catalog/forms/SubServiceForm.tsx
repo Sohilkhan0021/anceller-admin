@@ -441,7 +441,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
             {/* Image Upload */}
             <div>
               <Label htmlFor="image-upload">
-                Image <span className="text-muted text-xs">(Optional)</span>
+                Image <span className="text-gray-600 text-xs">(Optional)</span>
               </Label>
               <div className="mt-2">
                 <Input

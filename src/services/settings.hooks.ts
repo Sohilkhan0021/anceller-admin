@@ -54,6 +54,22 @@ export const useTestIntegration = () => {
 };
 
 /**
+ * Hook to refresh all integration statuses
+ */
+export const useRefreshIntegrationStatuses = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    () => settingsService.refreshIntegrationStatuses(),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['settings']);
+      },
+    }
+  );
+};
+
+/**
  * Hook to fetch system logs
  */
 export const useSystemLogs = (params: IGetSystemLogsParams = {}) => {

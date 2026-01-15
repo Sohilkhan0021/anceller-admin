@@ -86,6 +86,29 @@ export const testIntegration = async (
 };
 
 /**
+ * Refresh all integration statuses
+ * 
+ * @returns Promise resolving to refresh result
+ */
+export const refreshIntegrationStatuses = async (): Promise<any> => {
+  try {
+    const response = await axios.post(
+      `${SETTINGS_BASE_URL}/integrations/refresh-status`
+    );
+    return response.data.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const apiError: IApiError = error.response?.data || {
+        success: false,
+        message: error.message || 'An error occurred while refreshing integration statuses',
+      };
+      throw new Error(apiError.message || 'Failed to refresh integration statuses');
+    }
+    throw new Error('An unexpected error occurred while refreshing integration statuses');
+  }
+};
+
+/**
  * Get system logs
  * 
  * @param params - Query parameters for filtering logs
@@ -121,6 +144,7 @@ export const settingsService = {
   getSettings,
   updateSettings,
   testIntegration,
+  refreshIntegrationStatuses,
   getSystemLogs
 };
 

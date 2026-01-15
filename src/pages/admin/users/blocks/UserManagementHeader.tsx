@@ -78,7 +78,7 @@ const UserManagementHeader = ({
   return (
     <div className="card">
       <div className="card-header">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-row items-center justify-between w-full gap-4">
           <div className="flex items-center gap-3">
             <KeenIcon icon="user" className="text-primary text-2xl" />
             <div>

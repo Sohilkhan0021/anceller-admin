@@ -91,11 +91,21 @@ const UserManagementContent = () => {
       }
       
       // Transform form data to API format
+      // Handle phone number - ensure we don't send +91 if it's already in the number
+      let phoneNumber = userData.phone || '';
+      if (phoneNumber && typeof phoneNumber === 'string') {
+        // Remove any +91 prefix that might be present
+        phoneNumber = phoneNumber.replace(/^\+91\s*/g, '').replace(/\s*\+91\s*/g, '').trim();
+        if (phoneNumber.startsWith('+91')) {
+          phoneNumber = phoneNumber.substring(3).trim();
+        }
+      }
+      
       const updateData: any = {
         first_name: userData.firstName,
         last_name: userData.lastName,
         email: userData.email,
-        phone_number: userData.phone,
+        phone_number: phoneNumber,
       };
       
       // Add optional fields

@@ -81,14 +81,15 @@ const BookingManagementTable = ({
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
-      accepted: { variant: 'default', className: 'bg-info text-white', text: 'Accepted' },
-      completed: { variant: 'default', className: 'bg-success text-white', text: 'Completed' },
-      cancelled: { variant: 'destructive', className: '', text: 'Cancelled' },
-      'in-progress': { variant: 'secondary', className: '', text: 'In Progress' }
+      pending: { variant: 'default', className: 'bg-warning text-black font-semibold', text: 'Pending' },
+      accepted: { variant: 'default', className: 'bg-info text-white font-semibold', text: 'Accepted' },
+      completed: { variant: 'default', className: 'bg-success text-white font-semibold', text: 'Completed' },
+      cancelled: { variant: 'destructive', className: 'bg-danger text-white font-semibold', text: 'Cancelled' },
+      'in-progress': { variant: 'secondary', className: 'bg-primary text-white font-semibold', text: 'In Progress' },
+      active: { variant: 'default', className: 'bg-success text-white font-semibold', text: 'Active' }
     };
     
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
+    const config = statusConfig[status?.toLowerCase() as keyof typeof statusConfig] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
@@ -154,7 +155,12 @@ const BookingManagementTable = ({
               <span className="text-sm text-gray-600">
                 {selectedBookings.length} selected
               </span>
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full sm:w-auto"
+                onClick={() => setSelectedBookings([])}
+              >
                 <KeenIcon icon="cross-circle" className="me-2" />
                 Cancel Selected
               </Button>
@@ -242,17 +248,22 @@ const BookingManagementTable = ({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <Badge variant="outline" className="badge-outline max-w-[120px] truncate" title={booking.service || 'N/A'}>
-                      {booking.service || 'N/A'}
-                    </Badge>
+                  <TableCell className="hidden lg:table-cell w-[100px] px-2">
+                    <div className="min-w-0 w-full">
+                      <Badge variant="outline" className="badge-outline w-full truncate block" title={booking.service || 'N/A'}>
+                        <span className="block truncate">{booking.service || 'N/A'}</span>
+                      </Badge>
+                    </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate" title={formatDateTime(booking.dateTime) !== 'N/A' ? formatDateTime(booking.dateTime) : booking.dateTime}>
-                        {formatDateTime(booking.dateTime) !== 'Invalid Date' ? formatDateTime(booking.dateTime) : (booking.dateTime ? new Date(booking.dateTime).toLocaleDateString() : 'N/A')}
+                  <TableCell className="hidden md:table-cell w-[160px] px-2">
+                    <div className="min-w-0 w-full space-y-1">
+                      <div className="font-medium text-sm truncate w-full" title={formatDateTime(booking.dateTime) !== 'N/A' ? formatDateTime(booking.dateTime) : booking.dateTime}>
+                        {(() => {
+                          const dateTimeStr = formatDateTime(booking.dateTime) !== 'Invalid Date' ? formatDateTime(booking.dateTime) : (booking.dateTime ? new Date(booking.dateTime).toLocaleDateString() : 'N/A');
+                          return dateTimeStr.length > 12 ? dateTimeStr.substring(0, 12) + '...' : dateTimeStr;
+                        })()}
                       </div>
-                      <div className="text-xs text-gray-500 truncate max-w-[180px]" title={booking.address || 'N/A'}>
+                      <div className="text-xs text-gray-500 truncate w-full" title={booking.address || 'N/A'}>
                         {booking.address || 'N/A'}
                       </div>
                     </div>

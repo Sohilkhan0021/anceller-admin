@@ -329,7 +329,7 @@ const NotificationTemplates = () => {
         <Tabs value={activeTab} onChange={(event, newValue) => setActiveTab(String(newValue) || 'email')} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <Tab value="email">Email Templates</Tab>
-            <Tab value="sms">SMS Templates</Tab>  
+            <Tab value="sms">SMS Templates</Tab>
             <Tab value="push">Push Notifications</Tab>
           </TabsList>
 
@@ -338,7 +338,7 @@ const NotificationTemplates = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-semibold">Email Templates</h4>
-                <Button size="sm" onClick={handleAddTemplate}>
+                <Button size="sm" onClick={handleAddTemplate} className="mt-1">
                   <KeenIcon icon="plus" className="me-2" />
                   Add Template
                 </Button>
@@ -409,7 +409,7 @@ const NotificationTemplates = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-semibold">SMS Templates</h4>
-                <Button size="sm" onClick={handleAddTemplate}>
+                <Button size="sm" onClick={handleAddTemplate} className="mt-1">
                   <KeenIcon icon="plus" className="me-2" />
                   Add Template
                 </Button>
@@ -489,7 +489,7 @@ const NotificationTemplates = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-semibold">Push Notification Templates</h4>
-                <Button size="sm" onClick={handleAddTemplate}>
+                <Button size="sm" onClick={handleAddTemplate} className="mt-1">
                   <KeenIcon icon="plus" className="me-2" />
                   Add Template
                 </Button>

@@ -30,12 +30,12 @@ const SystemLogs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { 
-    data: logsData, 
-    isLoading, 
-    isError, 
-    error, 
-    refetch 
+  const {
+    data: logsData,
+    isLoading,
+    isError,
+    error,
+    refetch
   } = useSystemLogs({
     page: currentPage,
     limit: pageSize,
@@ -67,7 +67,7 @@ const SystemLogs = () => {
       info: { variant: 'default', className: 'bg-info text-white', text: 'Info' },
       success: { variant: 'default', className: 'bg-success text-white', text: 'Success' }
     };
-    
+
     const config = levelConfig[level as keyof typeof levelConfig] || { variant: 'secondary', className: '', text: level };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
@@ -79,7 +79,7 @@ const SystemLogs = () => {
       investigating: { variant: 'default', className: 'bg-info text-white', text: 'Investigating' },
       completed: { variant: 'default', className: 'bg-success text-white', text: 'Completed' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
@@ -91,7 +91,7 @@ const SystemLogs = () => {
       info: 'information',
       success: 'check-circle'
     };
-    
+
     return iconConfig[level as keyof typeof iconConfig] || 'question';
   };
 
@@ -101,30 +101,28 @@ const SystemLogs = () => {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h3 className="card-title">System Logs</h3>
-            <p className="text-sm text-gray-600">Monitor API failures, downtime alerts, and system events</p>
-          </div>
-          
-          <div className="flex gap-3">
-            {/* <Button variant="outline" size="sm">
+      <div className="card-header flex items-center justify-between gap-4">
+        <div className="flex flex-col">
+          <h3 className="card-title">System Logs</h3>
+          <p className="text-sm text-gray-600">Monitor API failures, downtime alerts, and system events</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* <Button variant="outline" size="sm">
               <KeenIcon icon="file-down" className="me-2" />
               Export Logs
             </Button> */}
-            <Button 
-              size="sm" 
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
-              <KeenIcon icon="refresh" className="me-2" />
-              Refresh
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <KeenIcon icon="refresh" className="me-2" />
+            Refresh
+          </Button>
         </div>
       </div>
-      
+
       <div className="card-body">
         {/* Error State */}
         {isError && (
@@ -197,8 +195,16 @@ const SystemLogs = () => {
                 <TableBody>
                   {systemLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No logs found
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <KeenIcon icon="document" className="text-gray-400 text-4xl" />
+                          <p className="text-gray-500 font-medium">No logs found</p>
+                          <p className="text-sm text-gray-400">
+                            {searchTerm || levelFilter !== 'all' 
+                              ? 'Try adjusting your filters' 
+                              : 'System activity will appear here as events occur'}
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

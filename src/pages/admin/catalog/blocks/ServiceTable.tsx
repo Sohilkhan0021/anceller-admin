@@ -48,9 +48,10 @@ import { getImageUrl } from '@/utils/imageUrl';
 
 interface IServiceTableProps {
   onEditService?: (service: IService) => void;
+  onAddService?: () => void;
 }
 
-const ServiceTable = ({ onEditService }: IServiceTableProps) => {
+const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const [sortBy, setSortBy] = useState('displayOrder');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [subServiceFilter, setSubServiceFilter] = useState('all');
@@ -277,12 +278,19 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
   return (
     <div className="card max-w-full w-full overflow-hidden">
       <div className="card-header max-w-full w-full overflow-hidden">
-        <div className="flex flex-col gap-4">
-          <div>
-            <h3 className="card-title">
-              Service Management {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
-            </h3>
-            <p className="text-sm text-gray-600">Manage service pricing and availability</p>
+        <div className="flex flex-col gap-4 w-full">
+          <div className="flex flex-row items-center justify-between w-full gap-4">
+            <div>
+              <h3 className="card-title">
+                Service Management {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
+              </h3>
+              <p className="text-sm text-gray-600">Manage service pricing and availability</p>
+            </div>
+
+            <Button size="sm" onClick={onAddService}>
+              <KeenIcon icon="plus" className="me-2" />
+              Add New Service
+            </Button>
           </div>
 
           {/* Error State */}
@@ -527,7 +535,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                               // Try multiple possible image field names - same as category implementation
                               const imageUrl = (service as any).image_url || (service as any).imageUrl || (service as any).image || '';
                               const fullImageUrl = getImageUrl(imageUrl);
-                              
+
                               // If image URL is invalid (local path, etc.), show placeholder
                               if (!fullImageUrl && imageUrl) {
                                 return (
@@ -536,7 +544,7 @@ const ServiceTable = ({ onEditService }: IServiceTableProps) => {
                                   </div>
                                 );
                               }
-                              
+
                               return fullImageUrl ? (
                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                                   <img

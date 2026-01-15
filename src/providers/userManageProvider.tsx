@@ -35,22 +35,30 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         onError: (error: any) => {
             // Extract detailed validation errors
             let errorMessage = error.message || 'Failed to create user';
-            
-            if (error.errors && typeof error.errors === 'object') {
-                // Format validation errors into a readable message
+
+            if (error.errors) {
                 const errorMessages: string[] = [];
-                Object.keys(error.errors).forEach((field) => {
-                    const fieldErrors = error.errors[field];
-                    if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
-                        errorMessages.push(`${field}: ${fieldErrors.join(', ')}`);
-                    }
-                });
-                
+                if (Array.isArray(error.errors)) {
+                    error.errors.forEach((err: any) => {
+                        if (err.message) errorMessages.push(err.message);
+                    });
+                } else if (typeof error.errors === 'object') {
+                    // Format validation errors into a readable message
+                    Object.keys(error.errors).forEach((field) => {
+                        const fieldErrors = error.errors[field];
+                        if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+                            errorMessages.push(`${field}: ${fieldErrors.join(', ')}`);
+                        } else if (typeof fieldErrors === 'string') {
+                            errorMessages.push(`${field}: ${fieldErrors}`);
+                        }
+                    });
+                }
+
                 if (errorMessages.length > 0) {
                     errorMessage = errorMessages.join('; ');
                 }
             }
-            
+
             toast.error(errorMessage);
             // Re-throw with errors object for form handling
             const enhancedError: any = new Error(errorMessage);
@@ -138,22 +146,30 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
             onError: (error: any) => {
                 // Extract detailed validation errors
                 let errorMessage = error.message || 'Failed to update user';
-                
-                if (error.errors && typeof error.errors === 'object') {
-                    // Format validation errors into a readable message
+
+                if (error.errors) {
                     const errorMessages: string[] = [];
-                    Object.keys(error.errors).forEach((field) => {
-                        const fieldErrors = error.errors[field];
-                        if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
-                            errorMessages.push(`${field}: ${fieldErrors.join(', ')}`);
-                        }
-                    });
-                    
+                    if (Array.isArray(error.errors)) {
+                        error.errors.forEach((err: any) => {
+                            if (err.message) errorMessages.push(err.message);
+                        });
+                    } else if (typeof error.errors === 'object') {
+                        // Format validation errors into a readable message
+                        Object.keys(error.errors).forEach((field) => {
+                            const fieldErrors = error.errors[field];
+                            if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+                                errorMessages.push(`${field}: ${fieldErrors.join(', ')}`);
+                            } else if (typeof fieldErrors === 'string') {
+                                errorMessages.push(`${field}: ${fieldErrors}`);
+                            }
+                        });
+                    }
+
                     if (errorMessages.length > 0) {
                         errorMessage = errorMessages.join('; ');
                     }
                 }
-                
+
                 toast.error(errorMessage);
                 // Re-throw with errors object for form handling
                 const enhancedError: any = new Error(errorMessage);

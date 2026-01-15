@@ -154,7 +154,22 @@ const UserManagementTable = ({
                           {user.email || 'N/A'}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">{user.phone || 'N/A'}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {(() => {
+                          let phone = user.phone || 'N/A';
+                          if (phone && phone !== 'N/A' && typeof phone === 'string') {
+                            // Remove duplicate +91 prefixes
+                            phone = phone.replace(/^\+91\s*/g, '').replace(/\s*\+91\s*/g, '').trim();
+                            // If it still starts with +91, remove it one more time
+                            if (phone.startsWith('+91')) {
+                              phone = phone.substring(3).trim();
+                            }
+                            // Display with single +91 prefix
+                            return phone ? `+91${phone}` : 'N/A';
+                          }
+                          return phone;
+                        })()}
+                      </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <div className="text-center">
                           <div className="font-semibold">{user.totalBookings || 0}</div>
