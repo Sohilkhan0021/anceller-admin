@@ -43,7 +43,7 @@ export const useTestIntegration = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    (integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api') =>
+    (integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api' | 'notifications') =>
       settingsService.testIntegration(integrationType),
     {
       onSuccess: () => {

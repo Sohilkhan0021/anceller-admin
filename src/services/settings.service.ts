@@ -66,7 +66,7 @@ export const updateSettings = async (
  * @returns Promise resolving to test result
  */
 export const testIntegration = async (
-  integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api'
+  integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api' | 'notifications'
 ): Promise<ITestIntegrationResponse['data']> => {
   try {
     const response = await axios.post<ITestIntegrationResponse>(
