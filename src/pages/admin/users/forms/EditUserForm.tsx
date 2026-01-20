@@ -79,7 +79,7 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
 
     // Use currentUserDetails if available (from fetchUserDetails), otherwise fallback to userData prop
     const dataToUse = currentUserDetails || userData;
-    
+
     if (dataToUse) {
       // Handle phone number - strip +91 prefix if present (handle multiple +91 cases)
       let phoneValue = dataToUse.phone || dataToUse.phone_number || '';
@@ -95,7 +95,7 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
       // Handle name - split if first_name/last_name not available
       let firstName = dataToUse.firstName || dataToUse.first_name || '';
       let lastName = dataToUse.lastName || dataToUse.last_name || '';
-      
+
       // If name exists but first_name/last_name don't, try to split name
       if ((!firstName && !lastName) && dataToUse.name) {
         const nameParts = dataToUse.name.trim().split(/\s+/);
@@ -112,17 +112,17 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
       }
 
       setFormData({
-        firstName: userData.firstName || userData.first_name || '',
-        lastName: userData.lastName || userData.last_name || '',
-        email: userData.email || '',
-        phone: cleanedPhone,
-        address: userData.address || '',
-        city: userData.city || '',
-        state: userData.state || '',
-        pincode: userData.pincode || userData.postal_code || '',
-        status: (userData.status || 'active').toLowerCase(),
-        isVerified: userData.isVerified || userData.is_verified || false,
-        notes: userData.notes || ''
+        firstName: firstName,
+        lastName: lastName,
+        email: dataToUse.email || '',
+        phone: phoneValue,
+        address: dataToUse.address || '',
+        city: dataToUse.city || '',
+        state: dataToUse.state || '',
+        pincode: dataToUse.pincode || dataToUse.postal_code || '',
+        status: statusValue,
+        isVerified: dataToUse.isVerified || dataToUse.is_verified || false,
+        notes: dataToUse.notes || ''
       });
       // Reset email validation state when form is populated
       setEmailError('');
@@ -167,7 +167,7 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate email before submit
     setEmailTouched(true);
     const emailValidationError = validateEmail(formData.email);
@@ -175,7 +175,7 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
       setEmailError(emailValidationError);
       return;
     }
-    
+
     onSave({ ...userData, ...formData });
     onClose();
   };
@@ -196,186 +196,186 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
               <ContentLoader />
             </div>
           ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    required
-                    className="mt-2"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      required
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      required
+                      className="mt-2"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    required
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    // type="email"
-                    value={formData.email}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Limit to 255 characters to prevent UI breaking
-                      if (value.length <= 255) {
-                        handleInputChange('email', value);
-                        // Validate email format in real-time
-                        if (value.length > 0) {
-                          setEmailTouched(true);
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      // type="email"
+                      value={formData.email}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Limit to 255 characters to prevent UI breaking
+                        if (value.length <= 255) {
+                          handleInputChange('email', value);
+                          // Validate email format in real-time
+                          if (value.length > 0) {
+                            setEmailTouched(true);
+                          }
                         }
-                      }
-                    }}
-                    onBlur={() => {
-                      setEmailTouched(true);
-                      const error = validateEmail(formData.email);
-                      setEmailError(error);
-                    }}
-                    maxLength={255}
-                    className={`mt-2 ${emailTouched && emailError ? 'border-danger' : ''}`}
-                    placeholder="user@example.com"
-                    required
-                  />
-                  {emailTouched && emailError && (
-                    <div className="mt-1 min-h-[20px]">
-                      <p className="text-danger text-xs break-words overflow-wrap-anywhere max-w-full">
-                        {emailError}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                      }}
+                      onBlur={() => {
+                        setEmailTouched(true);
+                        const error = validateEmail(formData.email);
+                        setEmailError(error);
+                      }}
+                      maxLength={255}
+                      className={`mt-2 ${emailTouched && emailError ? 'border-danger' : ''}`}
+                      placeholder="user@example.com"
+                      required
+                    />
+                    {emailTouched && emailError && (
+                      <div className="mt-1 min-h-[20px]">
+                        <p className="text-danger text-xs break-words overflow-wrap-anywhere max-w-full">
+                          {emailError}
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-                <div>
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    required
-                    className="mt-2"
-                  />
+                  <div>
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      required
+                      className="mt-2"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Address Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Address Information</h3>
+              {/* Address Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Address Information</h3>
 
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  rows={3}
-                  className="mt-2"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    rows={3}
                     className="mt-2"
                   />
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      value={formData.state}
+                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="pincode">Pincode</Label>
+                    <Input
+                      id="pincode"
+                      value={formData.pincode}
+                      onChange={(e) => handleInputChange('pincode', e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Account Settings</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="blocked">Blocked</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-6">
+                    <Switch
+                      checked={formData.isVerified}
+                      onCheckedChange={(checked) => handleInputChange('isVerified', checked)}
+                    />
+                    <Label>Email Verified</Label>
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    rows={3}
                     className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="pincode">Pincode</Label>
-                  <Input
-                    id="pincode"
-                    value={formData.pincode}
-                    onChange={(e) => handleInputChange('pincode', e.target.value)}
-                    className="mt-2"
+                    placeholder="Additional notes about the user..."
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Account Settings */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Account Settings</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="blocked">Blocked</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center space-x-2 pt-6">
-                  <Switch
-                    checked={formData.isVerified}
-                    onCheckedChange={(checked) => handleInputChange('isVerified', checked)}
-                  />
-                  <Label>Email Verified</Label>
-                </div>
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  <KeenIcon icon="check" className="me-2" />
+                  Update User
+                </Button>
               </div>
-
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  rows={3}
-                  className="mt-2"
-                  placeholder="Additional notes about the user..."
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                <KeenIcon icon="check" className="me-2" />
-                Update User
-              </Button>
-            </div>
-          </form>
+            </form>
           )}
         </DialogBody>
       </DialogContent>
