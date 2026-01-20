@@ -50,6 +50,7 @@ export interface ISystemSettings {
     payment_gateway: IIntegrationSettings;
     payout_service: IIntegrationSettings;
     maps_api: IIntegrationSettings;
+    notifications: IIntegrationSettings;
   };
   business: IBusinessSettings;
   notifications: INotificationSettings;
@@ -69,6 +70,7 @@ export interface IUpdateSettingsRequest {
     payment_gateway?: Partial<IIntegrationSettings>;
     payout_service?: Partial<IIntegrationSettings>;
     maps_api?: Partial<IIntegrationSettings>;
+    notifications?: Partial<IIntegrationSettings>;
   };
   business?: Partial<IBusinessSettings>;
   notifications?: Partial<INotificationSettings>;

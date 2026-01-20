@@ -71,30 +71,32 @@ const IntegrationTiles = () => {
       otp_service: {
         id: 'otp-service',
         name: 'OTP Service',
-        description: 'SMS and OTP delivery service',
-        // icon: 'smartphone'
+        description: 'SMS and OTP delivery service (Twilio, etc.)',
         icon: 'phone'
       },
       payment_gateway: {
         id: 'payment-gateway',
         name: 'Payment Gateway',
-        description: 'Payment processing and transactions',
-        // icon: 'money-bill'
+        description: 'Payment processing and transactions (Razorpay, etc.)',
         icon: 'dollar'
       },
       payout_service: {
         id: 'payout-service',
         name: 'Payout Service',
-        description: 'Provider payouts and settlements',
-        // icon: 'wallet'
+        description: 'Provider payouts and settlements (RazorpayX, etc.)',
         icon: 'wallet'
       },
       maps_api: {
         id: 'maps-api',
         name: 'Maps API',
-        description: 'Location services and mapping',
-        // icon: 'location'
+        description: 'Location services and mapping (Google Maps, etc.)',
         icon: 'geolocation'
+      },
+      notifications: {
+        id: 'notifications',
+        name: 'Notifications',
+        description: 'Push notifications service (FCM, etc.)',
+        icon: 'notification'
       }
     };
 
@@ -104,7 +106,7 @@ const IntegrationTiles = () => {
 
       return {
         ...meta,
-        type: value.provider || 'Unknown',
+        type: formatProviderName(value.provider),
         status: value.status || 'disconnected',
         lastTested: value.last_tested ? format(new Date(value.last_tested), 'yyyy-MM-dd hh:mm a') : null,
         apiKey: value.api_key,
@@ -141,7 +143,7 @@ const IntegrationTiles = () => {
   const handleSaveConfiguration = async () => {
     if (!selectedIntegration) return;
 
-    const integrationType = selectedIntegration.id.replace('-', '_') as 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api';
+    const integrationType = selectedIntegration.id.replace('-', '_') as 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api' | 'notifications';
 
     try {
       await updateSettingsMutation.mutateAsync({

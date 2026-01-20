@@ -43,8 +43,24 @@ export const useTestIntegration = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    (integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api') =>
+    (integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api' | 'notifications') =>
       settingsService.testIntegration(integrationType),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['settings']);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to refresh all integration statuses
+ */
+export const useRefreshIntegrationStatuses = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    () => settingsService.refreshIntegrationStatuses(),
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['settings']);

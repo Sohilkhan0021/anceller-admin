@@ -195,8 +195,16 @@ const SystemLogs = () => {
                 <TableBody>
                   {systemLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No logs found
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <KeenIcon icon="document" className="text-gray-400 text-4xl" />
+                          <p className="text-gray-500 font-medium">No logs found</p>
+                          <p className="text-sm text-gray-400">
+                            {searchTerm || levelFilter !== 'all' 
+                              ? 'Try adjusting your filters' 
+                              : 'System activity will appear here as events occur'}
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

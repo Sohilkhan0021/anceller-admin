@@ -48,22 +48,16 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
   const [emailError, setEmailError] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
 
-  // Fetch full user details when form opens (only once per user)
-  useEffect(() => {
-    if (isOpen && userData) {
-      const userId = userData.user_id || userData.id;
-      if (userId && fetchedUserIdRef.current !== userId) {
-        fetchedUserIdRef.current = userId;
-        fetchUserDetails(userId);
-      }
-    } else if (!isOpen) {
-      // Reset ref when form closes
-      fetchedUserIdRef.current = null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, userData?.user_id, userData?.id]);
+  // Helper function to extract phone number without country code and spaces
+  const extractPhoneNumber = (phone: string): string => {
+    if (!phone) return '';
+    // Remove all spaces, dashes, and parentheses
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    // Remove country codes (common formats: +91, +1, etc.)
+    cleaned = cleaned.replace(/^\+?\d{1,4}/, '');
+    return cleaned;
+  };
 
-  // Populate form when user details are available
   useEffect(() => {
     if (!isOpen) {
       // Reset form when dialog closes
@@ -80,9 +74,6 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
         isVerified: true,
         notes: ''
       });
-      // Reset email validation state when form closes
-      setEmailError('');
-      setEmailTouched(false);
       return;
     }
 
@@ -121,17 +112,17 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
       }
 
       setFormData({
-        firstName: firstName,
-        lastName: lastName,
-        email: dataToUse.email || '',
-        phone: phoneValue,
-        address: dataToUse.address || dataToUse.user_address || '',
-        city: dataToUse.city || dataToUse.city_name || dataToUse.user_city || '',
-        state: dataToUse.state || dataToUse.state_name || dataToUse.user_state || '',
-        pincode: dataToUse.pincode || dataToUse.zipCode || dataToUse.zip_code || dataToUse.user_pincode || '',
-        status: statusValue,
-        isVerified: dataToUse.isVerified !== undefined ? dataToUse.isVerified : (dataToUse.is_email_verified || false),
-        notes: dataToUse.notes || ''
+        firstName: userData.firstName || userData.first_name || '',
+        lastName: userData.lastName || userData.last_name || '',
+        email: userData.email || '',
+        phone: cleanedPhone,
+        address: userData.address || '',
+        city: userData.city || '',
+        state: userData.state || '',
+        pincode: userData.pincode || userData.postal_code || '',
+        status: (userData.status || 'active').toLowerCase(),
+        isVerified: userData.isVerified || userData.is_verified || false,
+        notes: userData.notes || ''
       });
       // Reset email validation state when form is populated
       setEmailError('');

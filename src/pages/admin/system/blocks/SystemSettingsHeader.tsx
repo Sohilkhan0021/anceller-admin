@@ -1,12 +1,30 @@
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { useSettings } from '@/services';
+import { useSettings, useRefreshIntegrationStatuses } from '@/services';
+import { useSnackbar } from 'notistack';
 
 const SystemSettingsHeader = () => {
   const { refetch, isLoading } = useSettings();
+  const refreshStatusesMutation = useRefreshIntegrationStatuses();
+  const { enqueueSnackbar } = useSnackbar();
 
-  const handleRefresh = () => {
-    refetch();
+  const handleRefresh = async () => {
+    try {
+      await refreshStatusesMutation.mutateAsync();
+      // Also refetch settings to get updated statuses
+      await refetch();
+      enqueueSnackbar('Integration statuses refreshed successfully', { 
+        variant: 'solid', 
+        state: 'success',
+        icon: 'check-circle'
+      });
+    } catch (error) {
+      enqueueSnackbar(error instanceof Error ? error.message : 'Failed to refresh integration statuses', { 
+        variant: 'solid', 
+        state: 'danger',
+        icon: 'cross-circle'
+      });
+    }
   };
 
   return (
@@ -26,9 +44,9 @@ const SystemSettingsHeader = () => {
             size="sm"
             className="w-full sm:w-auto"
             onClick={handleRefresh}
-            disabled={isLoading}
+            disabled={isLoading || refreshStatusesMutation.isLoading}
           >
-            {isLoading ? (
+            {(isLoading || refreshStatusesMutation.isLoading) ? (
               <>
                 <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 me-2"></div>
                 Refreshing...

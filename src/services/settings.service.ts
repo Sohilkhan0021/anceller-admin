@@ -66,7 +66,7 @@ export const updateSettings = async (
  * @returns Promise resolving to test result
  */
 export const testIntegration = async (
-  integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api'
+  integrationType: 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api' | 'notifications'
 ): Promise<ITestIntegrationResponse['data']> => {
   try {
     const response = await axios.post<ITestIntegrationResponse>(
@@ -82,6 +82,29 @@ export const testIntegration = async (
       throw new Error(apiError.message || 'Failed to test integration');
     }
     throw new Error('An unexpected error occurred while testing integration');
+  }
+};
+
+/**
+ * Refresh all integration statuses
+ * 
+ * @returns Promise resolving to refresh result
+ */
+export const refreshIntegrationStatuses = async (): Promise<any> => {
+  try {
+    const response = await axios.post(
+      `${SETTINGS_BASE_URL}/integrations/refresh-status`
+    );
+    return response.data.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const apiError: IApiError = error.response?.data || {
+        success: false,
+        message: error.message || 'An error occurred while refreshing integration statuses',
+      };
+      throw new Error(apiError.message || 'Failed to refresh integration statuses');
+    }
+    throw new Error('An unexpected error occurred while refreshing integration statuses');
   }
 };
 
@@ -121,6 +144,7 @@ export const settingsService = {
   getSettings,
   updateSettings,
   testIntegration,
+  refreshIntegrationStatuses,
   getSystemLogs
 };
 
