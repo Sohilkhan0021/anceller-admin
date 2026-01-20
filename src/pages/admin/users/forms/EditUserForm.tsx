@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -207,7 +208,15 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                     <Input
                       id="firstName"
                       value={formData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                        if (specialChars.length > 2) {
+                          toast.error("Only 2 special characters are allowed in First Name");
+                          return;
+                        }
+                        handleInputChange('firstName', value);
+                      }}
                       required
                       className="mt-2"
                     />
@@ -218,7 +227,15 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                     <Input
                       id="lastName"
                       value={formData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                        if (specialChars.length > 2) {
+                          toast.error("Only 2 special characters are allowed in Last Name");
+                          return;
+                        }
+                        handleInputChange('lastName', value);
+                      }}
                       required
                       className="mt-2"
                     />

@@ -21,11 +21,11 @@ const ProviderManagementContent = () => {
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editProvider, setEditProvider] = useState<IProvider | null>(null);
-  
+
   // Initialize filters from URL params
   const kycStatusFromUrl = searchParams.get('kyc_status') || '';
   const statusFromUrl = searchParams.get('status') || '';
-  
+
   // Filter state
   const [filters, setFilters] = useState<{ search: string; status: string; kyc_status?: string; category_id?: string }>({
     search: '',
@@ -50,14 +50,14 @@ const ProviderManagementContent = () => {
   }, [searchParams]);
 
   // Fetch providers with filters
-  const { 
-    providers, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
+  const {
+    providers,
+    pagination,
+    isLoading,
+    isError,
+    error,
     refetch,
-    isFetching 
+    isFetching
   } = useProviders({
     page: currentPage,
     limit: pageSize,
@@ -106,19 +106,16 @@ const ProviderManagementContent = () => {
   };
 
   // Create provider mutation
-  const { mutate: createProvider, isLoading: isCreating } = useCreateProvider({
+  const { mutateAsync: createProvider, isLoading: isCreating } = useCreateProvider({
     onSuccess: (data) => {
-      toast.success('Provider created successfully');
+      // toast.success('Provider created successfully'); // Form will handle success toast
       setIsAddFormOpen(false);
       queryClient.invalidateQueries(['providers']);
       queryClient.invalidateQueries(['coupon-stats']); // Also invalidate stats if they depend on providers
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create provider');
-    },
+    }
   });
 
-  const handleSaveProvider = (providerData: any) => {
+  const handleSaveProvider = async (providerData: any) => {
     // Transform form data to API format
     const apiData: any = {
       first_name: providerData.firstName,
@@ -142,7 +139,7 @@ const ProviderManagementContent = () => {
       notes: providerData.notes,
     };
 
-    createProvider(apiData);
+    return createProvider(apiData);
   };
 
   const handleUpdateProvider = (providerData: any) => {
@@ -157,7 +154,7 @@ const ProviderManagementContent = () => {
   return (
     <div className="grid gap-5 lg:gap-7.5">
       {/* Header with search and filters */}
-      <ProviderManagementHeader 
+      <ProviderManagementHeader
         onAddProvider={handleAddProvider}
         onFiltersChange={handleFiltersChange}
         initialSearch={filters.search}
@@ -194,32 +191,32 @@ const ProviderManagementContent = () => {
         </div>
       ) : (
         /* Provider Management Table */
-        <ProviderManagementTable 
+        <ProviderManagementTable
           providers={providers}
           pagination={pagination}
           isLoading={isFetching}
-          onProviderSelect={handleProviderSelect} 
+          onProviderSelect={handleProviderSelect}
           onEditProvider={handleEditProvider}
           onPageChange={setCurrentPage}
         />
       )}
 
       {/* Provider Profile Modal */}
-      <ProviderProfileModal 
-        provider={selectedProvider} 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal} 
+      <ProviderProfileModal
+        provider={selectedProvider}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
       />
 
       {/* Add Provider Form */}
-      <AddProviderForm 
+      <AddProviderForm
         isOpen={isAddFormOpen}
         onClose={handleCloseAddForm}
         onSave={handleSaveProvider}
       />
 
       {/* Edit Provider Form */}
-      <EditProviderForm 
+      <EditProviderForm
         isOpen={isEditFormOpen}
         onClose={handleCloseEditForm}
         onSave={handleUpdateProvider}

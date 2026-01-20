@@ -115,8 +115,11 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         ({ userId, status }: { userId: string; status: 'ACTIVE' | 'SUSPENDED' }) =>
             userService.updateUserStatus(userId, status),
         {
-            onSuccess: (data) => {
-                toast.success(data.message || 'User status updated successfully');
+            onSuccess: (_data, variables) => {
+                const message = variables.status === 'SUSPENDED'
+                    ? 'User blocked successfully'
+                    : 'User unblock successfully';
+                toast.success(message);
                 queryClient.invalidateQueries(['users']);
                 if (currentUserDetails) {
                     fetchUserDetails(currentUserDetails.user_id || currentUserDetails.id);

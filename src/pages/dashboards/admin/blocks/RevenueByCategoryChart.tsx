@@ -151,7 +151,7 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
     <div className="card h-full">
       <div className="card-header">
         <h3 className="card-title">Revenue by Service Category</h3>
-        <p className="text-sm text-gray-600">Monthly revenue breakdown by service type</p>
+        {/* <p className="text-sm text-gray-600">Monthly revenue breakdown by service type</p> */}
       </div>
       
       <div className="card-body flex flex-col justify-end items-stretch grow px-3 py-1">

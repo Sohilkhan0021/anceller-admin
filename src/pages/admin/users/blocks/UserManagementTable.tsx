@@ -58,6 +58,12 @@ const UserManagementTable = ({
     await updateUserStatus(userId, 'ACTIVE');
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    console.log('Delete user:', userId);
+    // delete API call in future
+  };
+
+
   const getStatusBadge = (status: string) => {
     const s = status?.toUpperCase();
     if (s === 'ACTIVE') {
@@ -139,7 +145,7 @@ const UserManagementTable = ({
                           <div className="min-w-0 flex-1">
                             {/* <div className="font-medium truncate">{user.name || 'N/A'}</div> */}
                             <div className="font-medium" title={user.name}>
-                              {truncateText(user.name || 'N/A', 40)}
+                              {truncateText(user.name || 'N/A', 30)}
                             </div>
 
                             <div className="text-sm text-gray-500 hidden sm:block">
@@ -219,6 +225,14 @@ const UserManagementTable = ({
                                   Unblock User
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteUser(user.user_id || user.id)}
+                                className="text-danger"
+                              >
+                                <KeenIcon icon="trash" className="me-2" />
+                                Delete User
+                              </DropdownMenuItem>
+
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -232,7 +246,7 @@ const UserManagementTable = ({
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && onPageChange && (
               <div className="card-footer">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
