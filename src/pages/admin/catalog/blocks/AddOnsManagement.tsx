@@ -184,11 +184,28 @@ const AddOnsManagement = ({
     }).format(amount);
   };
 
+  // Temporary flag to show "coming soon" message
+  // Set to false to restore original functionality
+  const SHOW_COMING_SOON = true;
+
+  // Temporary: Show "coming soon" message
+  if (SHOW_COMING_SOON) {
+    return (
+      <div className="card">
+        <div className="card-body">
+          <div className="p-8 text-center">
+            <p className="text-lg text-gray-600">This feature will be available very soon.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="card">
         <div className="card-header">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
                 Add-Ons & Extras {pagination ? `(${pagination.total})` : `(${addOns.length})`}

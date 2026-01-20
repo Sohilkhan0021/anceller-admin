@@ -158,7 +158,7 @@ const ProviderManagementTable = ({
       suspended: { variant: 'default', className: 'bg-warning text-white', text: 'Suspended' }
     };
     
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
+    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 

@@ -78,12 +78,16 @@ const DropdownUser = ({ menuItemRef }: IDropdownUserProps) => {
             {displayName}
           </Link>
           {displayEmail && displayEmail !== 'No email' ? (
-            <a
-              href={`mailto:${displayEmail}`}
-              className="text-xs text-gray-600 hover:text-primary font-medium leading-none"
-            >
+            // <a
+            //   href={`mailto:${displayEmail}`}
+            //   className="text-xs text-gray-600 hover:text-primary font-medium leading-none"
+            // >
+            //   {displayEmail}
+            // </a>
+            <span className="text-xs text-gray-600 font-medium leading-none cursor-default">
               {displayEmail}
-            </a>
+            </span>
+
           ) : (
             <span className="text-xs text-gray-500 font-medium leading-none">
               No email

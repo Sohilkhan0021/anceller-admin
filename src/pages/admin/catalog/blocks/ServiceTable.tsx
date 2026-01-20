@@ -674,7 +674,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditService(service.id)}>
-                                  <KeenIcon icon="edit" className="me-2" />
+                                  <KeenIcon icon="pencil" className="me-2" />
                                   Edit Service
                                 </DropdownMenuItem>
                                 <DropdownMenuItem

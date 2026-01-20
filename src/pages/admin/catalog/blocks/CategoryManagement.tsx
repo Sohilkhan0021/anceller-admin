@@ -534,9 +534,9 @@ const CategoryManagement = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
+        <DialogContent className="max-w-md pt-6">
+          <DialogHeader className='gap-2'>
+            <DialogTitle className='text-left pl-1'>Delete Category</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this category? This action cannot be undone.
               All sub-services under this category will also be affected.

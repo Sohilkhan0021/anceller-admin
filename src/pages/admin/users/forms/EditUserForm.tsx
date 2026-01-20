@@ -45,6 +45,8 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
     isVerified: true,
     notes: ''
   });
+  const [emailError, setEmailError] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
 
   // Fetch full user details when form opens (only once per user)
   useEffect(() => {
@@ -78,6 +80,9 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
         isVerified: true,
         notes: ''
       });
+      // Reset email validation state when form closes
+      setEmailError('');
+      setEmailTouched(false);
       return;
     }
 
@@ -128,18 +133,58 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
         isVerified: dataToUse.isVerified !== undefined ? dataToUse.isVerified : (dataToUse.is_email_verified || false),
         notes: dataToUse.notes || ''
       });
+      // Reset email validation state when form is populated
+      setEmailError('');
+      setEmailTouched(false);
     }
   }, [isOpen, userData, currentUserDetails]);
+
+  const validateEmail = (email: string) => {
+    if (!email) {
+      return 'Email is required';
+    }
+    if (email.length > 255) {
+      return 'Email must not exceed 255 characters';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address';
+    }
+    return '';
+  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    // Validate email in real-time
+    if (field === 'email') {
+      if (emailTouched) {
+        const error = validateEmail(value);
+        setEmailError(error);
+      }
+      // Limit to 255 characters to prevent UI breaking
+      if (value.length <= 255) {
+        if (value.length > 0) {
+          setEmailTouched(true);
+        }
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email before submit
+    setEmailTouched(true);
+    const emailValidationError = validateEmail(formData.email);
+    if (emailValidationError) {
+      setEmailError(emailValidationError);
+      return;
+    }
+    
     onSave({ ...userData, ...formData });
     onClose();
   };
@@ -194,12 +239,36 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                   <Label htmlFor="email">Email Address *</Label>
                   <Input
                     id="email"
-                    type="email"
+                    // type="email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Limit to 255 characters to prevent UI breaking
+                      if (value.length <= 255) {
+                        handleInputChange('email', value);
+                        // Validate email format in real-time
+                        if (value.length > 0) {
+                          setEmailTouched(true);
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      setEmailTouched(true);
+                      const error = validateEmail(formData.email);
+                      setEmailError(error);
+                    }}
+                    maxLength={255}
+                    className={`mt-2 ${emailTouched && emailError ? 'border-danger' : ''}`}
+                    placeholder="user@example.com"
                     required
-                    className="mt-2"
                   />
+                  {emailTouched && emailError && (
+                    <div className="mt-1 min-h-[20px]">
+                      <p className="text-danger text-xs break-words overflow-wrap-anywhere max-w-full">
+                        {emailError}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
