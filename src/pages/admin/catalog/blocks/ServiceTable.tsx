@@ -512,12 +512,12 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                 <TableHeader>
                   <TableRow>
                     {columnVisibility.service && <TableHead className="w-[200px]">Service</TableHead>}
-                    {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>}
+                    {/* {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>} */}
                     {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
                     {columnVisibility.category && <TableHead className="w-[100px]">Category</TableHead>}
                     {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>}
                     {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>}
-                    {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>}
+                    {/* {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>} */}
                     {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
                     {columnVisibility.popularity && <TableHead className="w-[90px]">Popularity</TableHead>}
                     {columnVisibility.bookings && <TableHead className="w-[70px] text-center">Bookings</TableHead>}
@@ -570,13 +570,13 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                           </div>
                         </TableCell>
                       )}
-                      {columnVisibility.subService && (
+                      {/* {columnVisibility.subService && (
                         <TableCell className="w-[150px]">
                           <div className="font-medium text-sm truncate" title={service.subServiceName || '—'}>
                             {service.subServiceName || '—'}
                           </div>
                         </TableCell>
-                      )}
+                      )} */}
                       {columnVisibility.description && (
                         <TableCell className="w-[160px]">
                           <div className="text-sm text-gray-600 truncate" title={service.description}>
@@ -610,13 +610,13 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                           </div>
                         </TableCell>
                       )}
-                      {columnVisibility.skills && (
+                      {/* {columnVisibility.skills && (
                         <TableCell className="w-[140px]">
                           <div className="text-xs text-gray-600 truncate" title={service.skills}>
                             {service.skills || '—'}
                           </div>
                         </TableCell>
-                      )}
+                      )} */}
                       {columnVisibility.status && (
                         <TableCell className="w-[100px]">
                           <div className="flex items-center gap-1.5 flex-nowrap">

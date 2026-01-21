@@ -29,7 +29,7 @@ interface IBookingManagementTableProps {
   onPageChange?: (page: number) => void;
 }
 
-const BookingManagementTable = ({ 
+const BookingManagementTable = ({
   bookings,
   pagination,
   isLoading = false,
@@ -88,7 +88,7 @@ const BookingManagementTable = ({
       'in-progress': { variant: 'secondary', className: 'bg-primary text-white font-semibold', text: 'In Progress' },
       active: { variant: 'default', className: 'bg-success text-white font-semibold', text: 'Active' }
     };
-    
+
     const config = statusConfig[status?.toLowerCase() as keyof typeof statusConfig] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
@@ -139,7 +139,7 @@ const BookingManagementTable = ({
       'Wallet': 'wallet',
       'Cash': 'money'
     };
-    
+
     return iconMap[paymentType as keyof typeof iconMap] || 'money';
   };
 
@@ -155,9 +155,9 @@ const BookingManagementTable = ({
               <span className="text-sm text-gray-600">
                 {selectedBookings.length} selected
               </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full sm:w-auto"
                 onClick={() => setSelectedBookings([])}
               >
@@ -168,7 +168,7 @@ const BookingManagementTable = ({
           )}
         </div>
       </div>
-      
+
       <div className="card-body p-0">
         {isLoading ? (
           <div className="p-8">
@@ -194,153 +194,153 @@ const BookingManagementTable = ({
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                <TableHead className="hidden sm:table-cell w-[120px]">Booking ID</TableHead>
-                <TableHead className="w-[180px] sm:w-[200px]">Customer</TableHead>
-                <TableHead className="hidden md:table-cell w-[140px]">Provider</TableHead>
-                <TableHead className="hidden lg:table-cell w-[100px]">Service</TableHead>
-                <TableHead className="hidden md:table-cell w-[160px]">Date-Time</TableHead>
-                <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
-                <TableHead className="hidden lg:table-cell w-[100px]">Amount</TableHead>
-                <TableHead className="hidden lg:table-cell w-[120px]">Payment</TableHead>
-                <TableHead className="w-[80px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bookings.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell className="hidden sm:table-cell">
-                    <Checkbox
-                      checked={selectedBookings.includes(booking.id)}
-                      onCheckedChange={(checked) => handleSelectBooking(booking.id, checked as boolean)}
-                    />
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="font-medium text-xs max-w-[120px] truncate" title={booking.id}>
-                      {booking.id || 'N/A'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="w-[180px] sm:w-[200px]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
-                        <KeenIcon icon="user" className="text-primary text-xs" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate text-sm" title={booking.userName || 'N/A'}>
-                          {booking.userName || 'N/A'}
+                    <TableHead className="hidden sm:table-cell w-[120px]">Booking ID</TableHead>
+                    <TableHead className="w-[180px] sm:w-[200px]">Customer</TableHead>
+                    <TableHead className="hidden md:table-cell w-[140px]">Provider</TableHead>
+                    <TableHead className="hidden lg:table-cell w-[100px]">Service</TableHead>
+                    <TableHead className="hidden md:table-cell w-[160px]">Date-Time</TableHead>
+                    <TableHead className="hidden sm:table-cell w-[100px]">Status</TableHead>
+                    <TableHead className="hidden lg:table-cell w-[100px]">Amount</TableHead>
+                    <TableHead className="hidden lg:table-cell w-[120px]">Payment</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="hidden sm:table-cell">
+                        <Checkbox
+                          checked={selectedBookings.includes(booking.id)}
+                          onCheckedChange={(checked) => handleSelectBooking(booking.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="font-medium text-xs max-w-[120px] truncate" title={booking.id}>
+                          {booking.id || 'N/A'}
                         </div>
-                        <div className="text-xs text-gray-500 hidden sm:block truncate" title={booking.phone || 'N/A'}>
-                          {booking.phone || 'N/A'}
+                      </TableCell>
+                      <TableCell className="w-[180px] sm:w-[200px]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
+                            <KeenIcon icon="user" className="text-primary text-xs" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate text-sm" title={booking.userName || 'N/A'}>
+                              {booking.userName || 'N/A'}
+                            </div>
+                            <div className="text-xs text-gray-500 hidden sm:block truncate" title={booking.phone || 'N/A'}>
+                              {booking.phone || 'N/A'}
+                            </div>
+                            <div className="text-xs text-gray-500 sm:hidden truncate max-w-[100px]" title={booking.id || 'N/A'}>
+                              {booking.id ? booking.id.substring(0, 15) + '...' : 'N/A'}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 sm:hidden truncate max-w-[100px]" title={booking.id || 'N/A'}>
-                          {booking.id ? booking.id.substring(0, 15) + '...' : 'N/A'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-success-light rounded-full flex items-center justify-center flex-shrink-0">
+                            <KeenIcon icon="shop" className="text-success text-sm" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{booking.providerName || 'N/A'}</div>
+                            <div className="text-sm text-gray-500">Provider</div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-success-light rounded-full flex items-center justify-center flex-shrink-0">
-                        <KeenIcon icon="shop" className="text-success text-sm" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{booking.providerName || 'N/A'}</div>
-                        <div className="text-sm text-gray-500">Provider</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell w-[100px] px-2">
-                    <div className="min-w-0 w-full">
-                      <Badge variant="outline" className="badge-outline w-full truncate block" title={booking.service || 'N/A'}>
-                        <span className="block truncate">{booking.service || 'N/A'}</span>
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell w-[160px] px-2">
-                    <div className="min-w-0 w-full space-y-1">
-                      <div className="font-medium text-sm truncate w-full" title={formatDateTime(booking.dateTime) !== 'N/A' ? formatDateTime(booking.dateTime) : booking.dateTime}>
-                        {(() => {
-                          const dateTimeStr = formatDateTime(booking.dateTime) !== 'Invalid Date' ? formatDateTime(booking.dateTime) : (booking.dateTime ? new Date(booking.dateTime).toLocaleDateString() : 'N/A');
-                          return dateTimeStr.length > 12 ? dateTimeStr.substring(0, 12) + '...' : dateTimeStr;
-                        })()}
-                      </div>
-                      <div className="text-xs text-gray-500 truncate w-full" title={booking.address || 'N/A'}>
-                        {booking.address || 'N/A'}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">{getStatusBadge(booking.status)}</TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="text-center">
-                      <div className="font-semibold">{formatCurrency(booking.amount || 0)}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex items-center gap-2">
-                      <KeenIcon icon={getPaymentTypeIcon(booking.paymentType)} className="text-gray-500 text-sm" />
-                      <span className="text-sm">{booking.paymentType || 'N/A'}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="w-[80px]">
-                    <div className="flex items-center justify-end">
-                      <div className="flex flex-col gap-1 sm:hidden mr-1">
-                        <div className="md:hidden">
-                          <Badge variant="outline" className="badge-outline text-xs px-1 py-0">
-                            {booking.service && booking.service.length > 8 
-                              ? booking.service.substring(0, 8) + '...' 
-                              : booking.service || 'N/A'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell w-[100px] px-2">
+                        <div className="min-w-0 w-full">
+                          <Badge variant="outline" className="badge-outline w-full truncate block" title={booking.service || 'N/A'}>
+                            <span className="block truncate">{booking.service || 'N/A'}</span>
                           </Badge>
                         </div>
-                        <div className="sm:hidden">
-                          {getStatusBadge(booking.status)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell w-[160px] px-2">
+                        <div className="min-w-0 w-full space-y-1">
+                          <div className="font-medium text-sm truncate w-full" title={formatDateTime(booking.dateTime) !== 'N/A' ? formatDateTime(booking.dateTime) : booking.dateTime}>
+                            {(() => {
+                              const dateTimeStr = formatDateTime(booking.dateTime) !== 'Invalid Date' ? formatDateTime(booking.dateTime) : (booking.dateTime ? new Date(booking.dateTime).toLocaleDateString() : 'N/A');
+                              return dateTimeStr.length > 12 ? dateTimeStr.substring(0, 12) + '...' : dateTimeStr;
+                            })()}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate w-full" title={booking.address || 'N/A'}>
+                            {booking.address || 'N/A'}
+                          </div>
                         </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="flex-shrink-0 p-1">
-                            <KeenIcon icon="dots-vertical" className="text-sm" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleViewDetails(booking)}>
-                            <KeenIcon icon="eye" className="me-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          {onEditBooking && (
-                            <DropdownMenuItem onClick={() => onEditBooking(booking)}>
-                              <KeenIcon icon="notepad-edit" className="me-2" />
-                              Edit Booking
-                            </DropdownMenuItem>
-                          )}
-                          {booking.status === 'pending' && (
-                            <>
-                              <DropdownMenuItem onClick={() => handleCancelBooking(booking.id)}>
-                                <KeenIcon icon="cross-circle" className="me-2" />
-                                Cancel Booking
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{getStatusBadge(booking.status)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="text-center">
+                          <div className="font-semibold">{formatCurrency(booking.amount || 0)}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="flex items-center gap-2">
+                          <KeenIcon icon={getPaymentTypeIcon(booking.paymentType)} className="text-gray-500 text-sm" />
+                          <span className="text-sm">{booking.paymentType || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[80px]">
+                        <div className="flex items-center justify-end">
+                          <div className="flex flex-col gap-1 sm:hidden mr-1">
+                            <div className="md:hidden">
+                              <Badge variant="outline" className="badge-outline text-xs px-1 py-0">
+                                {booking.service && booking.service.length > 8
+                                  ? booking.service.substring(0, 8) + '...'
+                                  : booking.service || 'N/A'}
+                              </Badge>
+                            </div>
+                            <div className="sm:hidden">
+                              {getStatusBadge(booking.status)}
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="flex-shrink-0 p-1">
+                                <KeenIcon icon="dots-vertical" className="text-sm" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetails(booking)}>
+                                <KeenIcon icon="eye" className="me-2" />
+                                View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleReassignProvider(booking.id)}>
-                                <KeenIcon icon="refresh" className="me-2" />
-                                Reassign Provider
+                              {onEditBooking && (
+                                <DropdownMenuItem onClick={() => onEditBooking(booking)}>
+                                  <KeenIcon icon="notepad-edit" className="me-2" />
+                                  Edit Booking
+                                </DropdownMenuItem>
+                              )}
+                              {booking.status === 'pending' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleCancelBooking(booking.id)}>
+                                    <KeenIcon icon="cross-circle" className="me-2" />
+                                    Cancel Booking
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleReassignProvider(booking.id)}>
+                                    <KeenIcon icon="refresh" className="me-2" />
+                                    Reassign Provider
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuItem onClick={() => handleRefund(booking.id)}>
+                                <KeenIcon icon="arrows-loop" className="me-2" />
+                                Refund / Manual Override
                               </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuItem onClick={() => handleRefund(booking.id)}>
-                            <KeenIcon icon="arrows-loop" className="me-2" />
-                            Refund / Manual Override
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
-            
+
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && onPageChange && (
               <div className="card-footer">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}

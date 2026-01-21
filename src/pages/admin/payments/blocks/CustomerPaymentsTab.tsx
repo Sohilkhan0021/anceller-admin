@@ -103,7 +103,7 @@ const CustomerPaymentsTab = () => {
       cod: { variant: 'secondary', className: '', text: 'COD' }
     };
 
-    const config = statusConfig[status] || { variant: 'secondary', className: '', text: status };
+    const config = statusConfig[status] || { variant: 'outline', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
@@ -311,7 +311,7 @@ const CustomerPaymentsTab = () => {
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="card-footer">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                     <div className="text-sm text-gray-600">
                       Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                       {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
