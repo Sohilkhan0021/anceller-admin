@@ -47,6 +47,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch sub-service details when editing
   const subServiceId = subServiceData?.id || subServiceData?.sub_service_id || subServiceData?.public_id || null;
@@ -139,6 +140,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         setImagePreview(null);
       }
       setErrors({});
+      setIsSubmitting(false); // Reset submitting state when dialog opens/closes
     }
   }, [subServiceDetails, subServiceData, isOpen]);
 
@@ -252,9 +254,12 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateForm() || isSubmitting) {
       return;
     }
+
+    // Set submitting state to prevent multiple clicks
+    setIsSubmitting(true);
 
     // CRITICAL: Ensure File object is preserved when passing to onSave
     // Log to verify File object is still intact
@@ -354,7 +359,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
             {/* Category - Auto-filled from service, but can be overridden */}
             {/* Commented out for edit mode - category should not be editable */}
-            {!subServiceData && (
+            {/* {!subServiceData && (
               <div>
                 <Label htmlFor="categoryId">
                   Category <span className="text-muted text-xs">(Auto-filled from service)</span>
@@ -378,7 +383,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                   <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
                 )}
               </div>
-            )}
+            )} */}
 
             {/* Base Price and Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -504,13 +509,30 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
 
             {/* Form Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
                 <KeenIcon icon="cross" className="me-2" />
                 Cancel
               </Button>
-              <Button type="submit">
-                <KeenIcon icon="check" className="me-2" />
-                {subServiceData ? 'Update Sub-Service' : 'Create Sub-Service'}
+              <Button 
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2"></div>
+                    {subServiceData ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <KeenIcon icon="check" className="me-2" />
+                    {subServiceData ? 'Update Sub-Service' : 'Create Sub-Service'}
+                  </>
+                )}
               </Button>
             </div>
           </form>

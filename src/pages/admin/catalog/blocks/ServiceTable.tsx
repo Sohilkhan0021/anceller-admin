@@ -515,8 +515,8 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                     {/* {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>} */}
                     {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
                     {columnVisibility.category && <TableHead className="w-[100px]">Category</TableHead>}
-                    {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>}
-                    {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>}
+                    {/* {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>} */}
+                    {/* {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>} */}
                     {/* {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>} */}
                     {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
                     {columnVisibility.popularity && <TableHead className="w-[90px]">Popularity</TableHead>}
@@ -594,7 +594,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                           </div>
                         </TableCell>
                       )}
-                      {columnVisibility.basePrice && (
+                      {/* {columnVisibility.basePrice && (
                         <TableCell className="w-[90px]">
                           <div className="text-center">
                             <div className="font-semibold text-sm whitespace-nowrap">
@@ -602,14 +602,14 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                             </div>
                           </div>
                         </TableCell>
-                      )}
-                      {columnVisibility.duration && (
+                      )} */}
+                      {/* {columnVisibility.duration && (
                         <TableCell className="w-[90px]">
                           <div className="text-center">
                             <div className="text-sm whitespace-nowrap">{formatDuration(service.duration)}</div>
                           </div>
                         </TableCell>
-                      )}
+                      )} */}
                       {/* {columnVisibility.skills && (
                         <TableCell className="w-[140px]">
                           <div className="text-xs text-gray-600 truncate" title={service.skills}>

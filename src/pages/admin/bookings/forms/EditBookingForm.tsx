@@ -93,20 +93,33 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
       let bookingDate = new Date();
       let bookingTime = '';
       
+      // Helper function to safely parse date
+      const parseDate = (dateValue: any): Date | null => {
+        if (!dateValue) return null;
+        const parsed = new Date(dateValue);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      };
+      
       if (booking.scheduled_date) {
-        bookingDate = new Date(booking.scheduled_date);
+        const parsed = parseDate(booking.scheduled_date);
+        if (parsed) bookingDate = parsed;
       } else if (booking.dateTime) {
-        const dateTime = new Date(booking.dateTime);
-        bookingDate = dateTime;
-        bookingTime = dateTime.toTimeString().slice(0, 5); // HH:mm format
+        const parsed = parseDate(booking.dateTime);
+        if (parsed) {
+          bookingDate = parsed;
+          bookingTime = parsed.toTimeString().slice(0, 5); // HH:mm format
+        }
       } else if (booking.bookingDate) {
-        bookingDate = new Date(booking.bookingDate);
+        const parsed = parseDate(booking.bookingDate);
+        if (parsed) bookingDate = parsed;
       }
       
       // Extract time from scheduled_time_start if available
       if (booking.scheduled_time_start) {
-        const timeDate = new Date(booking.scheduled_time_start);
-        bookingTime = timeDate.toTimeString().slice(0, 5);
+        const timeDate = parseDate(booking.scheduled_time_start);
+        if (timeDate) {
+          bookingTime = timeDate.toTimeString().slice(0, 5);
+        }
       } else if (booking.bookingTime) {
         bookingTime = booking.bookingTime;
       }
@@ -172,7 +185,12 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
         notes: booking.notes || booking.admin_notes || ''
       });
       
-      setSelectedDate(bookingDate);
+      // Only set selectedDate if bookingDate is valid
+      if (bookingDate && !isNaN(bookingDate.getTime())) {
+        setSelectedDate(bookingDate);
+      } else {
+        setSelectedDate(undefined);
+      }
     }
   }, [bookingData, fullBookingDetails, isOpen]);
 
@@ -280,7 +298,7 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
                       )}
                     >
                       <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                      {selectedDate && !isNaN(selectedDate.getTime()) ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">

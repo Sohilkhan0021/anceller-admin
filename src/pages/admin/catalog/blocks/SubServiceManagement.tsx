@@ -128,7 +128,7 @@ const SubServiceManagement = ({
       // VERIFY: Check if response has all expected fields
       const responseData = data?.data;
       if (!responseData) {
-        console.error('❌ ERROR: Response data is missing!');
+        console.error('ERROR: Response data is missing!');
         toast.error('Update failed: Invalid response from server');
         return;
       }
@@ -139,7 +139,7 @@ const SubServiceManagement = ({
       // If response is incomplete (only has sub_service_id), fetch the full sub-service data
       // This handles cases where the backend returns a minimal response
       if (responseKeys.length < 5 || responseKeys.length === 1) {
-        console.warn('⚠️ WARNING: Response is incomplete, fetching full sub-service data', {
+        console.warn('WARNING: Response is incomplete, fetching full sub-service data', {
           keys: responseKeys,
           subServiceId,
           note: 'This is expected behavior - backend may return minimal response after update'
@@ -156,9 +156,9 @@ const SubServiceManagement = ({
         if (subServiceId) {
           subServiceService.getSubServiceById(subServiceId)
             .then((fullSubService) => {
-              console.log('✅ Fetched full sub-service data after update:', fullSubService);
+              console.log('Fetched full sub-service data after update:', fullSubService);
               if (fullSubService?.data?.image_url) {
-                console.log('✅ Image URL confirmed:', fullSubService.data.image_url);
+                console.log('Image URL confirmed:', fullSubService.data.image_url);
               }
             })
             .catch((fetchError) => {
@@ -172,12 +172,13 @@ const SubServiceManagement = ({
       // Check if image_url is present (can be null if no image was uploaded)
       const hasImageUrl = 'image_url' in responseData;
       if (!hasImageUrl) {
-        console.warn('⚠️ WARNING: image_url field missing from response');
+        console.warn('WARNING: image_url field missing from response');
       }
 
       // Success - show appropriate message
       if (responseData.image_url) {
-        toast.success(`Sub-service updated successfully. Image: ${responseData.image_url}`);
+        // toast.success(`Sub-service updated successfully. Image: ${responseData.image_url}`);
+        toast.success(`Sub-service updated successfully`);
       } else {
         toast.success('Sub-service updated successfully');
       }
@@ -277,7 +278,7 @@ const SubServiceManagement = ({
       // CRITICAL: Check if image is a File object (not an empty object or null)
       if (subServiceData.image && subServiceData.image instanceof File) {
         updateData.image = subServiceData.image;
-        console.log('✅ Sub-service update: New image file provided', {
+        console.log(' Sub-service update: New image file provided', {
           fileName: subServiceData.image.name,
           fileSize: subServiceData.image.size,
           fileType: subServiceData.image.type,
@@ -287,7 +288,7 @@ const SubServiceManagement = ({
         // Explicitly do NOT set image_url when sending a file - backend will handle it
       } else if (subServiceData.image && typeof subServiceData.image === 'object' && Object.keys(subServiceData.image).length === 0) {
         // Image is an empty object {} - this means no new file was selected, keep existing image_url
-        console.log('⚠️ Sub-service update: Empty image object detected - keeping existing image_url');
+        console.log('Sub-service update: Empty image object detected - keeping existing image_url');
         // Don't include image or image_url - backend will keep the existing one
       } else if (subServiceData.image === null || subServiceData.image === undefined) {
         // No image file provided - use existing image_url if available
@@ -667,7 +668,7 @@ const SubServiceManagement = ({
       />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Sub-Service</DialogTitle>
@@ -693,7 +694,41 @@ const SubServiceManagement = ({
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog> */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md px-6 py-5">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg font-semibold">
+              Delete Sub-Service
+            </DialogTitle>
+
+            <DialogDescription className="text-sm leading-relaxed text-gray-600 break-words">
+              Are you sure you want to delete this sub-service? This action cannot be undone.
+              <br />
+              All services under this sub-service will also be affected.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
+
     </>
   );
 };
