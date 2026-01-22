@@ -249,7 +249,7 @@ const CustomerPaymentsTab = () => {
                 <Table className="w-full table-fixed" containerClassName="!overflow-x-hidden">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="hidden sm:table-cell w-[15%]">Transaction ID</TableHead>
+                      {/* <TableHead className="hidden sm:table-cell w-[15%]">Transaction ID</TableHead> */}
                       <TableHead className="w-[25%] px-4">Transaction</TableHead>
                       <TableHead className="hidden md:table-cell w-[10%] text-center px-4">Amount</TableHead>
                       <TableHead className="hidden lg:table-cell w-[12%] px-4">Payment Mode</TableHead>
@@ -261,9 +261,9 @@ const CustomerPaymentsTab = () => {
                   <TableBody>
                     {transactions.map((transaction) => (
                       <TableRow key={transaction.transaction_id}>
-                        <TableCell className="hidden sm:table-cell font-medium break-all whitespace-normal pr-4">
+                        {/* <TableCell className="hidden sm:table-cell font-medium break-all whitespace-normal pr-4">
                           {transaction.transaction_id}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
@@ -293,7 +293,8 @@ const CustomerPaymentsTab = () => {
                         </TableCell>
                         <TableCell className="hidden sm:table-cell px-4">{getStatusBadge(transaction.status)}</TableCell>
                         <TableCell className="hidden md:table-cell px-4">
-                          <div className="text-sm whitespace-normal leading-tight">
+                          {/* <div className="text-sm whitespace-normal leading-tight"> */}
+                          <div className="text-sm whitespace-nowrap">
                             {formatDateTime(transaction.created_at)}
                           </div>
                         </TableCell>

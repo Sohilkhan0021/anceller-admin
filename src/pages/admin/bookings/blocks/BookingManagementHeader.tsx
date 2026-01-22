@@ -189,6 +189,11 @@ const BookingManagementHeader = ({
     setDateRange(range);
   };
 
+  const handleClearDateRange = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent popover from opening when clicking clear button
+    setDateRange(undefined);
+  };
+
   const handleBulkAction = (action: string) => {
     // TODO: Implement bulk actions
     console.log('Bulk action:', action);
@@ -314,41 +319,54 @@ const BookingManagementHeader = ({
         <div className="mt-4">
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700">Date Range:</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[300px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
+            <div className="relative">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[300px] justify-start text-left font-normal",
+                      !dateRange && "text-muted-foreground",
+                      dateRange && "pr-8" // Add padding on right when date is selected to make room for clear button
+                    )}
+                  >
+                    <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd, y")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
                     ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={handleDateRangeChange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={handleDateRangeChange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+              {dateRange && (
+                <button
+                  type="button"
+                  onClick={handleClearDateRange}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 rounded-full p-1 hover:bg-gray-100 transition-colors"
+                  aria-label="Clear date range"
+                >
+                  <KeenIcon icon="cross" className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

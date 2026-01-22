@@ -79,6 +79,12 @@ const BookingManagementTable = ({
     console.log('Manual override for booking:', bookingId);
   };
 
+  const capitalizeFirstLetter = (value: string) => {
+    if (!value) return '';
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { variant: 'default', className: 'bg-warning text-black font-semibold', text: 'Pending' },
@@ -89,7 +95,7 @@ const BookingManagementTable = ({
       active: { variant: 'default', className: 'bg-success text-white font-semibold', text: 'Active' }
     };
 
-    const config = statusConfig[status?.toLowerCase() as keyof typeof statusConfig] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: status };
+    const config = statusConfig[status?.toLowerCase() as keyof typeof statusConfig] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: capitalizeFirstLetter(status), };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
@@ -150,7 +156,7 @@ const BookingManagementTable = ({
           <h3 className="card-title">
             Bookings {pagination ? `(${pagination.total})` : `(${bookings.length})`}
           </h3>
-          {selectedBookings.length > 0 && (
+          {/* {selectedBookings.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
                 {selectedBookings.length} selected
@@ -165,7 +171,7 @@ const BookingManagementTable = ({
                 Cancel Selected
               </Button>
             </div>
-          )}
+          )} */}
         </div>
       </div>
 
@@ -188,12 +194,12 @@ const BookingManagementTable = ({
               <Table className="min-w-full table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12 hidden sm:table-cell">
-                      <Checkbox
+                    {/* <TableHead className="w-12 hidden sm:table-cell"> */}
+                    {/* <Checkbox
                         checked={selectedBookings.length === bookings.length && bookings.length > 0}
                         onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
+                      /> */}
+                    {/* </TableHead> */}
                     <TableHead className="hidden sm:table-cell w-[120px]">Booking ID</TableHead>
                     <TableHead className="w-[180px] sm:w-[200px]">Customer</TableHead>
                     <TableHead className="hidden md:table-cell w-[140px]">Provider</TableHead>
@@ -208,12 +214,12 @@ const BookingManagementTable = ({
                 <TableBody>
                   {bookings.map((booking) => (
                     <TableRow key={booking.id}>
-                      <TableCell className="hidden sm:table-cell">
-                        <Checkbox
+                      {/* <TableCell className="hidden sm:table-cell"> */}
+                      {/* <Checkbox
                           checked={selectedBookings.includes(booking.id)}
                           onCheckedChange={(checked) => handleSelectBooking(booking.id, checked as boolean)}
-                        />
-                      </TableCell>
+                        /> */}
+                      {/* </TableCell> */}
                       <TableCell className="hidden sm:table-cell">
                         <div className="font-medium text-xs max-w-[120px] truncate" title={booking.id}>
                           {booking.id || 'N/A'}
@@ -277,7 +283,12 @@ const BookingManagementTable = ({
                       <TableCell className="hidden lg:table-cell">
                         <div className="flex items-center gap-2">
                           <KeenIcon icon={getPaymentTypeIcon(booking.paymentType)} className="text-gray-500 text-sm" />
-                          <span className="text-sm">{booking.paymentType || 'N/A'}</span>
+                          {/* <span className="text-sm">{booking.paymentType || 'N/A'}</span> */}
+                          <span className="text-sm">
+                            {booking.paymentType
+                              ? capitalizeFirstLetter(booking.paymentType)
+                              : 'N/A'}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="w-[80px]">
@@ -324,8 +335,9 @@ const BookingManagementTable = ({
                                 </>
                               )}
                               <DropdownMenuItem onClick={() => handleRefund(booking.id)}>
-                                <KeenIcon icon="arrows-loop" className="me-2" />
-                                Refund / Manual Override
+                                <KeenIcon icon="trash" className="me-2" />
+                                {/* Refund / Manual Override */}
+                                delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
