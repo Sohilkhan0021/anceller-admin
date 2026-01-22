@@ -377,6 +377,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                 rows={3}
                 className="mt-2"
                 placeholder="Short tagline or description for this category..."
+                maxLength={600}
               />
             </div>
 

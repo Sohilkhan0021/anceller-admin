@@ -160,14 +160,19 @@ export const useApproveProvider = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation(
-    (providerId: string) => providerService.approveProvider(providerId),
+    (providerId: string) => {
+      // console.log('[HOOK] useApproveProvider mutation function called with providerId:', providerId);
+      return providerService.approveProvider(providerId);
+    },
     {
       onSuccess: (data) => {
+        // console.log('[HOOK] useApproveProvider onSuccess called with data:', data);
         queryClient.invalidateQueries(['providers']);
         queryClient.invalidateQueries(['provider', data.provider_id]);
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
+        // console.error('[HOOK] useApproveProvider onError called:', error);
         if (options?.onError) options.onError(error);
       },
     }
@@ -184,15 +189,19 @@ export const useRejectProvider = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation(
-    ({ providerId, reason }: { providerId: string; reason: string }) => 
-      providerService.rejectProvider(providerId, reason),
+    ({ providerId, reason }: { providerId: string; reason: string }) => {
+      // console.log('[HOOK] useRejectProvider mutation function called with:', { providerId, reason });
+      return providerService.rejectProvider(providerId, reason);
+    },
     {
       onSuccess: (data) => {
+        // console.log('[HOOK] useRejectProvider onSuccess called with data:', data);
         queryClient.invalidateQueries(['providers']);
         queryClient.invalidateQueries(['provider', data.provider_id]);
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
+        // console.error('[HOOK] useRejectProvider onError called:', error);
         if (options?.onError) options.onError(error);
       },
     }
