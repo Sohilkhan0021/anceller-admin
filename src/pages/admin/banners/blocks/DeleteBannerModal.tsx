@@ -42,7 +42,7 @@ const DeleteBannerModal = ({
         </DialogHeader>
         <DialogBody>
           <p className="text-sm text-gray-600">
-            Are you sure you want to delete the banner <strong className="text-white">"{banner?.title || 'this banner'}"</strong>?
+            Are you sure you want to delete the banner <strong className="text-black">"{banner?.title || 'this banner'}"</strong>?
             This action cannot be undone.
           </p>
         </DialogBody>

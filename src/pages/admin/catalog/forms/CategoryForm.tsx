@@ -32,8 +32,9 @@ import {
 //   SelectValue
 // } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import { useUpdateCategory, useCreateCategory } from '@/services/category.hooks';
+import { getImageUrl } from '@/utils/imageUrl';
 
 interface ICategoryFormProps {
   isOpen: boolean;
@@ -43,7 +44,6 @@ interface ICategoryFormProps {
 }
 
 const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormProps) => {
-  const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     name: '',
     icon: 'category',
@@ -63,39 +63,23 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
 
   const createCategoryMutation = useCreateCategory({
     onSuccess: (data) => {
-      enqueueSnackbar('Category created successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      toast.success(data.message || 'Category created successfully');
       handleClose();
       // Don't call onSave here - let CategoryManagement handle the refetch
     },
     onError: (error) => {
-      enqueueSnackbar(error.message || 'Failed to create category', { 
-        variant: 'solid', 
-        state: 'danger',
-        icon: 'cross-circle'
-      });
+      toast.error(error.message || 'Failed to create category');
     }
   });
 
   const updateCategoryMutation = useUpdateCategory({
     onSuccess: (data) => {
-      enqueueSnackbar('Category updated successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      toast.success(data.message || 'Category updated successfully');
       handleClose();
       // Don't call onSave here - let CategoryManagement handle the refetch
     },
     onError: (error) => {
-      enqueueSnackbar(error.message || 'Failed to update category', { 
-        variant: 'solid', 
-        state: 'danger',
-        icon: 'cross-circle'
-      });
+      toast.error(error.message || 'Failed to update category');
     }
   });
 
@@ -142,11 +126,10 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         // Set image preview from existing category
         const imageUrl = categoryData.image_url || categoryData.imageUrl || categoryData.image;
         if (imageUrl) {
-          const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || '';
-          const fullImageUrl = imageUrl.startsWith('http') 
-            ? imageUrl 
-            : `${baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
-          setImagePreview(fullImageUrl);
+          // Use the centralized getImageUrl utility to properly construct the full URL
+          // This handles both absolute URLs (http://...) and relative paths
+          const fullImageUrl = getImageUrl(imageUrl);
+          setImagePreview(fullImageUrl || null);
         } else {
           setImagePreview(null);
         }
@@ -324,11 +307,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
       // Update existing category
       const categoryId = categoryData.id || categoryData.category_id || categoryData.public_id;
       if (!categoryId) {
-        enqueueSnackbar('Category ID is missing', { 
-          variant: 'solid', 
-          state: 'danger',
-          icon: 'cross-circle'
-        });
+        toast.error('Category ID is missing');
         return;
       }
 
@@ -424,6 +403,12 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                         src={imagePreview}
                         alt="Image preview"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // If image fails to load, clear the preview
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          setImagePreview(null);
+                        }}
                       />
                     </div>
                     <div className="flex gap-2">

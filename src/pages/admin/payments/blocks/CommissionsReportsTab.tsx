@@ -195,7 +195,7 @@ const CommissionsReportsTab = () => {
       {/* Report Controls */}
       <div className="card">
         <div className="card-header">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">Revenue Reports</h3>
               <p className="text-sm text-gray-600">Generate and download financial reports</p>
