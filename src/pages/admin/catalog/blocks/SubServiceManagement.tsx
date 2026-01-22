@@ -26,8 +26,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { useSubServices, useDeleteSubService, useUpdateSubService } from '@/services';
 import { subServiceService } from '@/services/subservice.service';
@@ -667,16 +667,21 @@ const SubServiceManagement = ({
         availableCategories={availableCategories}
       />
 
-      {/* Delete Confirmation Dialog */}
-      {/* <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+    
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Sub-Service</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this sub-service? This action cannot be undone.
-              All services under this sub-service will also be affected.
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="trash" className="text-danger" />
+              Delete Sub-Service
+            </DialogTitle>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete the sub-service <strong className="text-black">"{subServiceToDelete ? subServices.find(s => s.id === subServiceToDelete)?.name || 'this sub-service' : 'this sub-service'}"</strong>?
+              This action cannot be undone.
+            </p>
+          </DialogBody>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -690,40 +695,17 @@ const SubServiceManagement = ({
               onClick={handleConfirmDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md px-6 py-5">
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="text-lg font-semibold">
-              Delete Sub-Service
-            </DialogTitle>
-
-            <DialogDescription className="text-sm leading-relaxed text-gray-600 break-words">
-              Are you sure you want to delete this sub-service? This action cannot be undone.
-              <br />
-              All services under this sub-service will also be affected.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  Deleting...
+                </span>
+              ) : (
+                <>
+                  <KeenIcon icon="trash" className="me-2" />
+                  Delete
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

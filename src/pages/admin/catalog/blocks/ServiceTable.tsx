@@ -36,8 +36,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { useServices, useDeleteService, useUpdateService } from '@/services';
 import { IService } from '@/services/service.types';
@@ -105,6 +105,8 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const { mutate: deleteService, isLoading: isDeleting } = useDeleteService({
     onSuccess: (data) => {
       toast.success(data.message || 'Service deleted successfully');
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
       refetch();
     },
     onError: (error: Error) => {
@@ -205,8 +207,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     if (serviceToDelete) {
       deleteService(serviceToDelete);
     }
-    setDeleteDialogOpen(false);
-    setServiceToDelete(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -747,12 +747,17 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Service</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this service? This action cannot be undone.
-              This will also affect any sub-services under this service.
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="trash" className="text-danger" />
+              Delete Service
+            </DialogTitle>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete the service <strong className="text-black">"{serviceToDelete ? services.find(s => s.id === serviceToDelete)?.name || 'this service' : 'this service'}"</strong>?
+              This action cannot be undone.
+            </p>
+          </DialogBody>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -766,7 +771,17 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               onClick={handleConfirmDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  Deleting...
+                </span>
+              ) : (
+                <>
+                  <KeenIcon icon="trash" className="me-2" />
+                  Delete
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

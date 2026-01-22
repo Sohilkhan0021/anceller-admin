@@ -35,8 +35,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/services';
 import { ICategory, ICreateCategoryRequest, IUpdateCategoryRequest } from '@/services/category.types';
@@ -534,26 +534,43 @@ const CategoryManagement = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md pt-6">
-          <DialogHeader className='gap-2'>
-            <DialogTitle className='text-left pl-1'>Delete Category</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this category? This action cannot be undone.
-              All sub-services under this category will also be affected.
-            </DialogDescription>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="trash" className="text-danger" />
+              Delete Category
+            </DialogTitle>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete the category <strong className="text-black">"{categoryToDelete ? categories.find(c => c.id === categoryToDelete)?.name || 'this category' : 'this category'}"</strong>?
+              This action cannot be undone.
+            </p>
+          </DialogBody>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirmDelete}
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  Deleting...
+                </span>
+              ) : (
+                <>
+                  <KeenIcon icon="trash" className="me-2" />
+                  Delete
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

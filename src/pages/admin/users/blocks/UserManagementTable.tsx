@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { IUser, IPaginationMeta } from '@/services/user.types';
 import { ContentLoader } from '@/components/loaders';
 import { useUserManage } from '@/providers/userManageProvider';
@@ -43,6 +52,8 @@ const UserManagementTable = ({
   onEditUser,
   onPageChange
 }: IUserManagementTableProps) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const { updateUserStatus } = useUserManage();
 
@@ -56,6 +67,19 @@ const UserManagementTable = ({
 
   const handleUnblockUser = async (userId: string) => {
     await updateUserStatus(userId, 'ACTIVE');
+  };
+
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (userToDelete) {
+      await handleDeleteUser(userToDelete);
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -226,7 +250,7 @@ const UserManagementTable = ({
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
-                                onClick={() => handleDeleteUser(user.user_id || user.id)}
+                                onClick={() => handleDeleteClick(user.user_id || user.id)}
                                 className="text-danger"
                               >
                                 <KeenIcon icon="trash" className="me-2" />
@@ -289,6 +313,39 @@ const UserManagementTable = ({
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="trash" className="text-danger" />
+              Delete User
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete the user <strong className="text-black">"{userToDelete ? users.find(u => (u.user_id || u.id) === userToDelete)?.name || 'this user' : 'this user'}"</strong>?
+              This action cannot be undone.
+            </p>
+          </DialogBody>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              <KeenIcon icon="trash" className="me-2" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
