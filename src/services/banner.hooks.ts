@@ -240,7 +240,7 @@ export const useUpdateBanner = (): IUseUpdateBannerReturn => {
   );
 
   return {
-    updateBanner: mutation.mutateAsync,
+    updateBanner: (bannerId: string, data: IUpdateBannerRequest) => mutation.mutateAsync({ bannerId, data }),
     isLoading: mutation.isLoading,
     isError: mutation.isError,
     error: mutation.error || null,
