@@ -8,3 +8,4 @@ export * from './policies';
 export * from './system';
 export * from './roles';
 export * from './support';
+export * from './banners';
