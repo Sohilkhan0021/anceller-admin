@@ -21,6 +21,8 @@ import type {
   IProviderStatsResponse,
   ICreateProviderRequest,
   ICreateProviderResponse,
+  IVerifyKycDocumentRequest,
+  IVerifyKycDocumentResponse,
 } from './provider.types';
 
 /**
@@ -263,6 +265,32 @@ export const useCreateProvider = (options?: {
     {
       onSuccess: (data) => {
         queryClient.invalidateQueries(['providers']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to verify KYC document
+ */
+export const useVerifyKycDocument = (options?: {
+  onSuccess?: (data: IVerifyKycDocumentResponse['data']) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IVerifyKycDocumentResponse['data'], Error, { documentId: string; data: IVerifyKycDocumentRequest }> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ documentId, data }: { documentId: string; data: IVerifyKycDocumentRequest }) => {
+      return providerService.verifyKycDocument(documentId, data);
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['providers']);
+        queryClient.invalidateQueries(['provider']);
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {

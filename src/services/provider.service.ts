@@ -19,6 +19,8 @@ import type {
   IProviderStatsResponse,
   ICreateProviderRequest,
   ICreateProviderResponse,
+  IVerifyKycDocumentRequest,
+  IVerifyKycDocumentResponse,
   IApiError,
 } from './provider.types';
 
@@ -330,6 +332,52 @@ export const createProvider = async (
 };
 
 /**
+ * Verify KYC document
+ * 
+ * @param documentId - Document ID
+ * @param data - Verification data (action and optional rejection_reason)
+ * @returns Promise resolving to verification result
+ * @throws Error if API request fails
+ */
+export const verifyKycDocument = async (
+  documentId: string,
+  data: IVerifyKycDocumentRequest
+): Promise<IVerifyKycDocumentResponse['data'] & { message?: string }> => {
+  try {
+    const response = await axios.post<IVerifyKycDocumentResponse>(
+      `${API_URL}/providers/kyc/documents/${documentId}/verify`,
+      data
+    );
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0 || response.data.status !== 1) {
+      throw new Error(response.data.message || 'Failed to verify KYC document');
+    }
+    
+    // Return data with message
+    return {
+      ...(response.data.data || {}),
+      message: response.data.message,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('[API] Axios error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to verify KYC document';
+      throw new Error(errorMessage);
+    }
+    // If it's already an Error, re-throw it
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('An unexpected error occurred while verifying KYC document');
+  }
+};
+
+/**
  * Provider Service Object
  * 
  * Centralized service object for all provider-related operations
@@ -343,5 +391,6 @@ export const providerService = {
   updateProviderStatus,
   getProviderStats,
   createProvider,
+  verifyKycDocument,
 };
 

@@ -189,12 +189,9 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
       return;
     }
     
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors(prev => ({
-        ...prev,
-        image: 'Image size must be less than 5MB'
-      }));
+    // Validate file size (1MB max)
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error('Maximum allowed image size is 1 MB');
       return;
     }
     

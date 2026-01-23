@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useProvider, useApproveProvider, useRejectProvider, useUpdateProviderStatus } from '@/services';
+import { useProvider, useApproveProvider, useRejectProvider, useUpdateProviderStatus, useVerifyKycDocument } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { toast } from 'sonner';
@@ -45,6 +45,18 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
 
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+
+  const verifyKycMutation = useVerifyKycDocument({
+    onSuccess: (data) => {
+      toast.success((data as any).message || 'KYC document approved successfully');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to approve KYC document');
+    },
+  });
 
   const approveMutation = useApproveProvider({
     onSuccess: (data) => {
@@ -87,13 +99,16 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
 
   if (!provider && !providerDetail) return null;
 
-  // Extract data from API response
+  // Extract data from API response - preserve full document data including file_url
   const kycDocuments = (displayProvider?.kyc?.documents || []).map((doc: any) => ({
     type: doc.document_type || 'Unknown',
     status: (doc.status || 'pending').toLowerCase(),
-    uploadDate: doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A',
-    documentNumber: doc.public_id || 'N/A',
+    uploadDate: doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A',
+    verifiedDate: doc.verified_at ? new Date(doc.verified_at).toLocaleDateString() : null,
+    documentNumber: doc.document_id || doc.public_id || 'N/A',
     document_id: doc.document_id || doc.public_id,
+    file_url: doc.file_url || doc.fileUrl || doc.url || null,
+    originalDoc: doc, // Preserve full original document data
   }));
 
   const serviceZones = (displayProvider?.zones || []).map((zone: any) => ({
@@ -184,6 +199,25 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     }
   };
 
+  const handleApproveKYCDocument = (documentId: string) => {
+    if (!documentId) {
+      toast.error('Document ID is missing');
+      return;
+    }
+    
+    try {
+      verifyKycMutation.mutate({
+        documentId,
+        data: {
+          action: 'approve',
+          rejection_reason: 'Document is not clear',
+        },
+      });
+    } catch (error) {
+      console.error('[APPROVE] Error calling mutation:', error);
+    }
+  };
+
   const handleRejectKYC = () => {
     // console.log('[REJECT] Button clicked - handleRejectKYC called');
     // console.log('[REJECT] Opening reject dialog');
@@ -231,6 +265,23 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
       providerId: id,
       status: 'SUSPENDED',
     });
+  };
+
+  const handleViewDocument = (doc: any) => {
+    setSelectedDocument(doc);
+    setViewDocumentOpen(true);
+  };
+
+  const isImageFile = (url: string | null) => {
+    if (!url) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    const lowerUrl = url.toLowerCase();
+    return imageExtensions.some(ext => lowerUrl.includes(ext));
+  };
+
+  const isPdfFile = (url: string | null) => {
+    if (!url) return false;
+    return url.toLowerCase().includes('.pdf');
   };
 
   const providerName = displayProvider?.name || displayProvider?.business_name || displayProvider?.user?.name || 'Unknown Provider';
@@ -343,14 +394,16 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                     </div>
 
                     {/* Address Section */}
-                    {(displayProvider?.address || displayProvider?.city || displayProvider?.state || displayProvider?.pincode || displayProvider?.country) && (
+                    {(displayProvider?.address || displayProvider?.city || displayProvider?.state || displayProvider?.pincode || displayProvider?.country || (displayProvider?.zones && displayProvider.zones.length > 0)) && (
                       <div className="mt-6 pt-6 border-t border-gray-200">
                         <div className="text-sm font-medium text-gray-700 mb-4">Address Information</div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {displayProvider?.address && (
+                          {(displayProvider?.address || (displayProvider?.zones && displayProvider.zones.length > 0)) && (
                             <div className="space-y-1 md:col-span-2">
                               <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Address</div>
-                              <div className="text-sm">{displayProvider.address}</div>
+                              <div className="text-sm">
+                                {displayProvider?.address || (displayProvider?.zones && displayProvider.zones.length > 0 ? displayProvider.zones.map((zone: any) => zone.name).join(', ') : 'N/A')}
+                              </div>
                             </div>
                           )}
                           {displayProvider?.city && (
@@ -400,7 +453,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                       <TableHead>Document Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Upload Date</TableHead>
-                      <TableHead>Document Number</TableHead>
+                      {/* <TableHead>Document Number</TableHead>x  */}
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -417,10 +470,14 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           <TableCell className="font-medium">{doc.type}</TableCell>
                           <TableCell>{getStatusBadge(doc.status)}</TableCell>
                           <TableCell>{doc.uploadDate}</TableCell>
-                          <TableCell>{doc.documentNumber}</TableCell>
+                          {/* <TableCell>{doc.documentNumber}</TableCell> */}
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewDocument(doc)}
+                              >
                                 <KeenIcon icon="eye" className="me-1" />
                                 View
                               </Button>
@@ -430,11 +487,11 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                     variant="default" 
                                     className="bg-success text-white hover:bg-success/90" 
                                     size="sm"
-                                    onClick={handleApproveKYC}
-                                    disabled={approveMutation.isLoading}
+                                    onClick={() => handleApproveKYCDocument(doc.document_id)}
+                                    disabled={verifyKycMutation.isLoading}
                                   >
                                     <KeenIcon icon="check" className="me-1" />
-                                    {approveMutation.isLoading ? 'Approving...' : 'Approve'}
+                                    {verifyKycMutation.isLoading ? 'Approving...' : 'Approve'}
                                   </Button>
                                   <Button 
                                     variant="destructive" 
@@ -472,7 +529,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                       <TableHead>Zone</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Jobs Completed</TableHead>
-                      <TableHead>Actions</TableHead>
+                      {/* <TableHead>Actions</TableHead> */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -488,7 +545,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           <TableCell className="font-medium">{zone.zone}</TableCell>
                           <TableCell>{getStatusBadge(zone.status)}</TableCell>
                           <TableCell>{zone.jobsCompleted || 0}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           <div className="flex gap-2">
                             {zone.status === 'active' ? (
                               <Button variant="outline" className="border-warning text-warning hover:bg-warning hover:text-white" size="sm">
@@ -502,7 +559,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                               </Button>
                             )}
                           </div>
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                       ))
                     )}
@@ -684,6 +741,101 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
               disabled={!rejectReason.trim() || rejectMutation.isLoading}
             >
               {rejectMutation.isLoading ? 'Rejecting...' : 'Reject Provider'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Document Dialog */}
+      <Dialog open={viewDocumentOpen} onOpenChange={setViewDocumentOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="document" className="text-primary" />
+              {selectedDocument?.type || 'Document'}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {selectedDocument?.file_url ? (
+              <div className="mt-4">
+                {isImageFile(selectedDocument.file_url) ? (
+                  <div className="w-full flex justify-center">
+                    <img
+                      src={selectedDocument.file_url}
+                      alt={selectedDocument.type || 'Document'}
+                      className="max-w-full max-h-[70vh] w-auto h-auto rounded-lg border border-gray-200 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400"%3E%3Crect fill="%23ddd" width="800" height="400"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="24"%3EImage Not Available%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                ) : isPdfFile(selectedDocument.file_url) ? (
+                  <div className="w-full">
+                    <iframe
+                      src={selectedDocument.file_url}
+                      className="w-full h-[600px] rounded-lg border border-gray-200"
+                      title={selectedDocument.type || 'Document'}
+                    />
+                    <div className="mt-4 text-center">
+                      <a
+                        href={selectedDocument.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <KeenIcon icon="arrow-top-right" className="text-sm" />
+                        Open in new tab
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full">
+                    <div className="w-full h-64 bg-gray-100 rounded-lg flex flex-col items-center justify-center gap-4">
+                      <KeenIcon icon="document" className="text-gray-400 text-5xl" />
+                      <p className="text-gray-600">Document preview not available</p>
+                      <a
+                        href={selectedDocument.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <KeenIcon icon="arrow-top-right" className="text-sm" />
+                        Open document
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {selectedDocument.documentNumber && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    {/* <div className="text-sm text-gray-600">
+                      <span className="font-medium">Document ID:</span> {selectedDocument.documentNumber}
+                    </div> */}
+                    {selectedDocument.uploadDate && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="font-medium">Upload Date:</span> {selectedDocument.uploadDate}
+                      </div>
+                    )}
+                    {selectedDocument.verifiedDate && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="font-medium">Verified Date:</span> {selectedDocument.verifiedDate}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <KeenIcon icon="document" className="text-gray-400 text-5xl mx-auto mb-4" />
+                  <p className="text-gray-600">Document file not available</p>
+                </div>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setViewDocumentOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
