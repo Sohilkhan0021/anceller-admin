@@ -38,6 +38,12 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/services';
 import { ICategory, ICreateCategoryRequest, IUpdateCategoryRequest } from '@/services/category.types';
 import { ContentLoader } from '@/components/loaders';
@@ -131,6 +137,8 @@ const CategoryManagement = ({
   const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+  const [viewingCategory, setViewingCategory] = useState<ICategory | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -245,6 +253,11 @@ const CategoryManagement = ({
   const handleDeleteClick = (categoryId: string) => {
     setCategoryToDelete(categoryId);
     setDeleteDialogOpen(true);
+  };
+
+  const handleViewDetails = (category: ICategory) => {
+    setViewingCategory(category);
+    setViewDetailsOpen(true);
   };
 
   const handleConfirmDelete = () => {
@@ -448,24 +461,30 @@ const CategoryManagement = ({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditCategory(category)}
-                              >
-                                <KeenIcon icon="pencil" className="me-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteClick(category.id)}
-                              >
-                                <KeenIcon icon="trash" className="me-1" />
-                                Delete
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex-shrink-0">
+                                  <KeenIcon icon="dots-vertical" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleViewDetails(category)}>
+                                  <KeenIcon icon="eye" className="me-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditCategory(category)}>
+                                  <KeenIcon icon="pencil" className="me-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteClick(category.id)}
+                                  className="text-danger"
+                                >
+                                  <KeenIcon icon="trash" className="me-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -571,6 +590,90 @@ const CategoryManagement = ({
                   Delete
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="category" className="text-primary" />
+              {viewingCategory?.name || 'Category Details'}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {viewingCategory && (
+              <div className="mt-4">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Category Image - Left Side */}
+                  <div className="flex-shrink-0">
+                    {(() => {
+                      const imageUrl = (viewingCategory as any).image_url || (viewingCategory as any).imageUrl || (viewingCategory as any).icon_url || (viewingCategory as any).image;
+                      const fullImageUrl = getImageUrl(imageUrl);
+                      return fullImageUrl ? (
+                        <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                          <img
+                            src={fullImageUrl}
+                            alt={viewingCategory.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-48 h-48 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                          <KeenIcon icon="image" className="text-gray-400 text-4xl" />
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Category Details - Right Side */}
+                  <div className="flex-1 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category Name</div>
+                        <div className="text-sm font-medium">{viewingCategory.name || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</div>
+                        <div>{getStatusBadge(viewingCategory.status || ((viewingCategory as any).is_active === false ? 'inactive' : 'active'))}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Display Order</div>
+                        <div className="text-sm">
+                          {viewingCategory.displayOrder ??
+                            (viewingCategory as any).display_order ??
+                            (viewingCategory as any).sort_order ??
+                            'N/A'}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category ID</div>
+                        <div className="text-sm">{viewingCategory.id || 'N/A'}</div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    {viewingCategory.description && (
+                      <div className="space-y-1 pt-4 border-t border-gray-200">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</div>
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap">{viewingCategory.description}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setViewDetailsOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
