@@ -36,6 +36,21 @@ interface IIntegration {
   environment?: string;
 }
 
+const formatProviderName = (provider: string | null | undefined): string => {
+  if (!provider) return 'Not configured';
+  // Capitalize first letter and handle special cases
+  const providerMap: Record<string, string> = {
+    'twilio': 'Twilio',
+    'razorpay': 'Razorpay',
+    'razorpayx': 'RazorpayX',
+    'google': 'Google Maps',
+    'fcm': 'Firebase Cloud Messaging',
+    'stripe': 'Stripe',
+    'paypal': 'PayPal'
+  };
+  return providerMap[provider.toLowerCase()] || provider.charAt(0).toUpperCase() + provider.slice(1);
+};
+
 const IntegrationTiles = () => {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<IIntegration | null>(null);
@@ -117,7 +132,8 @@ const IntegrationTiles = () => {
   }, [settings]);
 
   const handleTestConnection = async (integrationId: string) => {
-    const integrationType = integrationId.replace('-', '_') as 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api';
+    // Convert integration ID to API type format
+    const integrationType = integrationId.replace('-', '_') as 'otp_service' | 'payment_gateway' | 'payout_service' | 'maps_api' | 'notifications';
     try {
       setTestingIntegrationId(integrationId);
       await testIntegrationMutation.mutateAsync(integrationType);
