@@ -19,6 +19,8 @@ import type {
   IProviderStatsResponse,
   ICreateProviderRequest,
   ICreateProviderResponse,
+  IVerifyKycDocumentRequest,
+  IVerifyKycDocumentResponse,
   IApiError,
 } from './provider.types';
 
@@ -110,13 +112,45 @@ export const getProviderById = async (
  */
 export const approveProvider = async (
   providerId: string
-): Promise<IApproveProviderResponse['data']> => {
+): Promise<IApproveProviderResponse['data'] & { message?: string }> => {
+  // console.log(' [API] approveProvider called with providerId:', providerId);
+  // console.log('[API] Making POST request to:', `${PROVIDER_BASE_URL}/${providerId}/approve`);
+  
   try {
-    const response = await axios.post<{ status: number; message: string; data: any }>(`${PROVIDER_BASE_URL}/${providerId}/approve`);
-    return response.data.data;
+    const response = await axios.post<IApproveProviderResponse>(`${PROVIDER_BASE_URL}/${providerId}/approve`);
+    
+    // console.log('[API] approveProvider response received:', response);
+    // console.log('[API] Response status:', response.data.status);
+    // console.log('[API] Response message:', response.data.message);
+    // console.log('[API] Response data:', response.data.data);
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0 || response.data.status !== 1) {
+      // console.error('[API] Response indicates error (status !== 1)');
+      throw new Error(response.data.message || 'Failed to approve provider');
+    }
+    
+    // Return data with message (data might not exist if status is 0)
+    const result = {
+      ...(response.data.data || {}),
+      message: response.data.message,
+    };
+    // console.log('[API] approveProvider returning:', result);
+    return result;
   } catch (error) {
+    // console.error('[API] approveProvider error:', error);
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to approve provider');
+      console.error('[API] Axios error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to approve provider';
+      throw new Error(errorMessage);
+    }
+    // If it's already an Error, re-throw it
+    if (error instanceof Error) {
+      throw error;
     }
     throw new Error('An unexpected error occurred while approving provider');
   }
@@ -133,18 +167,46 @@ export const approveProvider = async (
 export const rejectProvider = async (
   providerId: string,
   reason: string
-): Promise<IRejectProviderResponse['data']> => {
+): Promise<IRejectProviderResponse['data'] & { message?: string }> => {
+  // console.log('[API] rejectProvider called with:', { providerId, reason });
+  // console.log('[API] Making POST request to:', `${PROVIDER_BASE_URL}/${providerId}/reject`);
+  
   try {
-    const response = await axios.post<{ status: number; message: string; data: any }>(
+    const response = await axios.post<IRejectProviderResponse>(
       `${PROVIDER_BASE_URL}/${providerId}/reject`,
       { reason }
     );
-    return response.data.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to reject provider');
+    
+    // console.log('[API] rejectProvider response received:', response);
+    // console.log('[API] Response status:', response.data.status);
+    // console.log('[API] Response message:', response.data.message);
+    // console.log('[API] Response data:', response.data.data);
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0) {
+      // console.error('[API] Response indicates error (status === 0)');
+      throw new Error(response.data.message || 'Failed to reject provider');
     }
-    throw new Error('An unexpected error occurred while rejecting provider');
+    
+    // Return data with message
+    const result = {
+      ...(response.data.data || {}),
+      message: response.data.message,
+    };
+    // console.log('[API] rejectProvider returning:', result);
+    return result;
+  } catch (error) {
+    // console.error('[API] rejectProvider error:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('[API] Axios error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      const errorMessage = error.response?.data?.message || 'Failed to reject provider';
+      throw new Error(errorMessage);
+    }
+    throw error;
   }
 };
 
@@ -159,18 +221,29 @@ export const rejectProvider = async (
 export const updateProviderStatus = async (
   providerId: string,
   status: 'ACTIVE' | 'SUSPENDED' | 'DELETED'
-): Promise<IUpdateProviderStatusResponse['data']> => {
+): Promise<IUpdateProviderStatusResponse['data'] & { message?: string }> => {
   try {
-    const response = await axios.put<{ status: number; message: string; data: any }>(
+    const response = await axios.put<IUpdateProviderStatusResponse>(
       `${PROVIDER_BASE_URL}/${providerId}/status`,
       { status }
     );
-    return response.data.data;
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to update provider status');
+    }
+    
+    // Return data with message
+    return {
+      ...(response.data.data || {}),
+      message: response.data.message,
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to update provider status');
+      const errorMessage = error.response?.data?.message || 'Failed to update provider status';
+      throw new Error(errorMessage);
     }
-    throw new Error('An unexpected error occurred while updating provider status');
+    throw error;
   }
 };
 
@@ -259,6 +332,52 @@ export const createProvider = async (
 };
 
 /**
+ * Verify KYC document
+ * 
+ * @param documentId - Document ID
+ * @param data - Verification data (action and optional rejection_reason)
+ * @returns Promise resolving to verification result
+ * @throws Error if API request fails
+ */
+export const verifyKycDocument = async (
+  documentId: string,
+  data: IVerifyKycDocumentRequest
+): Promise<IVerifyKycDocumentResponse['data'] & { message?: string }> => {
+  try {
+    const response = await axios.post<IVerifyKycDocumentResponse>(
+      `${API_URL}/providers/kyc/documents/${documentId}/verify`,
+      data
+    );
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0 || response.data.status !== 1) {
+      throw new Error(response.data.message || 'Failed to verify KYC document');
+    }
+    
+    // Return data with message
+    return {
+      ...(response.data.data || {}),
+      message: response.data.message,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('[API] Axios error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to verify KYC document';
+      throw new Error(errorMessage);
+    }
+    // If it's already an Error, re-throw it
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('An unexpected error occurred while verifying KYC document');
+  }
+};
+
+/**
  * Provider Service Object
  * 
  * Centralized service object for all provider-related operations
@@ -272,5 +391,6 @@ export const providerService = {
   updateProviderStatus,
   getProviderStats,
   createProvider,
+  verifyKycDocument,
 };
 

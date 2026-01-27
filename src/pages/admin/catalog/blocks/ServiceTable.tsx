@@ -36,8 +36,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { useServices, useDeleteService, useUpdateService } from '@/services';
 import { IService } from '@/services/service.types';
@@ -105,6 +105,8 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const { mutate: deleteService, isLoading: isDeleting } = useDeleteService({
     onSuccess: (data) => {
       toast.success(data.message || 'Service deleted successfully');
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
       refetch();
     },
     onError: (error: Error) => {
@@ -205,8 +207,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     if (serviceToDelete) {
       deleteService(serviceToDelete);
     }
-    setDeleteDialogOpen(false);
-    setServiceToDelete(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -512,12 +512,12 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                 <TableHeader>
                   <TableRow>
                     {columnVisibility.service && <TableHead className="w-[200px]">Service</TableHead>}
-                    {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>}
+                    {/* {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>} */}
                     {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
                     {columnVisibility.category && <TableHead className="w-[100px]">Category</TableHead>}
-                    {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>}
-                    {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>}
-                    {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>}
+                    {/* {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>} */}
+                    {/* {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>} */}
+                    {/* {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>} */}
                     {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
                     {columnVisibility.popularity && <TableHead className="w-[90px]">Popularity</TableHead>}
                     {columnVisibility.bookings && <TableHead className="w-[70px] text-center">Bookings</TableHead>}
@@ -570,13 +570,13 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                           </div>
                         </TableCell>
                       )}
-                      {columnVisibility.subService && (
+                      {/* {columnVisibility.subService && (
                         <TableCell className="w-[150px]">
                           <div className="font-medium text-sm truncate" title={service.subServiceName || '—'}>
                             {service.subServiceName || '—'}
                           </div>
                         </TableCell>
-                      )}
+                      )} */}
                       {columnVisibility.description && (
                         <TableCell className="w-[160px]">
                           <div className="text-sm text-gray-600 truncate" title={service.description}>
@@ -594,7 +594,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                           </div>
                         </TableCell>
                       )}
-                      {columnVisibility.basePrice && (
+                      {/* {columnVisibility.basePrice && (
                         <TableCell className="w-[90px]">
                           <div className="text-center">
                             <div className="font-semibold text-sm whitespace-nowrap">
@@ -602,21 +602,21 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                             </div>
                           </div>
                         </TableCell>
-                      )}
-                      {columnVisibility.duration && (
+                      )} */}
+                      {/* {columnVisibility.duration && (
                         <TableCell className="w-[90px]">
                           <div className="text-center">
                             <div className="text-sm whitespace-nowrap">{formatDuration(service.duration)}</div>
                           </div>
                         </TableCell>
-                      )}
-                      {columnVisibility.skills && (
+                      )} */}
+                      {/* {columnVisibility.skills && (
                         <TableCell className="w-[140px]">
                           <div className="text-xs text-gray-600 truncate" title={service.skills}>
                             {service.skills || '—'}
                           </div>
                         </TableCell>
-                      )}
+                      )} */}
                       {columnVisibility.status && (
                         <TableCell className="w-[100px]">
                           <div className="flex items-center gap-1.5 flex-nowrap">
@@ -674,7 +674,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditService(service.id)}>
-                                  <KeenIcon icon="edit" className="me-2" />
+                                  <KeenIcon icon="pencil" className="me-2" />
                                   Edit Service
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -747,12 +747,17 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Service</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this service? This action cannot be undone.
-              This will also affect any sub-services under this service.
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="trash" className="text-danger" />
+              Delete Service
+            </DialogTitle>
           </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete the service <strong className="text-black">"{serviceToDelete ? services.find(s => s.id === serviceToDelete)?.name || 'this service' : 'this service'}"</strong>?
+              This action cannot be undone.
+            </p>
+          </DialogBody>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -766,7 +771,17 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               onClick={handleConfirmDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  Deleting...
+                </span>
+              ) : (
+                <>
+                  <KeenIcon icon="trash" className="me-2" />
+                  Delete
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

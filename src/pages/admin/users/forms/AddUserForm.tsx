@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -176,8 +177,17 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="firstName">First Name *</Label>
                   <Input
                     id="firstName"
+                    placeholder="Enter first name"
                     value={formik.values.firstName}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                      if (specialChars.length > 2) {
+                        toast.error("Only 2 special characters are allowed in First Name");
+                        return;
+                      }
+                      formik.handleChange(e);
+                    }}
                     onBlur={formik.handleBlur}
                     className={`mt-2 ${formik.touched.firstName && formik.errors.firstName ? 'border-danger' : ''}`}
                   />
@@ -192,8 +202,17 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="lastName">Last Name *</Label>
                   <Input
                     id="lastName"
+                    placeholder="Enter last name"
                     value={formik.values.lastName}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                      if (specialChars.length > 2) {
+                        toast.error("Only 2 special characters are allowed in Last Name");
+                        return;
+                      }
+                      formik.handleChange(e);
+                    }}
                     onBlur={formik.handleBlur}
                     className={`mt-2 ${formik.touched.lastName && formik.errors.lastName ? 'border-danger' : ''}`}
                   />
@@ -226,7 +245,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                     onBlur={formik.handleBlur}
                     maxLength={255}
                     className={`mt-2 ${formik.touched.email && formik.errors.email ? 'border-danger' : ''}`}
-                    placeholder="user@example.com"
+                    placeholder="enter@example.com"
                   />
                   {formik.touched.email && formik.errors.email && (
                     <div className="mt-1 min-h-[20px]">
@@ -241,6 +260,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="phone">Phone Number *</Label>
                   <Input
                     id="phone"
+                    placeholder="Enter phone number"
                     type="tel"
                     value={formik.values.phone}
                     onChange={formik.handleChange}
@@ -264,6 +284,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                 <Label htmlFor="address">Address</Label>
                 <Textarea
                   id="address"
+                  placeholder="Enter full address"
                   value={formik.values.address}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -282,6 +303,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="city">City</Label>
                   <Input
                     id="city"
+                    placeholder="Enter city"
                     value={formik.values.city}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
@@ -298,6 +320,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="state">State</Label>
                   <Input
                     id="state"
+                    placeholder="Enter state"
                     value={formik.values.state}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
@@ -314,6 +337,7 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="pincode">Pincode *</Label>
                   <Input
                     id="pincode"
+                    placeholder="Enter Pincode"
                     value={formik.values.pincode}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}

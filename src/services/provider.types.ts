@@ -287,6 +287,27 @@ export interface ICreateProviderResponse {
 }
 
 /**
+ * Verify KYC document request
+ */
+export interface IVerifyKycDocumentRequest {
+  action: 'approve' | 'reject';
+  rejection_reason?: string;
+}
+
+/**
+ * Verify KYC document response
+ */
+export interface IVerifyKycDocumentResponse {
+  status: number;
+  message: string;
+  data: {
+    document_id: string;
+    status: string;
+    verified_at?: string;
+  };
+}
+
+/**
  * Error response structure
  */
 export interface IApiError {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Tabs,
@@ -22,9 +24,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useProvider } from '@/services';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useProvider, useApproveProvider, useRejectProvider, useUpdateProviderStatus, useVerifyKycDocument } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
+import { toast } from 'sonner';
 
 interface IProviderProfileModalProps {
   provider: any | null;
@@ -34,8 +39,59 @@ interface IProviderProfileModalProps {
 
 const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileModalProps) => {
   const providerId = provider?.id || provider?.provider_id || null;
-  const { provider: providerDetail, isLoading, isError, error } = useProvider(providerId, {
+  const { provider: providerDetail, isLoading, isError, error, refetch } = useProvider(providerId, {
     enabled: isOpen && !!providerId,
+  });
+
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+
+  const verifyKycMutation = useVerifyKycDocument({
+    onSuccess: (data) => {
+      toast.success((data as any).message || 'KYC document approved successfully');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to approve KYC document');
+    },
+  });
+
+  const approveMutation = useApproveProvider({
+    onSuccess: (data) => {
+      // console.log('[APPROVE] Mutation onSuccess called with data:', data);
+      toast.success((data as any).message || 'Provider approved successfully');
+      refetch();
+    },
+    onError: (error) => {
+      // console.error('[APPROVE] Mutation onError called:', error);
+      toast.error(error.message || 'Failed to approve provider');
+    },
+  });
+
+  const rejectMutation = useRejectProvider({
+    onSuccess: (data) => {
+      // console.log('[REJECT] Mutation onSuccess called with data:', data);
+      toast.success((data as any).message || 'Provider rejected successfully');
+      setRejectDialogOpen(false);
+      setRejectReason('');
+      refetch();
+    },
+    onError: (error) => {
+      // console.error(' [REJECT] Mutation onError called:', error);
+      toast.error(error.message || 'Failed to reject provider');
+    },
+  });
+
+  const updateStatusMutation = useUpdateProviderStatus({
+    onSuccess: (data) => {
+      toast.success((data as any).message || 'Provider status updated successfully');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update provider status');
+    },
   });
 
   // Use detailed provider data if available, otherwise fall back to basic provider data
@@ -43,13 +99,16 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
 
   if (!provider && !providerDetail) return null;
 
-  // Extract data from API response
+  // Extract data from API response - preserve full document data including file_url
   const kycDocuments = (displayProvider?.kyc?.documents || []).map((doc: any) => ({
     type: doc.document_type || 'Unknown',
     status: (doc.status || 'pending').toLowerCase(),
-    uploadDate: doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A',
-    documentNumber: doc.public_id || 'N/A',
+    uploadDate: doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A',
+    verifiedDate: doc.verified_at ? new Date(doc.verified_at).toLocaleDateString() : null,
+    documentNumber: doc.document_id || doc.public_id || 'N/A',
     document_id: doc.document_id || doc.public_id,
+    file_url: doc.file_url || doc.fileUrl || doc.url || null,
+    originalDoc: doc, // Preserve full original document data
   }));
 
   const serviceZones = (displayProvider?.zones || []).map((zone: any) => ({
@@ -98,7 +157,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
       unavailable: { variant: 'destructive', text: 'Unavailable' }
     };
     
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', text: status };
+    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', text: status };
     return <Badge variant={config.variant as any}>{config.text}</Badge>;
   };
 
@@ -114,6 +173,115 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
       );
     }
     return <div className="flex items-center gap-1">{stars}</div>;
+  };
+
+  const handleApproveKYC = () => {
+    // console.log('[APPROVE] Button clicked - handleApproveKYC called');
+    // console.log('[APPROVE] Current state:', { providerId, provider, providerDetail });
+    
+    const id = providerId || provider?.id || provider?.provider_id;
+    // console.log('[APPROVE] Extracted ID:', id);
+    
+    if (!id) {
+      toast.error('Provider ID is missing');
+      // console.error('[APPROVE] Provider ID is missing:', { providerId, provider });
+      return;
+    }
+    
+    // console.log('[APPROVE] Calling approveMutation.mutate with ID:', id);
+    // console.log('[APPROVE] Mutation object:', approveMutation);
+    
+    try {
+      approveMutation.mutate(id);
+      // console.log('[APPROVE] Mutation.mutate() called successfully');
+    } catch (error) {
+      console.error(' [APPROVE] Error calling mutation:', error);
+    }
+  };
+
+  const handleApproveKYCDocument = (documentId: string) => {
+    if (!documentId) {
+      toast.error('Document ID is missing');
+      return;
+    }
+    
+    try {
+      verifyKycMutation.mutate({
+        documentId,
+        data: {
+          action: 'approve',
+          rejection_reason: 'Document is not clear',
+        },
+      });
+    } catch (error) {
+      console.error('[APPROVE] Error calling mutation:', error);
+    }
+  };
+
+  const handleRejectKYC = () => {
+    // console.log('[REJECT] Button clicked - handleRejectKYC called');
+    // console.log('[REJECT] Opening reject dialog');
+    setRejectDialogOpen(true);
+  };
+
+  const handleConfirmReject = () => {
+    // console.log('[REJECT] Confirm button clicked - handleConfirmReject called');
+    // console.log('[REJECT] Current state:', { providerId, provider, rejectReason });
+    
+    const id = providerId || provider?.id || provider?.provider_id;
+    // console.log('[REJECT] Extracted ID:', id);
+    
+    if (!id || !rejectReason.trim()) {
+      toast.error('Please provide a rejection reason');
+      // console.error('[REJECT] Missing ID or reason:', { id, rejectReason });
+      return;
+    }
+    
+    const mutationData = {
+      providerId: id,
+      reason: rejectReason.trim(),
+    };
+    
+    // console.log('[REJECT] Calling rejectMutation.mutate with data:', mutationData);
+    // console.log('[REJECT] Mutation object:', rejectMutation);
+    
+    try {
+      rejectMutation.mutate(mutationData);
+      // console.log('[REJECT] Mutation.mutate() called successfully');
+    } catch (error) {
+      console.error('[REJECT] Error calling mutation:', error);
+    }
+  };
+
+  const handleBlockProvider = () => {
+    const id = providerId || provider?.id || provider?.provider_id;
+    if (!id) {
+      toast.error('Provider ID is missing');
+      console.error('Provider ID is missing:', { providerId, provider });
+      return;
+    }
+    console.log('Blocking provider:', id);
+    updateStatusMutation.mutate({
+      providerId: id,
+      status: 'SUSPENDED',
+    });
+  };
+
+  const handleViewDocument = (doc: any) => {
+    setSelectedDocument(doc);
+    setViewDocumentOpen(true);
+  };
+
+  const isImageFile = (url: string | null) => {
+    if (!url) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    const lowerUrl = url.toLowerCase();
+    return imageExtensions.some(ext => lowerUrl.includes(ext));
+  };
+
+  const isPdfFile = (url: string | null) => {
+    if (!url) return false;
+    return url.toLowerCase().includes('.pdf');
   };
 
   const providerName = displayProvider?.name || displayProvider?.business_name || displayProvider?.user?.name || 'Unknown Provider';
@@ -150,13 +318,126 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
         {!isLoading && !isError && (
 
         <div className="px-6 pb-6">
-          <Tabs defaultValue="kyc" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="personal" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <Tab value="personal">Personal Details</Tab>
             <Tab value="kyc">KYC Documents</Tab>
             <Tab value="zones">Service Zones</Tab>
             <Tab value="schedule">Availability</Tab>
             <Tab value="reviews">Reviews & Ratings</Tab>
           </TabsList>
+
+          {/* Personal Details Tab */}
+          <TabPanel value="personal" className="space-y-6 pt-6">
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">Personal Details</h3>
+                <p className="text-sm text-gray-600">Provider personal information</p>
+              </div>
+              <div className="card-body">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Provider Image Section */}
+                  <div className="flex-shrink-0 flex items-center justify-center md:items-start">
+                    <div className="w-32 h-32 rounded-lg bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+                      {displayProvider?.user?.profile_picture_url || displayProvider?.avatar ? (
+                        <img
+                          src={displayProvider?.user?.profile_picture_url || displayProvider?.avatar}
+                          alt={displayProvider?.user?.name || displayProvider?.name || 'Provider'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {(!displayProvider?.user?.profile_picture_url && !displayProvider?.avatar) && (
+                        <KeenIcon icon="user" className="text-gray-400 text-5xl" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Personal Details Table */}
+                  <div className="flex-1 min-w-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Provider ID</div>
+                        <div className="text-sm font-medium">{displayProvider?.provider_id || displayProvider?.id || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Name</div>
+                        <div className="text-sm font-medium">{displayProvider?.user?.name || displayProvider?.name || displayProvider?.business_name || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Business Name</div>
+                        <div className="text-sm">{displayProvider?.business_name || displayProvider?.name || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</div>
+                        <div className="text-sm">{displayProvider?.user?.email || displayProvider?.email || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</div>
+                        <div className="text-sm">{displayProvider?.user?.phone || displayProvider?.phone || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</div>
+                        <div>{getStatusBadge((displayProvider?.status || 'inactive').toLowerCase())}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">KYC Status</div>
+                        <div>{getStatusBadge((displayProvider?.kyc_status || displayProvider?.kycStatus || 'pending').toLowerCase())}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Joined Date</div>
+                        <div className="text-sm">{displayProvider?.joined_at || displayProvider?.joinDate || displayProvider?.createdAt ? new Date(displayProvider?.joined_at || displayProvider?.joinDate || displayProvider?.createdAt).toLocaleDateString() : 'N/A'}</div>
+                      </div>
+                    </div>
+
+                    {/* Address Section */}
+                    {(displayProvider?.address || displayProvider?.city || displayProvider?.state || displayProvider?.pincode || displayProvider?.country || (displayProvider?.zones && displayProvider.zones.length > 0)) && (
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <div className="text-sm font-medium text-gray-700 mb-4">Address Information</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(displayProvider?.address || (displayProvider?.zones && displayProvider.zones.length > 0)) && (
+                            <div className="space-y-1 md:col-span-2">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Address</div>
+                              <div className="text-sm">
+                                {displayProvider?.address || (displayProvider?.zones && displayProvider.zones.length > 0 ? displayProvider.zones.map((zone: any) => zone.name).join(', ') : 'N/A')}
+                              </div>
+                            </div>
+                          )}
+                          {displayProvider?.city && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">City</div>
+                              <div className="text-sm">{displayProvider.city}</div>
+                            </div>
+                          )}
+                          {displayProvider?.state && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">State</div>
+                              <div className="text-sm">{displayProvider.state}</div>
+                            </div>
+                          )}
+                          {displayProvider?.pincode && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Pincode</div>
+                              <div className="text-sm">{displayProvider.pincode || displayProvider.zipCode || 'N/A'}</div>
+                            </div>
+                          )}
+                          {displayProvider?.country && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Country</div>
+                              <div className="text-sm">{displayProvider.country}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabPanel>
 
           {/* KYC Documents Tab */}
           <TabPanel value="kyc" className="space-y-6 pt-6">
@@ -172,7 +453,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                       <TableHead>Document Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Upload Date</TableHead>
-                      <TableHead>Document Number</TableHead>
+                      {/* <TableHead>Document Number</TableHead>x  */}
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -189,20 +470,35 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           <TableCell className="font-medium">{doc.type}</TableCell>
                           <TableCell>{getStatusBadge(doc.status)}</TableCell>
                           <TableCell>{doc.uploadDate}</TableCell>
-                          <TableCell>{doc.documentNumber}</TableCell>
+                          {/* <TableCell>{doc.documentNumber}</TableCell> */}
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewDocument(doc)}
+                              >
                                 <KeenIcon icon="eye" className="me-1" />
                                 View
                               </Button>
                               {doc.status === 'pending' && (
                                 <>
-                                  <Button variant="default" className="bg-success text-white hover:bg-success/90" size="sm">
+                                  <Button 
+                                    variant="default" 
+                                    className="bg-success text-white hover:bg-success/90" 
+                                    size="sm"
+                                    onClick={() => handleApproveKYCDocument(doc.document_id)}
+                                    disabled={verifyKycMutation.isLoading}
+                                  >
                                     <KeenIcon icon="check" className="me-1" />
-                                    Approve
+                                    {verifyKycMutation.isLoading ? 'Approving...' : 'Approve'}
                                   </Button>
-                                  <Button variant="destructive" size="sm">
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={handleRejectKYC}
+                                    disabled={rejectMutation.isLoading}
+                                  >
                                     <KeenIcon icon="cross" className="me-1" />
                                     Reject
                                   </Button>
@@ -233,7 +529,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                       <TableHead>Zone</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Jobs Completed</TableHead>
-                      <TableHead>Actions</TableHead>
+                      {/* <TableHead>Actions</TableHead> */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -249,7 +545,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           <TableCell className="font-medium">{zone.zone}</TableCell>
                           <TableCell>{getStatusBadge(zone.status)}</TableCell>
                           <TableCell>{zone.jobsCompleted || 0}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           <div className="flex gap-2">
                             {zone.status === 'active' ? (
                               <Button variant="outline" className="border-warning text-warning hover:bg-warning hover:text-white" size="sm">
@@ -263,7 +559,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                               </Button>
                             )}
                           </div>
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                       ))
                     )}
@@ -374,25 +670,176 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
             </Button>
             {displayProvider?.kyc_status === 'PENDING' && (
               <>
-                <Button variant="default" className="bg-success text-white hover:bg-success/90">
+                <Button 
+                  variant="default" 
+                  className="bg-success text-white hover:bg-success/90"
+                  onClick={handleApproveKYC}
+                  disabled={approveMutation.isLoading}
+                >
                   <KeenIcon icon="check-circle" className="me-2" />
-                  Approve KYC
+                  {approveMutation.isLoading ? 'Approving...' : 'Approve KYC'}
                 </Button>
-                <Button variant="destructive">
+                <Button 
+                  variant="destructive"
+                  onClick={handleRejectKYC}
+                  disabled={rejectMutation.isLoading}
+                >
                   <KeenIcon icon="cross-circle" className="me-2" />
                   Reject KYC
                 </Button>
               </>
             )}
             {displayProvider?.status === 'ACTIVE' && (
-              <Button variant="destructive">
+              <Button 
+                variant="destructive"
+                onClick={handleBlockProvider}
+                disabled={updateStatusMutation.isLoading}
+              >
                 <KeenIcon icon="cross-circle" className="me-2" />
-                Block Provider
+                {updateStatusMutation.isLoading ? 'Blocking...' : 'Block Provider'}
               </Button>
             )}
           </div>
         )}
       </DialogContent>
+
+      {/* Reject Provider Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Provider KYC</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="rejectReason">Rejection Reason *</Label>
+                <Textarea
+                  id="rejectReason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejecting this provider's KYC..."
+                  rows={4}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectReason('');
+              }}
+              disabled={rejectMutation.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={!rejectReason.trim() || rejectMutation.isLoading}
+            >
+              {rejectMutation.isLoading ? 'Rejecting...' : 'Reject Provider'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Document Dialog */}
+      <Dialog open={viewDocumentOpen} onOpenChange={setViewDocumentOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="document" className="text-primary" />
+              {selectedDocument?.type || 'Document'}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {selectedDocument?.file_url ? (
+              <div className="mt-4">
+                {isImageFile(selectedDocument.file_url) ? (
+                  <div className="w-full flex justify-center">
+                    <img
+                      src={selectedDocument.file_url}
+                      alt={selectedDocument.type || 'Document'}
+                      className="max-w-full max-h-[70vh] w-auto h-auto rounded-lg border border-gray-200 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400"%3E%3Crect fill="%23ddd" width="800" height="400"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="24"%3EImage Not Available%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                ) : isPdfFile(selectedDocument.file_url) ? (
+                  <div className="w-full">
+                    <iframe
+                      src={selectedDocument.file_url}
+                      className="w-full h-[600px] rounded-lg border border-gray-200"
+                      title={selectedDocument.type || 'Document'}
+                    />
+                    <div className="mt-4 text-center">
+                      <a
+                        href={selectedDocument.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <KeenIcon icon="arrow-top-right" className="text-sm" />
+                        Open in new tab
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full">
+                    <div className="w-full h-64 bg-gray-100 rounded-lg flex flex-col items-center justify-center gap-4">
+                      <KeenIcon icon="document" className="text-gray-400 text-5xl" />
+                      <p className="text-gray-600">Document preview not available</p>
+                      <a
+                        href={selectedDocument.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <KeenIcon icon="arrow-top-right" className="text-sm" />
+                        Open document
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {selectedDocument.documentNumber && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    {/* <div className="text-sm text-gray-600">
+                      <span className="font-medium">Document ID:</span> {selectedDocument.documentNumber}
+                    </div> */}
+                    {selectedDocument.uploadDate && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="font-medium">Upload Date:</span> {selectedDocument.uploadDate}
+                      </div>
+                    )}
+                    {selectedDocument.verifiedDate && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="font-medium">Verified Date:</span> {selectedDocument.verifiedDate}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <KeenIcon icon="document" className="text-gray-400 text-5xl mx-auto mb-4" />
+                  <p className="text-gray-600">Document file not available</p>
+                </div>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setViewDocumentOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

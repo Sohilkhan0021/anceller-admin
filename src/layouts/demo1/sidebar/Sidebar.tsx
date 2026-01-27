@@ -18,14 +18,15 @@ export const Sidebar = () => {
   const selfRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [scrollableHeight, setScrollableHeight] = useState<number>(0);
-  const scrollableOffset = 40;
+  const scrollableOffset = 0; // Removed fixed offset - padding is handled by flexbox
   const [viewportHeight] = useViewport();
   const { pathname, prevPathname } = usePathname();
 
   useEffect(() => {
     if (headerRef.current) {
       const headerHeight = getHeight(headerRef.current);
-      const availableHeight = viewportHeight - headerHeight - scrollableOffset;
+      // Calculate available height: viewport - header, padding handled by flexbox
+      const availableHeight = viewportHeight - headerHeight;
       setScrollableHeight(availableHeight);
     } else {
       setScrollableHeight(viewportHeight);

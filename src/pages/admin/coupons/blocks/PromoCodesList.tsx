@@ -392,7 +392,7 @@ const PromoCodesList = ({ onEditPromo, onDeletePromo }: IPromoCodesListProps) =>
                                     onClick={() => handleDeactivatePromo(promo.id)}
                                     className="text-warning"
                                   >
-                                    <KeenIcon icon="pause" className="me-2" />
+                                    <KeenIcon icon="time" className="me-2" />
                                     Deactivate
                                   </DropdownMenuItem>
                                 )}

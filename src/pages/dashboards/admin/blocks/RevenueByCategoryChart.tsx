@@ -13,7 +13,7 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
   const dateRange = useMemo(() => {
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (period) {
       case 'today':
         startDate.setDate(endDate.getDate() - 1);
@@ -27,7 +27,7 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
       default:
         startDate.setDate(endDate.getDate() - 30);
     }
-    
+
     return {
       start_date: startDate.toISOString().split('T')[0],
       end_date: endDate.toISOString().split('T')[0]
@@ -43,7 +43,7 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
 
     // Sort by revenue descending and take top 10
     const sorted = [...revenueData].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-    
+
     return {
       categories: sorted.map(item => item.category_name),
       data: sorted.map(item => item.revenue)
@@ -89,6 +89,9 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
     },
     xaxis: {
       categories: chartData.categories,
+       crosshairs: {
+      show: false
+    },
       axisBorder: {
         show: false
       },
@@ -115,12 +118,24 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
         formatter: (value) => `₹${(value / 1000).toFixed(0)}K`
       }
     },
+     states: {
+    hover: {
+      filter: {
+        type: 'none'
+      }
+    },
+    active: {
+      filter: {
+        type: 'none'
+      }
+    }
+  },
     tooltip: {
       enabled: true,
       custom({ series, seriesIndex, dataPointIndex, w }) {
         const value = series[seriesIndex][dataPointIndex];
         const category = w.globals.seriesX[seriesIndex][dataPointIndex];
-        
+
         return `
           <div class="flex flex-col gap-2 p-3.5">
             <div class="font-medium text-2sm text-gray-600">${category}</div>
@@ -151,9 +166,9 @@ const RevenueByCategoryChart = ({ period = 'today' }: RevenueByCategoryChartProp
     <div className="card h-full">
       <div className="card-header">
         <h3 className="card-title">Revenue by Service Category</h3>
-        <p className="text-sm text-gray-600">Monthly revenue breakdown by service type</p>
+        {/* <p className="text-sm text-gray-600">Monthly revenue breakdown by service type</p> */}
       </div>
-      
+
       <div className="card-body flex flex-col justify-end items-stretch grow px-3 py-1">
         {isLoading ? (
           <ContentLoader />

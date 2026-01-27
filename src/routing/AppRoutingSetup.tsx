@@ -1,7 +1,7 @@
 import { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { DefaultPage, Demo1DarkSidebarPage, AdminDashboardPage } from '@/pages/dashboards';
-import { UserManagementPage, ProviderManagementPage, BookingManagementPage, BookingDetailsPage, PaymentsManagementPage, CatalogManagementPage, CouponsManagementPage, PoliciesManagementPage, SystemSettingsPage, RolesPermissionsPage /*, NotificationsSupportPage */ } from '@/pages/admin';
+import { UserManagementPage, ProviderManagementPage, BookingManagementPage, BookingDetailsPage, PaymentsManagementPage, CatalogManagementPage, CouponsManagementPage, PoliciesManagementPage, SystemSettingsPage, RolesPermissionsPage, BannerManagementPage /*, NotificationsSupportPage */ } from '@/pages/admin';
 import {
   ProfileActivityPage,
   ProfileBloggerPage,
@@ -90,7 +90,7 @@ const AppRoutingSetup = (): ReactElement => {
     <Routes>
       {/* Root path - shows login if not authenticated, redirects to dashboard if authenticated */}
       <Route path="/" element={<RootRouteGuard />} />
-      
+
       {/* Protected routes - require authentication */}
       <Route element={<RequireAuth />}>
         <Route element={<Demo1Layout />}>
@@ -103,6 +103,7 @@ const AppRoutingSetup = (): ReactElement => {
           <Route path="/admin/catalog" element={<CatalogManagementPage />} />
           <Route path="/admin/coupons" element={<CouponsManagementPage />} />
           <Route path="/admin/policies" element={<PoliciesManagementPage />} />
+          <Route path="/admin/banners" element={<BannerManagementPage />} />
           <Route path="/admin/system" element={<SystemSettingsPage />} />
           <Route path="/admin/roles" element={<RolesPermissionsPage />} />
           {/* Commented out - Notifications & Support tab

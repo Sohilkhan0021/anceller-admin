@@ -76,6 +76,7 @@ const BookingTrendChart = ({ period = 'today' }: BookingTrendChartProps) => {
     },
     xaxis: {
       categories: chartData.labels.map(formatDateLabel),
+      tickAmount: selectedDays === 30 ? 6 : undefined, // added to remove conjected looks on UI 
       axisBorder: {
         show: false
       },

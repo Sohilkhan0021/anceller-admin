@@ -143,13 +143,19 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
         }
       } else {
         // Create new role
-        await createRoleMutation.mutateAsync({
+        const response: any = await createRoleMutation.mutateAsync({
           name: newRole.name.toLowerCase().trim(),
           display_name: newRole.display_name || newRole.name,
           description: newRole.description,
           is_active: newRole.is_active,
           permissions: validPermissions
         });
+
+        if (response?.message || response?.data?.message) {
+          toast.success(response?.message || response?.data?.message || 'Role created successfully');
+        } else {
+          toast.success('Role created successfully');
+        }
       }
       handleCloseModal();
       refetchRoles();
@@ -169,12 +175,14 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
 
     try {
       await deleteRoleMutation.mutateAsync(roleToDelete.role_id);
+      toast.success(`Role "${roleToDelete.name}" deleted successfully`);
       refetchRoles();
       setDeleteDialogOpen(false);
       setRoleToDelete(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting role:', error);
-      // alert(error instanceof Error ? error.message : 'Failed to delete role');
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete role';
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 
@@ -535,12 +543,16 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                   <Input
                     id="role-name"
                     value={newRole.name}
-                    onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value.slice(0, 30) }))}
                     className="mt-2"
                     placeholder="Enter role name (e.g., manager)"
                     disabled={!!selectedRole}
+                    maxLength={30}
                     required
                   />
+                  <div className="text-xs text-gray-500 text-right mt-1">
+                    {newRole.name.length} / 30
+                  </div>
                 </div>
 
                 <div>
@@ -548,10 +560,14 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                   <Input
                     id="role-display-name"
                     value={newRole.display_name}
-                    onChange={(e) => setNewRole(prev => ({ ...prev, display_name: e.target.value }))}
+                    onChange={(e) => setNewRole(prev => ({ ...prev, display_name: e.target.value.slice(0, 30) }))}
                     className="mt-2"
                     placeholder="Enter display name (e.g., Manager)"
+                    maxLength={30}
                   />
+                  <div className="text-xs text-gray-500 text-right mt-1">
+                    {newRole.display_name.length} / 30
+                  </div>
                 </div>
               </div>
 
@@ -560,11 +576,22 @@ const RoleManagement = ({ isAddRoleOpen = false, onCloseAddRole }: IRoleManageme
                 <textarea
                   id="role-description"
                   value={newRole.description}
-                  onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length > 250) {
+                      toast.warning('Description cannot exceed 250 characters');
+                      return;
+                    }
+                    setNewRole(prev => ({ ...prev, description: value }));
+                  }}
                   className="mt-2 w-full p-3 border border-gray-300 rounded-md"
                   rows={3}
                   placeholder="Enter role description..."
+                  maxLength={250}
                 />
+                <div className="text-xs text-gray-500 text-right mt-1">
+                  {newRole.description.length} / 250
+                </div>
               </div>
 
               {/* Status Toggle */}

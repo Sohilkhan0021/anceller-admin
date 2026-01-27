@@ -21,6 +21,8 @@ import type {
   IProviderStatsResponse,
   ICreateProviderRequest,
   ICreateProviderResponse,
+  IVerifyKycDocumentRequest,
+  IVerifyKycDocumentResponse,
 } from './provider.types';
 
 /**
@@ -160,14 +162,19 @@ export const useApproveProvider = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation(
-    (providerId: string) => providerService.approveProvider(providerId),
+    (providerId: string) => {
+      // console.log('[HOOK] useApproveProvider mutation function called with providerId:', providerId);
+      return providerService.approveProvider(providerId);
+    },
     {
       onSuccess: (data) => {
+        // console.log('[HOOK] useApproveProvider onSuccess called with data:', data);
         queryClient.invalidateQueries(['providers']);
         queryClient.invalidateQueries(['provider', data.provider_id]);
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
+        // console.error('[HOOK] useApproveProvider onError called:', error);
         if (options?.onError) options.onError(error);
       },
     }
@@ -184,15 +191,19 @@ export const useRejectProvider = (options?: {
   const queryClient = useQueryClient();
 
   return useMutation(
-    ({ providerId, reason }: { providerId: string; reason: string }) => 
-      providerService.rejectProvider(providerId, reason),
+    ({ providerId, reason }: { providerId: string; reason: string }) => {
+      // console.log('[HOOK] useRejectProvider mutation function called with:', { providerId, reason });
+      return providerService.rejectProvider(providerId, reason);
+    },
     {
       onSuccess: (data) => {
+        // console.log('[HOOK] useRejectProvider onSuccess called with data:', data);
         queryClient.invalidateQueries(['providers']);
         queryClient.invalidateQueries(['provider', data.provider_id]);
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
+        // console.error('[HOOK] useRejectProvider onError called:', error);
         if (options?.onError) options.onError(error);
       },
     }
@@ -254,6 +265,32 @@ export const useCreateProvider = (options?: {
     {
       onSuccess: (data) => {
         queryClient.invalidateQueries(['providers']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to verify KYC document
+ */
+export const useVerifyKycDocument = (options?: {
+  onSuccess?: (data: IVerifyKycDocumentResponse['data']) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<IVerifyKycDocumentResponse['data'], Error, { documentId: string; data: IVerifyKycDocumentRequest }> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ documentId, data }: { documentId: string; data: IVerifyKycDocumentRequest }) => {
+      return providerService.verifyKycDocument(documentId, data);
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['providers']);
+        queryClient.invalidateQueries(['provider']);
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {

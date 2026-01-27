@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { IUser, IPaginationMeta } from '@/services/user.types';
 import { ContentLoader } from '@/components/loaders';
 import { useUserManage } from '@/providers/userManageProvider';
@@ -43,6 +52,8 @@ const UserManagementTable = ({
   onEditUser,
   onPageChange
 }: IUserManagementTableProps) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const { updateUserStatus } = useUserManage();
 
@@ -57,6 +68,25 @@ const UserManagementTable = ({
   const handleUnblockUser = async (userId: string) => {
     await updateUserStatus(userId, 'ACTIVE');
   };
+
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (userToDelete) {
+      await handleDeleteUser(userToDelete);
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    console.log('Delete user:', userId);
+    // delete API call in future
+  };
+
 
   const getStatusBadge = (status: string) => {
     const s = status?.toUpperCase();
@@ -139,7 +169,7 @@ const UserManagementTable = ({
                           <div className="min-w-0 flex-1">
                             {/* <div className="font-medium truncate">{user.name || 'N/A'}</div> */}
                             <div className="font-medium" title={user.name}>
-                              {truncateText(user.name || 'N/A', 40)}
+                              {truncateText(user.name || 'N/A', 30)}
                             </div>
 
                             <div className="text-sm text-gray-500 hidden sm:block">
@@ -219,6 +249,14 @@ const UserManagementTable = ({
                                   Unblock User
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteClick(user.user_id || user.id)}
+                                className="text-danger"
+                              >
+                                <KeenIcon icon="trash" className="me-2" />
+                                Delete User
+                              </DropdownMenuItem>
+
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -232,7 +270,7 @@ const UserManagementTable = ({
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && onPageChange && (
               <div className="card-footer">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
@@ -275,6 +313,39 @@ const UserManagementTable = ({
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="trash" className="text-danger" />
+              Delete User
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete the user <strong className="text-black">"{userToDelete ? users.find(u => (u.user_id || u.id) === userToDelete)?.name || 'this user' : 'this user'}"</strong>?
+              This action cannot be undone.
+            </p>
+          </DialogBody>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              <KeenIcon icon="trash" className="me-2" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

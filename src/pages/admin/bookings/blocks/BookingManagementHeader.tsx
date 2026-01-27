@@ -20,6 +20,69 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useCategories } from '@/services';
 
+/**
+ * Maps frontend status filter values to backend API accepted values
+ * Backend accepts: CANCELED, ACTIVE, UPCOMING, IN_PROGRESS, COMPLETED, RESCHEDULED, FAILED
+ */
+const mapStatusToBackend = (frontendStatus: string): string => {
+  const statusMap: { [key: string]: string } = {
+    'accepted': 'ACTIVE',
+    'completed': 'COMPLETED',
+    'cancelled': 'CANCELED',
+    'in-progress': 'IN_PROGRESS',
+  };
+  
+  return statusMap[frontendStatus] || frontendStatus;
+};
+
+/**
+ * Maps backend API status values back to frontend filter values
+ * Used when initializing filters from API response or URL params
+ */
+const mapStatusToFrontend = (backendStatus: string): string => {
+  const reverseStatusMap: { [key: string]: string } = {
+    'ACTIVE': 'accepted',
+    'COMPLETED': 'completed',
+    'CANCELED': 'cancelled',
+    'IN_PROGRESS': 'in-progress',
+  };
+  
+  return reverseStatusMap[backendStatus] || backendStatus;
+};
+
+/**
+ * Maps frontend payment status filter values to backend API accepted values
+ * Backend accepts: PENDING, SUCCESS, FAILED, REFUNDED, PARTIALLY_REFUNDED, CANCELLED
+ */
+const mapPaymentStatusToBackend = (frontendPaymentStatus: string): string => {
+  const paymentStatusMap: { [key: string]: string } = {
+    'pending': 'PENDING',
+    'paid': 'SUCCESS',
+    'failed': 'FAILED',
+    'refunded': 'REFUNDED',
+    'partially-paid': 'PARTIALLY_REFUNDED',
+  };
+  
+  return paymentStatusMap[frontendPaymentStatus] || frontendPaymentStatus;
+};
+
+/**
+ * Maps backend API payment status values back to frontend filter values
+ * Used when initializing filters from API response or URL params
+ */
+const mapPaymentStatusToFrontend = (backendPaymentStatus: string): string => {
+  const reversePaymentStatusMap: { [key: string]: string } = {
+    'PENDING': 'pending',
+    'SUCCESS': 'paid',
+    'FAILED': 'failed',
+    'REFUNDED': 'refunded',
+    'PARTIALLY_REFUNDED': 'partially-paid',
+    'CANCELLED': 'cancelled', // Backend has CANCELLED but frontend doesn't have this option
+  };
+  
+  return reversePaymentStatusMap[backendPaymentStatus] || backendPaymentStatus;
+};
+
 interface IBookingManagementHeaderProps {
   onAddBooking?: () => void;
   onFiltersChange?: (filters: {
@@ -45,9 +108,23 @@ const BookingManagementHeader = ({
   onFiltersChange,
   initialFilters
 }: IBookingManagementHeaderProps) => {
+  // Map backend status value to frontend value if initialFilters contains backend value
+  const initialStatus = initialFilters?.status 
+    ? (initialFilters.status === 'all' || initialFilters.status === '' 
+        ? 'all' 
+        : mapStatusToFrontend(initialFilters.status))
+    : 'all';
+
+  // Map backend payment status value to frontend value if initialFilters contains backend value
+  const initialPaymentStatus = initialFilters?.payment_status 
+    ? (initialFilters.payment_status === 'all' || initialFilters.payment_status === '' 
+        ? 'all' 
+        : mapPaymentStatusToFrontend(initialFilters.payment_status))
+    : 'all';
+
   const [searchTerm, setSearchTerm] = useState(initialFilters?.search || '');
-  const [statusFilter, setStatusFilter] = useState(initialFilters?.status || 'all');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState(initialFilters?.payment_status || 'all');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState(initialPaymentStatus);
   const [categoryFilter, setCategoryFilter] = useState(initialFilters?.category_id || 'all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
 
@@ -76,10 +153,16 @@ const BookingManagementHeader = ({
         const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
         const endDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '';
 
+        // Map frontend status value to backend API accepted value
+        const backendStatus = statusFilter === 'all' ? '' : mapStatusToBackend(statusFilter);
+
+        // Map frontend payment status value to backend API accepted value
+        const backendPaymentStatus = paymentStatusFilter === 'all' ? '' : mapPaymentStatusToBackend(paymentStatusFilter);
+
         onFiltersChange({
           search: searchTerm,
-          status: statusFilter === 'all' ? '' : statusFilter,
-          payment_status: paymentStatusFilter === 'all' ? '' : paymentStatusFilter,
+          status: backendStatus,
+          payment_status: backendPaymentStatus,
           start_date: startDate,
           end_date: endDate,
           category_id: categoryFilter === 'all' ? '' : categoryFilter,
@@ -104,6 +187,11 @@ const BookingManagementHeader = ({
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
+  };
+
+  const handleClearDateRange = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent popover from opening when clicking clear button
+    setDateRange(undefined);
   };
 
   const handleBulkAction = (action: string) => {
@@ -179,7 +267,7 @@ const BookingManagementHeader = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                {/* <SelectItem value="pending">Pending</SelectItem> */}
                 <SelectItem value="accepted">Accepted</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -231,41 +319,54 @@ const BookingManagementHeader = ({
         <div className="mt-4">
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700">Date Range:</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[300px] justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
+            <div className="relative">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[300px] justify-start text-left font-normal",
+                      !dateRange && "text-muted-foreground",
+                      dateRange && "pr-8" // Add padding on right when date is selected to make room for clear button
+                    )}
+                  >
+                    <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd, y")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
                     ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={handleDateRangeChange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={handleDateRangeChange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+              {dateRange && (
+                <button
+                  type="button"
+                  onClick={handleClearDateRange}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 rounded-full p-1 hover:bg-gray-100 transition-colors"
+                  aria-label="Clear date range"
+                >
+                  <KeenIcon icon="cross" className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

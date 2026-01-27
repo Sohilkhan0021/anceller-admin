@@ -76,6 +76,11 @@ const IntegrationTiles = () => {
     return apiKey;
   };
 
+  const formatProviderName = (name: string) => {
+    if (!name) return 'Unknown';
+    return name.split(/[-_]+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
 
 
   // Map API data to integration tiles
