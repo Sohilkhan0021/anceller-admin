@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { IBooking, IPaginationMeta } from '@/services/booking.types';
+import { useCancelBooking } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 
 interface IBookingManagementTableProps {
@@ -59,9 +61,19 @@ const BookingManagementTable = ({
     navigate(`/admin/bookings/${booking.id}`);
   };
 
+  const cancelBookingMutation = useCancelBooking({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Booking cancelled successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to cancel booking');
+    },
+  });
+
   const handleCancelBooking = (bookingId: string) => {
-    // TODO: Implement cancel booking functionality
-    console.log('Cancelling booking:', bookingId);
+    if (window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+      cancelBookingMutation.mutate({ bookingId, reason: 'Cancelled by admin' });
+    }
   };
 
   const handleReassignProvider = (bookingId: string) => {

@@ -89,6 +89,14 @@ export interface IBookingDetail {
     email: string;
     phone: string;
   };
+  provider: {
+    provider_id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    assignment_status: string | null;
+    assignment_id: string | null;
+  } | null;
   address: any;
   scheduled_date: string | null;
   scheduled_time_start: string | null;

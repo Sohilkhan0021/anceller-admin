@@ -29,7 +29,6 @@ const ProviderManagementHeader = ({
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryId);
-  const [kycStatusFilter, setKycStatusFilter] = useState('all');
 
   // Fetch categories from API
   const { categories, isLoading: isLoadingCategories } = useCategories({

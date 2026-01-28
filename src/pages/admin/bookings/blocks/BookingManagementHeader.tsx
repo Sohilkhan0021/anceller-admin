@@ -126,7 +126,6 @@ const BookingManagementHeader = ({
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState(initialPaymentStatus);
   const [categoryFilter, setCategoryFilter] = useState(initialFilters?.category_id || 'all');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
 
   // Fetch categories from API
   const { categories, isLoading: isLoadingCategories } = useCategories({

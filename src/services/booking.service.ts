@@ -216,6 +216,80 @@ export const getBookingDetail = async (
 };
 
 /**
+ * Cancel booking
+ * 
+ * @param bookingId - ID of the booking to cancel
+ * @param reason - Optional cancellation reason
+ * @returns Promise resolving to cancellation result
+ * @throws Error if API request fails
+ */
+export const cancelBooking = async (
+  bookingId: string,
+  reason?: string
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  try {
+    const response = await axios.post<{ status: number; message: string; data?: any }>(
+      `${BOOKING_BASE_URL}/${bookingId}/cancel`,
+      { reason: reason || 'Cancelled by admin' }
+    );
+    
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to cancel booking');
+    }
+    
+    return {
+      success: true,
+      message: response.data.message || 'Booking cancelled successfully',
+      data: response.data.data
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to cancel booking';
+      throw new Error(errorMessage);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Update booking status
+ * 
+ * @param bookingId - ID of the booking to update
+ * @param status - New status
+ * @param reason - Optional reason for status change
+ * @returns Promise resolving to update result
+ * @throws Error if API request fails
+ */
+export const updateBookingStatus = async (
+  bookingId: string,
+  status: string,
+  reason?: string
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  try {
+    const response = await axios.put<{ status: number; message: string; data?: any }>(
+      `${BOOKING_BASE_URL}/${bookingId}/status`,
+      { status, reason }
+    );
+    
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to update booking status');
+    }
+    
+    return {
+      success: true,
+      message: response.data.message || 'Booking status updated successfully',
+      data: response.data.data
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to update booking status';
+      throw new Error(errorMessage);
+    }
+    throw error;
+  }
+};
+
+/**
  * Booking Service Object
  * 
  * Centralized service object for all booking-related operations
@@ -224,11 +298,7 @@ export const getBookingDetail = async (
 export const bookingService = {
   getBookings,
   getBookingDetail,
-  // Future methods can be added here:
-  // createBooking,
-  // updateBooking,
-  // deleteBooking,
-  // cancelBooking,
-  // updateBookingStatus,
+  cancelBooking,
+  updateBookingStatus,
 };
 

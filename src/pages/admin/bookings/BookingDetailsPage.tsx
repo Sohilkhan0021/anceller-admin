@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,16 +12,50 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useBookingDetail } from '@/services';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useBookingDetail, useCancelBooking } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { format } from 'date-fns';
+import { useState } from 'react';
 
 const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   
   const { booking, isLoading, isError, error, refetch } = useBookingDetail(id || null);
+  
+  const cancelBookingMutation = useCancelBooking({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Booking cancelled successfully');
+      setCancelDialogOpen(false);
+      setCancelReason('');
+      refetch();
+      navigate('/admin/bookings');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to cancel booking');
+    },
+  });
+
+  const handleCancelBooking = () => {
+    if (!id) return;
+    cancelBookingMutation.mutate({ 
+      bookingId: id, 
+      reason: cancelReason || 'Cancelled by admin' 
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { variant: string; className: string; text: string }> = {
@@ -130,6 +165,17 @@ const BookingDetailsPage = () => {
           </div>
           <div className="flex items-center gap-3">
             {getStatusBadge(booking.status)}
+            {booking.status && !['CANCELLED', 'COMPLETED', 'cancelled', 'completed'].includes(booking.status) && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setCancelDialogOpen(true)}
+                disabled={cancelBookingMutation.isLoading}
+              >
+                <KeenIcon icon="cross-circle" className="me-2" />
+                Cancel Booking
+              </Button>
+            )}
           </div>
         </div>
 
@@ -292,6 +338,62 @@ const BookingDetailsPage = () => {
               </div>
             </div>
 
+            {/* Provider Information */}
+            {booking.provider ? (
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title">Provider Information</h3>
+                </div>
+                <div className="card-body space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-success-light rounded-full flex items-center justify-center">
+                      <KeenIcon icon="user-tie" className="text-success text-xl" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{booking.provider.name}</h4>
+                      {booking.provider.email && (
+                        <p className="text-sm text-gray-600">{booking.provider.email}</p>
+                      )}
+                      {booking.provider.phone && (
+                        <p className="text-sm text-gray-600">{booking.provider.phone}</p>
+                      )}
+                      {booking.provider.provider_id && (
+                        <p className="text-xs text-gray-500 mt-1">ID: {booking.provider.provider_id}</p>
+                      )}
+                    </div>
+                  </div>
+                  {booking.provider.assignment_status && (
+                    <div className="pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Assignment Status</span>
+                        {getStatusBadge(booking.provider.assignment_status)}
+                      </div>
+                    </div>
+                  )}
+                  {booking.provider.assignment_id && (
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Assignment ID</span>
+                        <span className="text-xs font-mono text-gray-500">{booking.provider.assignment_id}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title">Provider Information</h3>
+                </div>
+                <div className="card-body">
+                  <div className="text-center py-4">
+                    <KeenIcon icon="user-tie" className="text-4xl text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">No provider assigned</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Booking Timeline */}
             <div className="card">
               <div className="card-header">
@@ -384,6 +486,52 @@ const BookingDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Booking Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Booking</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Are you sure you want to cancel this booking? This action cannot be undone.
+              </p>
+              <div>
+                <Label htmlFor="cancelReason">Cancellation Reason (Optional)</Label>
+                <Textarea
+                  id="cancelReason"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Enter reason for cancellation..."
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setCancelReason('');
+              }}
+              disabled={cancelBookingMutation.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelBooking}
+              disabled={cancelBookingMutation.isLoading}
+            >
+              {cancelBookingMutation.isLoading ? 'Cancelling...' : 'Confirm Cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };

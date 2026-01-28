@@ -5,7 +5,7 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, UseQueryResult } from 'react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
 import { bookingService } from './booking.service';
 import type {
   IGetBookingsParams,
@@ -163,3 +163,60 @@ export const useBookingDetail = (
   };
 };
 
+/**
+ * Hook to cancel a booking
+ * 
+ * @param options - Callback options for success and error handling
+ * @returns Mutation object with cancel function and loading/error states
+ */
+export const useCancelBooking = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { bookingId: string; reason?: string }> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ bookingId, reason }: { bookingId: string; reason?: string }) =>
+      bookingService.cancelBooking(bookingId, reason),
+    {
+      onSuccess: (data) => {
+        // Invalidate bookings queries to refetch data
+        queryClient.invalidateQueries(['bookings']);
+        queryClient.invalidateQueries(['booking']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to update booking status
+ * 
+ * @param options - Callback options for success and error handling
+ * @returns Mutation object with update function and loading/error states
+ */
+export const useUpdateBookingStatus = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { bookingId: string; status: string; reason?: string }> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ bookingId, status, reason }: { bookingId: string; status: string; reason?: string }) =>
+      bookingService.updateBookingStatus(bookingId, status, reason),
+    {
+      onSuccess: (data) => {
+        // Invalidate bookings queries to refetch data
+        queryClient.invalidateQueries(['bookings']);
+        queryClient.invalidateQueries(['booking']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
