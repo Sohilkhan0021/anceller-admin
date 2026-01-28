@@ -378,6 +378,56 @@ export const verifyKycDocument = async (
 };
 
 /**
+ * Update provider details
+ * 
+ * @param providerId - Provider ID
+ * @param data - Update data
+ * @returns Promise resolving to update result
+ * @throws Error if API request fails
+ */
+export const updateProvider = async (
+  providerId: string,
+  data: {
+    business_name?: string;
+    contact_name?: string;
+    contact_email?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    pan_number?: string;
+    gstin?: string;
+    bank_account_number?: string;
+    bank_ifsc?: string;
+    bank_account_name?: string;
+    category_ids?: string[];
+  }
+): Promise<any> => {
+  try {
+    const response = await axios.put(
+      `${PROVIDER_BASE_URL}/${providerId}`,
+      data
+    );
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to update provider');
+    }
+    
+    // Return data with message
+    return {
+      ...(response.data.data || {}),
+      message: response.data.message,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to update provider';
+      throw new Error(errorMessage);
+    }
+    throw error;
+  }
+};
+
+/**
  * Provider Service Object
  * 
  * Centralized service object for all provider-related operations
@@ -392,5 +442,6 @@ export const providerService = {
   getProviderStats,
   createProvider,
   verifyKycDocument,
+  updateProvider,
 };
 

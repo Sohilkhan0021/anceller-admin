@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useProvider, useApproveProvider, useRejectProvider, useUpdateProviderStatus, useVerifyKycDocument } from '@/services';
+import { useProvider, useUpdateProviderStatus, useVerifyKycDocument } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { toast } from 'sonner';
@@ -43,46 +43,25 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     enabled: isOpen && !!providerId,
   });
 
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
   const [viewDocumentOpen, setViewDocumentOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+  const [rejectDocumentDialogOpen, setRejectDocumentDialogOpen] = useState(false);
+  const [rejectDocumentReason, setRejectDocumentReason] = useState('');
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [loadingDocumentId, setLoadingDocumentId] = useState<string | null>(null);
 
   const verifyKycMutation = useVerifyKycDocument({
     onSuccess: (data) => {
-      toast.success((data as any).message || 'KYC document approved successfully');
+      toast.success((data as any).message || 'KYC document updated successfully');
+      setLoadingDocumentId(null);
       refetch();
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to approve KYC document');
+      toast.error(error.message || 'Failed to update KYC document');
+      setLoadingDocumentId(null);
     },
   });
 
-  const approveMutation = useApproveProvider({
-    onSuccess: (data) => {
-      // console.log('[APPROVE] Mutation onSuccess called with data:', data);
-      toast.success((data as any).message || 'Provider approved successfully');
-      refetch();
-    },
-    onError: (error) => {
-      // console.error('[APPROVE] Mutation onError called:', error);
-      toast.error(error.message || 'Failed to approve provider');
-    },
-  });
-
-  const rejectMutation = useRejectProvider({
-    onSuccess: (data) => {
-      // console.log('[REJECT] Mutation onSuccess called with data:', data);
-      toast.success((data as any).message || 'Provider rejected successfully');
-      setRejectDialogOpen(false);
-      setRejectReason('');
-      refetch();
-    },
-    onError: (error) => {
-      // console.error(' [REJECT] Mutation onError called:', error);
-      toast.error(error.message || 'Failed to reject provider');
-    },
-  });
 
   const updateStatusMutation = useUpdateProviderStatus({
     onSuccess: (data) => {
@@ -100,16 +79,29 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
   if (!provider && !providerDetail) return null;
 
   // Extract data from API response - preserve full document data including file_url
-  const kycDocuments = (displayProvider?.kyc?.documents || []).map((doc: any) => ({
-    type: doc.document_type || 'Unknown',
-    status: (doc.status || 'pending').toLowerCase(),
-    uploadDate: doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A',
-    verifiedDate: doc.verified_at ? new Date(doc.verified_at).toLocaleDateString() : null,
-    documentNumber: doc.document_id || doc.public_id || 'N/A',
-    document_id: doc.document_id || doc.public_id,
-    file_url: doc.file_url || doc.fileUrl || doc.url || null,
-    originalDoc: doc, // Preserve full original document data
-  }));
+  // Map verification_status: PENDING -> pending, VERIFIED -> verified, REJECTED -> rejected
+  const kycDocuments = (displayProvider?.kyc?.documents || []).map((doc: any) => {
+    const verificationStatus = doc.verification_status || doc.status || 'PENDING';
+    const statusMap: { [key: string]: string } = {
+      'PENDING': 'pending',
+      'VERIFIED': 'verified',
+      'REJECTED': 'rejected',
+      'pending': 'pending',
+      'verified': 'verified',
+      'rejected': 'rejected'
+    };
+    return {
+      type: doc.document_type || 'Unknown',
+      status: statusMap[verificationStatus.toUpperCase()] || 'pending',
+      uploadDate: doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A',
+      verifiedDate: doc.verified_at ? new Date(doc.verified_at).toLocaleDateString() : null,
+      documentNumber: doc.document_id || doc.public_id || 'N/A',
+      document_id: doc.document_id || doc.public_id,
+      file_url: doc.file_url || doc.fileUrl || doc.url || null,
+      rejection_reason: doc.rejection_reason || null,
+      originalDoc: doc, // Preserve full original document data
+    };
+  });
 
   const serviceZones = (displayProvider?.zones || []).map((zone: any) => ({
     zone: zone.name || 'Unknown Zone',
@@ -148,17 +140,17 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      verified: { variant: 'success', text: 'Verified' },
-      pending: { variant: 'warning', text: 'Pending' },
-      rejected: { variant: 'destructive', text: 'Rejected' },
-      active: { variant: 'success', text: 'Active' },
-      inactive: { variant: 'secondary', text: 'Inactive' },
-      available: { variant: 'success', text: 'Available' },
-      unavailable: { variant: 'destructive', text: 'Unavailable' }
+      verified: { variant: 'success', text: 'Verified', className: '' },
+      pending: { variant: 'warning', text: 'Pending', className: '' },
+      rejected: { variant: 'destructive', text: 'Rejected', className: '' },
+      active: { variant: 'success', text: 'Active', className: '' },
+      inactive: { variant: 'secondary', text: 'Inactive', className: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 font-medium' },
+      available: { variant: 'success', text: 'Available', className: '' },
+      unavailable: { variant: 'destructive', text: 'Unavailable', className: '' }
     };
     
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', text: status };
-    return <Badge variant={config.variant as any}>{config.text}</Badge>;
+    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', text: status || 'Inactive', className: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 font-medium' };
+    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
   const renderStars = (rating: number) => {
@@ -175,29 +167,6 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     return <div className="flex items-center gap-1">{stars}</div>;
   };
 
-  const handleApproveKYC = () => {
-    // console.log('[APPROVE] Button clicked - handleApproveKYC called');
-    // console.log('[APPROVE] Current state:', { providerId, provider, providerDetail });
-    
-    const id = providerId || provider?.id || provider?.provider_id;
-    // console.log('[APPROVE] Extracted ID:', id);
-    
-    if (!id) {
-      toast.error('Provider ID is missing');
-      // console.error('[APPROVE] Provider ID is missing:', { providerId, provider });
-      return;
-    }
-    
-    // console.log('[APPROVE] Calling approveMutation.mutate with ID:', id);
-    // console.log('[APPROVE] Mutation object:', approveMutation);
-    
-    try {
-      approveMutation.mutate(id);
-      // console.log('[APPROVE] Mutation.mutate() called successfully');
-    } catch (error) {
-      console.error(' [APPROVE] Error calling mutation:', error);
-    }
-  };
 
   const handleApproveKYCDocument = (documentId: string) => {
     if (!documentId) {
@@ -205,53 +174,53 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
       return;
     }
     
+    setLoadingDocumentId(documentId);
     try {
       verifyKycMutation.mutate({
         documentId,
         data: {
           action: 'approve',
-          rejection_reason: 'Document is not clear',
         },
       });
     } catch (error) {
       console.error('[APPROVE] Error calling mutation:', error);
+      setLoadingDocumentId(null);
     }
   };
 
-  const handleRejectKYC = () => {
-    // console.log('[REJECT] Button clicked - handleRejectKYC called');
-    // console.log('[REJECT] Opening reject dialog');
-    setRejectDialogOpen(true);
+  const handleRejectKYCDocument = (documentId: string) => {
+    if (!documentId) {
+      toast.error('Document ID is missing');
+      return;
+    }
+    setSelectedDocumentId(documentId);
+    setRejectDocumentDialogOpen(true);
   };
 
-  const handleConfirmReject = () => {
-    // console.log('[REJECT] Confirm button clicked - handleConfirmReject called');
-    // console.log('[REJECT] Current state:', { providerId, provider, rejectReason });
-    
-    const id = providerId || provider?.id || provider?.provider_id;
-    // console.log('[REJECT] Extracted ID:', id);
-    
-    if (!id || !rejectReason.trim()) {
+  const handleConfirmRejectDocument = () => {
+    if (!selectedDocumentId || !rejectDocumentReason.trim()) {
       toast.error('Please provide a rejection reason');
-      // console.error('[REJECT] Missing ID or reason:', { id, rejectReason });
       return;
     }
     
-    const mutationData = {
-      providerId: id,
-      reason: rejectReason.trim(),
-    };
-    
-    // console.log('[REJECT] Calling rejectMutation.mutate with data:', mutationData);
-    // console.log('[REJECT] Mutation object:', rejectMutation);
-    
+    setLoadingDocumentId(selectedDocumentId);
     try {
-      rejectMutation.mutate(mutationData);
-      // console.log('[REJECT] Mutation.mutate() called successfully');
+      verifyKycMutation.mutate({
+        documentId: selectedDocumentId,
+        data: {
+          action: 'reject',
+          rejection_reason: rejectDocumentReason.trim(),
+        },
+      });
+      setRejectDocumentDialogOpen(false);
+      setRejectDocumentReason('');
+      // Don't clear selectedDocumentId here - let onSuccess/onError handle it
     } catch (error) {
-      console.error('[REJECT] Error calling mutation:', error);
+      console.error('[REJECT DOCUMENT] Error calling mutation:', error);
+      setLoadingDocumentId(null);
     }
   };
+
 
   const handleBlockProvider = () => {
     const id = providerId || provider?.id || provider?.provider_id;
@@ -339,9 +308,9 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                   {/* Provider Image Section */}
                   <div className="flex-shrink-0 flex items-center justify-center md:items-start">
                     <div className="w-32 h-32 rounded-lg bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden">
-                      {displayProvider?.user?.profile_picture_url || displayProvider?.avatar ? (
+                      {displayProvider?.profile_picture_url || displayProvider?.user?.profile_picture_url || displayProvider?.avatar ? (
                         <img
-                          src={displayProvider?.user?.profile_picture_url || displayProvider?.avatar}
+                          src={displayProvider?.profile_picture_url || displayProvider?.user?.profile_picture_url || displayProvider?.avatar}
                           alt={displayProvider?.user?.name || displayProvider?.name || 'Provider'}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -350,7 +319,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           }}
                         />
                       ) : null}
-                      {(!displayProvider?.user?.profile_picture_url && !displayProvider?.avatar) && (
+                      {(!displayProvider?.profile_picture_url && !displayProvider?.user?.profile_picture_url && !displayProvider?.avatar) && (
                         <KeenIcon icon="user" className="text-gray-400 text-5xl" />
                       )}
                     </div>
@@ -488,19 +457,19 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                     className="bg-success text-white hover:bg-success/90" 
                                     size="sm"
                                     onClick={() => handleApproveKYCDocument(doc.document_id)}
-                                    disabled={verifyKycMutation.isLoading}
+                                    disabled={loadingDocumentId !== null}
                                   >
                                     <KeenIcon icon="check" className="me-1" />
-                                    {verifyKycMutation.isLoading ? 'Approving...' : 'Approve'}
+                                    {loadingDocumentId === doc.document_id ? 'Approving...' : 'Approve'}
                                   </Button>
                                   <Button 
                                     variant="destructive" 
                                     size="sm"
-                                    onClick={handleRejectKYC}
-                                    disabled={rejectMutation.isLoading}
+                                    onClick={() => handleRejectKYCDocument(doc.document_id)}
+                                    disabled={loadingDocumentId !== null}
                                   >
                                     <KeenIcon icon="cross" className="me-1" />
-                                    Reject
+                                    {loadingDocumentId === doc.document_id ? 'Rejecting...' : 'Reject'}
                                   </Button>
                                 </>
                               )}
@@ -668,27 +637,6 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            {displayProvider?.kyc_status === 'PENDING' && (
-              <>
-                <Button 
-                  variant="default" 
-                  className="bg-success text-white hover:bg-success/90"
-                  onClick={handleApproveKYC}
-                  disabled={approveMutation.isLoading}
-                >
-                  <KeenIcon icon="check-circle" className="me-2" />
-                  {approveMutation.isLoading ? 'Approving...' : 'Approve KYC'}
-                </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={handleRejectKYC}
-                  disabled={rejectMutation.isLoading}
-                >
-                  <KeenIcon icon="cross-circle" className="me-2" />
-                  Reject KYC
-                </Button>
-              </>
-            )}
             {displayProvider?.status === 'ACTIVE' && (
               <Button 
                 variant="destructive"
@@ -703,21 +651,21 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
         )}
       </DialogContent>
 
-      {/* Reject Provider Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      {/* Reject Document Dialog */}
+      <Dialog open={rejectDocumentDialogOpen} onOpenChange={setRejectDocumentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Provider KYC</DialogTitle>
+            <DialogTitle>Reject KYC Document</DialogTitle>
           </DialogHeader>
           <DialogBody>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="rejectReason">Rejection Reason *</Label>
+                <Label htmlFor="rejectDocumentReason">Rejection Reason *</Label>
                 <Textarea
-                  id="rejectReason"
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Please provide a reason for rejecting this provider's KYC..."
+                  id="rejectDocumentReason"
+                  value={rejectDocumentReason}
+                  onChange={(e) => setRejectDocumentReason(e.target.value)}
+                  placeholder="Please provide a reason for rejecting this document..."
                   rows={4}
                   className="mt-1"
                 />
@@ -728,19 +676,20 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
             <Button
               variant="outline"
               onClick={() => {
-                setRejectDialogOpen(false);
-                setRejectReason('');
+                setRejectDocumentDialogOpen(false);
+                setRejectDocumentReason('');
+                setSelectedDocumentId(null);
               }}
-              disabled={rejectMutation.isLoading}
+              disabled={verifyKycMutation.isLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleConfirmReject}
-              disabled={!rejectReason.trim() || rejectMutation.isLoading}
+              onClick={handleConfirmRejectDocument}
+              disabled={!rejectDocumentReason.trim() || verifyKycMutation.isLoading}
             >
-              {rejectMutation.isLoading ? 'Rejecting...' : 'Reject Provider'}
+              {verifyKycMutation.isLoading ? 'Rejecting...' : 'Reject Document'}
             </Button>
           </DialogFooter>
         </DialogContent>

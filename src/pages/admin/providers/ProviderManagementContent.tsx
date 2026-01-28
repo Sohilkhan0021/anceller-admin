@@ -8,7 +8,7 @@ import { ProviderManagementTable } from './blocks/ProviderManagementTable';
 import { ProviderProfileModal } from './blocks/ProviderProfileModal';
 import { AddProviderForm } from './forms/AddProviderForm';
 import { EditProviderForm } from './forms/EditProviderForm';
-import { useProviders, useCreateProvider } from '@/services';
+import { useProviders, useCreateProvider, useUpdateProvider } from '@/services';
 import { IProvider } from '@/services/provider.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
@@ -142,13 +142,50 @@ const ProviderManagementContent = () => {
     return createProvider(apiData);
   };
 
-  const handleUpdateProvider = (providerData: any) => {
-    console.log('Updating provider:', providerData);
-    // TODO: Implement API call to update provider
-    setIsEditFormOpen(false);
-    setEditProvider(null);
-    // Refetch providers after update
-    refetch();
+  const { mutateAsync: updateProvider, isLoading: isUpdating } = useUpdateProvider({
+    onSuccess: (data) => {
+      toast.success('Provider updated successfully');
+      setIsEditFormOpen(false);
+      setEditProvider(null);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update provider');
+    },
+  });
+
+  const handleUpdateProvider = async (providerData: any) => {
+    if (!editProvider?.id && !editProvider?.provider_id) {
+      toast.error('Provider ID is missing');
+      return;
+    }
+    
+    const providerId = editProvider.id || editProvider.provider_id;
+    if (!providerId) {
+      toast.error('Provider ID is missing');
+      return;
+    }
+    
+    // Transform form data to API format
+    const apiData: any = {
+      business_name: providerData.businessName || providerData.business_name,
+      first_name: providerData.firstName,
+      last_name: providerData.lastName,
+      email: providerData.email,
+      pan_number: providerData.panNumber,
+      bank_account_number: providerData.bankAccount,
+      bank_ifsc: providerData.ifscCode,
+      category_ids: providerData.serviceCategory ? [providerData.serviceCategory] : undefined,
+    };
+
+    // Remove undefined values
+    Object.keys(apiData).forEach(key => apiData[key] === undefined && delete apiData[key]);
+
+    try {
+      await updateProvider({ providerId: providerId as string, data: apiData });
+    } catch (error) {
+      // Error is handled by the hook's onError callback
+    }
   };
 
   return (

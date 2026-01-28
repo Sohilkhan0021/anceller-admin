@@ -30,8 +30,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { IProvider, IPaginationMeta } from '@/services/provider.types';
 import { ContentLoader } from '@/components/loaders';
 import {
-  useApproveProvider,
-  useRejectProvider,
   useUpdateProviderStatus
 } from '@/services';
 import { toAbsoluteUrl } from '@/utils';
@@ -53,9 +51,6 @@ const ProviderManagementTable = ({
   onEditProvider,
   onPageChange
 }: IProviderManagementTableProps) => {
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
 
   // Generic confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -76,26 +71,7 @@ const ProviderManagementTable = ({
     onConfirm: () => { },
   });
 
-  const approveMutation = useApproveProvider({
-    onSuccess: (data) => {
-      toast.success('Provider approved successfully');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to approve provider');
-    },
-  });
 
-  const rejectMutation = useRejectProvider({
-    onSuccess: (data) => {
-      toast.success('Provider rejected successfully');
-      setRejectDialogOpen(false);
-      setRejectReason('');
-      setSelectedProviderId(null);
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to reject provider');
-    },
-  });
 
   const updateStatusMutation = useUpdateProviderStatus({
     onSuccess: (data) => {
@@ -110,33 +86,7 @@ const ProviderManagementTable = ({
     onProviderSelect(provider);
   };
 
-  const handleApproveKYC = (providerId: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Approve Provider KYC',
-      description: 'Are you sure you want to approve this provider? This will allow them to start accepting jobs.',
-      confirmText: 'Approve',
-      variant: 'success',
-      illustration: '28', // Checkmark/Success illustration
-      onConfirm: () => approveMutation.mutate(providerId),
-    });
-  };
 
-  const handleRejectKYC = (providerId: string) => {
-    setSelectedProviderId(providerId);
-    setRejectDialogOpen(true);
-  };
-
-  const handleConfirmReject = () => {
-    if (!selectedProviderId || !rejectReason.trim()) {
-      toast.error('Please provide a rejection reason');
-      return;
-    }
-    rejectMutation.mutate({
-      providerId: selectedProviderId,
-      reason: rejectReason.trim(),
-    });
-  };
 
   const handleBlockProvider = (providerId: string) => {
     setConfirmModal({
@@ -175,25 +125,32 @@ const ProviderManagementTable = ({
   };
 
   const getKYCStatusBadge = (status: string) => {
-    const statusConfig = {
+    // Normalize status to lowercase for comparison
+    const normalizedStatus = (status || '').toLowerCase();
+    const statusConfig: { [key: string]: { variant: string; className: string; text: string } } = {
       approved: { variant: 'default', className: 'bg-success text-white', text: 'Approved' },
       pending: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
       rejected: { variant: 'destructive', className: '', text: 'Rejected' },
-      'under-review': { variant: 'secondary', className: '', text: 'Under Review' }
+      'under-review': { variant: 'secondary', className: '', text: 'Under Review' },
+      'under_review': { variant: 'secondary', className: '', text: 'Under Review' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', className: '', text: status };
+    const config = statusConfig[normalizedStatus] || { variant: 'secondary', className: '', text: status };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
+    // Normalize status to lowercase for comparison
+    const normalizedStatus = (status || '').toLowerCase();
+    const statusConfig: { [key: string]: { variant: string; className: string; text: string } } = {
       active: { variant: 'default', className: 'bg-success text-white', text: 'Active' },
+      inactive: { variant: 'secondary', className: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 font-medium', text: 'Inactive' },
       blocked: { variant: 'destructive', className: '', text: 'Blocked' },
+      blacklisted: { variant: 'destructive', className: '', text: 'Blocked' },
       suspended: { variant: 'default', className: 'bg-warning text-white', text: 'Suspended' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', className: '', text: status };
+    const config = statusConfig[normalizedStatus] || { variant: 'outline', className: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 font-medium', text: status || 'Inactive' };
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
@@ -378,27 +335,7 @@ const ProviderManagementTable = ({
                                   Edit Provider
                                 </DropdownMenuItem>
                               )}
-                              {provider.kycStatus === 'pending' && (
-                                <>
-                                  <DropdownMenuItem
-                                    onClick={() => handleApproveKYC(provider.id)}
-                                    className="text-success"
-                                    disabled={approveMutation.isLoading}
-                                  >
-                                    <KeenIcon icon="check-circle" className="me-2" />
-                                    Approve KYC
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleRejectKYC(provider.id)}
-                                    className="text-danger"
-                                    disabled={rejectMutation.isLoading}
-                                  >
-                                    <KeenIcon icon="cross-circle" className="me-2" />
-                                    Reject KYC
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {provider.status === 'active' && (
+                              {((provider.status || '').toLowerCase() === 'active') && (
                                 <>
                                   <DropdownMenuItem
                                     onClick={() => handleBlockProvider(provider.id)}
@@ -418,7 +355,7 @@ const ProviderManagementTable = ({
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              {(provider.status === 'suspended' || provider.status === 'blocked') && (
+                              {((provider.status || '').toLowerCase() === 'suspended' || (provider.status || '').toLowerCase() === 'blocked') && (
                                 <DropdownMenuItem
                                   onClick={() => handleActivateProvider(provider.id)}
                                   className="text-success"
@@ -485,88 +422,6 @@ const ProviderManagementTable = ({
         )}
       </div>
 
-      {/* Reject Provider Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="max-w-[500px]">
-          <DialogHeader className="border-0 pt-5 justify-center">
-            <DialogTitle></DialogTitle>
-          </DialogHeader>
-          <DialogBody className="flex flex-col items-center pt-0 pb-10">
-            <div className="mb-6">
-              <img
-                src={toAbsoluteUrl('/media/illustrations/23.svg')}
-                className="dark:hidden max-h-[160px]"
-                alt="Reject Illustration"
-              />
-              <img
-                src={toAbsoluteUrl('/media/illustrations/23-dark.svg')}
-                className="light:hidden max-h-[160px]"
-                alt="Reject Illustration"
-              />
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-900 text-center mb-3">
-              Reject Provider KYC
-            </h3>
-
-            <div className="text-center mb-8 px-4">
-              <p className="text-gray-600 text-sm">
-                Are you sure you want to reject this provider's KYC? <br />
-                This will notify the provider to update their documents.
-              </p>
-            </div>
-
-            <div className="w-full space-y-4 px-4">
-              <div>
-                <Label htmlFor="rejectReason" className="text-gray-800 font-semibold mb-2 block">
-                  Rejection Reason *
-                </Label>
-                <Textarea
-                  id="rejectReason"
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="e.g., ID document is blurry or expired..."
-                  rows={3}
-                  className="mt-1 resize-none"
-                />
-              </div>
-              <div className="flex justify-center gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setRejectDialogOpen(false);
-                    setRejectReason('');
-                    setSelectedProviderId(null);
-                  }}
-                  disabled={rejectMutation.isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={handleConfirmReject}
-                  disabled={!rejectReason.trim() || rejectMutation.isLoading}
-                >
-                  {rejectMutation.isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                      Rejecting...
-                    </span>
-                  ) : (
-                    <>
-                      <KeenIcon icon="cross-circle" className="me-2" />
-                      Reject KYC
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
-
       {/* Generic Confirmation Dialog */}
       <Dialog
         open={confirmModal.isOpen}
@@ -605,7 +460,7 @@ const ProviderManagementTable = ({
                 variant="outline"
                 className="flex-1"
                 onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                disabled={approveMutation.isLoading || updateStatusMutation.isLoading}
+                disabled={updateStatusMutation.isLoading}
               >
                 Cancel
               </Button>
@@ -616,7 +471,7 @@ const ProviderManagementTable = ({
                   confirmModal.onConfirm();
                   setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 }}
-                disabled={approveMutation.isLoading || updateStatusMutation.isLoading}
+                disabled={updateStatusMutation.isLoading}
               >
                 {confirmModal.confirmText}
               </Button>

@@ -85,19 +85,24 @@ export const useProviders = (
   );
 
   // Normalize providers data - convert snake_case to camelCase
-  const normalizedProviders: IProvider[] = (queryResult.data?.providers || []).map((provider: any) => ({
-    ...provider,
-    id: provider.provider_id || provider.id,
-    name: provider.name || provider.business_name || 'N/A',
-    serviceCategory: provider.service_categories?.[0]?.name || provider.serviceCategory || 'N/A',
-    kycStatus: (provider.kyc_status || provider.kycStatus || 'pending').toLowerCase() as any,
-    rating: provider.rating || 0,
-    jobsCompleted: provider.jobs || provider.jobsCompleted || 0,
-    earnings: provider.earnings || 0,
-    status: (provider.status || 'active').toLowerCase() as any,
-    joinDate: provider.joined_at || provider.joinDate || provider.createdAt || '',
-    avatar: provider.user?.profile_picture_url || provider.avatar || null,
-  }));
+  const normalizedProviders: IProvider[] = (queryResult.data?.providers || []).map((provider: any) => {
+    // Get profile picture URL - check profile_picture_url first, then user.profile_picture_url, then avatar
+    const profilePictureUrl = provider.profile_picture_url || provider.user?.profile_picture_url || provider.avatar || null;
+    
+    return {
+      ...provider,
+      id: provider.provider_id || provider.id,
+      name: provider.name || provider.business_name || 'N/A',
+      serviceCategory: provider.service_categories?.[0]?.name || provider.serviceCategory || 'N/A',
+      kycStatus: (provider.kyc_status || provider.kycStatus || 'pending').toLowerCase() as any,
+      rating: provider.rating || 0,
+      jobsCompleted: provider.jobs || provider.jobsCompleted || 0,
+      earnings: provider.earnings || 0,
+      status: (provider.status || 'active').toLowerCase() as any,
+      joinDate: provider.joined_at || provider.joinDate || provider.createdAt || '',
+      avatar: profilePictureUrl,
+    };
+  });
 
   const paginationData = queryResult.data?.pagination;
   
@@ -222,6 +227,31 @@ export const useUpdateProviderStatus = (options?: {
   return useMutation(
     ({ providerId, status }: { providerId: string; status: 'ACTIVE' | 'SUSPENDED' | 'DELETED' }) => 
       providerService.updateProviderStatus(providerId, status),
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['providers']);
+        queryClient.invalidateQueries(['provider', data.provider_id]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
+ * Hook to update provider details
+ */
+export const useUpdateProvider = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: any }> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ providerId, data }: { providerId: string; data: any }) => 
+      providerService.updateProvider(providerId, data),
     {
       onSuccess: (data) => {
         queryClient.invalidateQueries(['providers']);
