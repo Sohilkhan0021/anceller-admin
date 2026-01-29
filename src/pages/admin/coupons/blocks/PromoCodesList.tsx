@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useCoupons, useCouponStats } from '@/services';
+import { toast } from 'sonner';
 import { ICoupon } from '@/services/coupon.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
@@ -83,11 +84,17 @@ const PromoCodesList = ({ onEditPromo, onDeletePromo }: IPromoCodesListProps) =>
     }
   };
 
-  const handleDeactivatePromo = (promoId: string) => {
-    // TODO: Implement API call to deactivate promo
-    console.log('Deactivating promo:', promoId);
-    // Refetch after deactivation
-    refetch();
+  const handleDeactivatePromo = async (promoId: string) => {
+    try {
+      const { updateCoupon } = await import('@/services/coupon.service');
+      await updateCoupon(promoId, { is_active: false });
+      toast.success('Promo code deactivated successfully');
+      // Refetch after deactivation
+      refetch();
+    } catch (error: any) {
+      console.error('Failed to deactivate promo:', error);
+      toast.error(error?.message || 'Failed to deactivate promo code');
+    }
   };
 
   const handleDeletePromo = (promoId: string) => {

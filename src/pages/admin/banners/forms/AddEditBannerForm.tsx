@@ -197,13 +197,31 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
+    // Validate title
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
+    } else if (formData.title.length > 200) {
+      newErrors.title = 'Title must not exceed 200 characters';
     }
 
     // Image is required only for new banners (not when editing)
     if (!bannerData && !imageFile) {
       newErrors.image = 'Banner image is required';
+    }
+
+    // Validate image file if provided
+    if (imageFile) {
+      // Validate file type
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(imageFile.type)) {
+        newErrors.image = 'Only PNG, JPG, GIF, or WEBP files are allowed';
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (imageFile.size > maxSize) {
+        newErrors.image = 'Image size must be less than 5MB';
+      }
     }
 
     setErrors(newErrors);
@@ -264,11 +282,20 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
               <Input
                 id="title"
                 value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length <= 200) {
+                    handleInputChange('title', value);
+                  }
+                }}
+                maxLength={200}
                 placeholder="Enter banner title"
                 className={`mt-2 ${errors.title ? 'border-danger' : ''}`}
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.title.length}/200 characters
+              </p>
               {errors.title && (
                 <p className="text-danger text-sm mt-1">{errors.title}</p>
               )}

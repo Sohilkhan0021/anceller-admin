@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,45 +40,115 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [ticketsLoading, setTicketsLoading] = useState(false);
+  
+  // Use ref to track the last fetched user ID to prevent duplicate calls
+  const lastFetchedUserIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
+
+  // Memoize the fetch function to prevent recreation on every render
+  const fetchUserData = useCallback(async (userId: string) => {
+    // Prevent duplicate calls
+    if (isFetchingRef.current || lastFetchedUserIdRef.current === userId) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
+    lastFetchedUserIdRef.current = userId;
+    
+    setBookingsLoading(true);
+    setPaymentsLoading(true);
+    setTicketsLoading(true);
+    
+    try {
+      const [bookingsData, paymentsData, ticketsData] = await Promise.all([
+        userService.getUserBookings(userId, { limit: 50 }).catch(err => {
+          console.error('Error fetching bookings:', err);
+          return { data: { bookings: [] } };
+        }),
+        userService.getUserPayments(userId, { limit: 50 }).catch(err => {
+          console.error('Error fetching payments:', err);
+          return { data: { transactions: [] } };
+        }),
+        userService.getUserSupportTickets(userId, { limit: 50 }).catch(err => {
+          console.error('Error fetching support tickets:', err);
+          return { data: { items: [] } };
+        })
+      ]);
+      
+      // Handle bookings response - backend returns { status: 1, data: { bookings: [...], pagination: {...} } }
+      let bookingsList = [];
+      if (bookingsData?.data?.bookings) {
+        bookingsList = Array.isArray(bookingsData.data.bookings) ? bookingsData.data.bookings : [];
+      } else if (bookingsData?.data?.items) {
+        bookingsList = Array.isArray(bookingsData.data.items) ? bookingsData.data.items : [];
+      } else if (Array.isArray(bookingsData?.data)) {
+        bookingsList = bookingsData.data;
+      }
+      setBookings(bookingsList);
+      
+      // Handle payments response - backend returns { status: 1, data: { transactions: [...], pagination: {...} } }
+      let paymentsList = [];
+      if (paymentsData?.data?.transactions) {
+        paymentsList = Array.isArray(paymentsData.data.transactions) ? paymentsData.data.transactions : [];
+      } else if (paymentsData?.data?.items) {
+        paymentsList = Array.isArray(paymentsData.data.items) ? paymentsData.data.items : [];
+      } else if (Array.isArray(paymentsData?.data)) {
+        paymentsList = paymentsData.data;
+      }
+      setPayments(paymentsList);
+      
+      // Handle support tickets response
+      let ticketsList = [];
+      if (ticketsData?.data?.items) {
+        ticketsList = Array.isArray(ticketsData.data.items) ? ticketsData.data.items : [];
+      } else if (Array.isArray(ticketsData?.data)) {
+        ticketsList = ticketsData.data;
+      }
+      setSupportTickets(ticketsList);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // Keep empty arrays on error
+      setBookings([]);
+      setPayments([]);
+      setSupportTickets([]);
+    } finally {
+      setBookingsLoading(false);
+      setPaymentsLoading(false);
+      setTicketsLoading(false);
+      isFetchingRef.current = false;
+    }
+  }, []);
+
+  // Get stable user ID
+  const userId = user?.user_id || user?.id || user?.public_id;
 
   useEffect(() => {
-    if (isOpen && user?.id) {
-      // Use id or user_id depending on what's available physically in the object from Table
-      const idToFetch = user.user_id || user.id;
-      fetchUserDetails(idToFetch);
+    if (!isOpen) {
+      // Reset data when modal closes
+      setBookings([]);
+      setPayments([]);
+      setSupportTickets([]);
+      lastFetchedUserIdRef.current = null;
+      isFetchingRef.current = false;
+      return;
+    }
+
+    if (!userId) {
+      console.error('No user ID found in user object:', user);
+      return;
+    }
+
+    // Only fetch if this is a different user or modal just opened
+    if (lastFetchedUserIdRef.current !== userId && !isFetchingRef.current) {
+      // Fetch user details
+      fetchUserDetails(userId);
       
       // Fetch bookings, payments, and support tickets
-      const fetchUserData = async () => {
-        setBookingsLoading(true);
-        setPaymentsLoading(true);
-        setTicketsLoading(true);
-        
-        try {
-          const [bookingsData, paymentsData, ticketsData] = await Promise.all([
-            userService.getUserBookings(idToFetch, { limit: 50 }),
-            userService.getUserPayments(idToFetch, { limit: 50 }),
-            userService.getUserSupportTickets(idToFetch, { limit: 50 })
-          ]);
-          
-          setBookings(bookingsData?.data?.items || bookingsData?.data || []);
-          setPayments(paymentsData?.data?.items || paymentsData?.data || []);
-          setSupportTickets(ticketsData?.data?.items || ticketsData?.data || []);
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          // Keep empty arrays on error
-          setBookings([]);
-          setPayments([]);
-          setSupportTickets([]);
-        } finally {
-          setBookingsLoading(false);
-          setPaymentsLoading(false);
-          setTicketsLoading(false);
-        }
-      };
-      
-      fetchUserData();
+      fetchUserData(userId);
     }
-  }, [isOpen, user, fetchUserDetails]);
+    // Only depend on isOpen and userId, not the entire user object or functions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, userId]);
 
   const handleStatusChange = async () => {
     if (!displayUser) return;
@@ -193,7 +263,19 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                       <div>
                         <h4 className="text-lg font-semibold">{displayUser.name}</h4>
                         <p className="text-gray-600">{displayUser.email}</p>
-                        <p className="text-gray-600">{displayUser.phone || displayUser.phone_number}</p>
+                        <p className="text-gray-600">
+                          {(() => {
+                            const phone = displayUser.phone || displayUser.phone_number || '';
+                            const countryCode = displayUser.phone_country_code || '+91';
+                            // Remove duplicate country code if present
+                            let cleanPhone = phone.replace(new RegExp(`^${countryCode.replace('+', '\\+')}\\s*`, 'g'), '').trim();
+                            // If phone doesn't start with country code, add it
+                            if (cleanPhone && !cleanPhone.startsWith('+')) {
+                              return `${countryCode} ${cleanPhone}`;
+                            }
+                            return cleanPhone || 'N/A';
+                          })()}
+                        </p>
                       </div>
                     </div>
 
@@ -290,34 +372,34 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        bookings.map((booking: any) => (
-                          <TableRow key={booking.order_id || booking.public_id || booking.id}>
-                            <TableCell className="font-medium">{booking.public_id || booking.order_id || booking.id}</TableCell>
-                            <TableCell>
-                              {booking.orderItems?.[0]?.subService?.name || 
-                               booking.service_name || 
-                               booking.service || 
-                               'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              {booking.provider?.name || 
-                               booking.provider_name || 
-                               booking.provider || 
-                               'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              {booking.created_at 
-                                ? new Date(booking.created_at).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })
-                                : booking.date || 'N/A'}
-                            </TableCell>
-                            <TableCell>₹{booking.final_amount || booking.amount || 0}</TableCell>
-                            <TableCell>{getStatusBadge(booking.status || 'pending')}</TableCell>
-                          </TableRow>
-                        ))
+                        bookings.map((booking: any) => {
+                          // Handle different booking response formats from backend
+                          const bookingId = booking.booking_id || booking.public_id || booking.order_id || booking.id;
+                          const serviceName = booking.service || booking.service_name || booking.orderItems?.[0]?.subService?.name || 'N/A';
+                          const providerName = booking.provider?.name || booking.provider_name || (booking.provider ? `${booking.provider.business_name || booking.provider.contact_name || 'N/A'}` : 'N/A');
+                          const bookingDate = booking.scheduled_date || booking.created_at || booking.date;
+                          const amount = booking.amount || booking.final_amount || 0;
+                          const status = booking.status || 'pending';
+                          
+                          return (
+                            <TableRow key={bookingId}>
+                              <TableCell className="font-medium">{bookingId}</TableCell>
+                              <TableCell>{serviceName}</TableCell>
+                              <TableCell>{providerName}</TableCell>
+                              <TableCell>
+                                {bookingDate 
+                                  ? new Date(bookingDate).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  : 'N/A'}
+                              </TableCell>
+                              <TableCell>₹{typeof amount === 'number' ? amount.toFixed(2) : amount}</TableCell>
+                              <TableCell>{getStatusBadge(status)}</TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -356,23 +438,32 @@ const UserDetailModal = ({ user, isOpen, onClose }: IUserDetailModalProps) => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        payments.map((payment: any) => (
-                          <TableRow key={payment.transaction_id || payment.public_id || payment.id}>
-                            <TableCell className="font-medium">{payment.transaction_id || payment.public_id || payment.id}</TableCell>
-                            <TableCell>₹{payment.amount || 0}</TableCell>
-                            <TableCell>{payment.payment_method_display || payment.payment_mode || payment.method || 'N/A'}</TableCell>
-                            <TableCell>
-                              {payment.created_at 
-                                ? new Date(payment.created_at).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })
-                                : payment.date || 'N/A'}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(payment.status || 'pending')}</TableCell>
-                          </TableRow>
-                        ))
+                        payments.map((payment: any) => {
+                          // Handle different payment response formats
+                          const paymentId = payment.transaction_id || payment.public_id || payment.id;
+                          const amount = payment.amount || 0;
+                          const method = payment.payment_method_display || payment.payment_mode || payment.method || payment.gateway || 'N/A';
+                          const paymentDate = payment.created_at || payment.completed_at || payment.date;
+                          const status = payment.status || 'pending';
+                          
+                          return (
+                            <TableRow key={paymentId}>
+                              <TableCell className="font-medium">{paymentId}</TableCell>
+                              <TableCell>₹{typeof amount === 'number' ? amount.toFixed(2) : amount}</TableCell>
+                              <TableCell>{method}</TableCell>
+                              <TableCell>
+                                {paymentDate 
+                                  ? new Date(paymentDate).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  : 'N/A'}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(status)}</TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>

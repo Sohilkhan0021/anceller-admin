@@ -33,16 +33,19 @@ const addUserSchema = Yup.object().shape({
   firstName: Yup.string()
     .min(2, 'First name must be at least 2 characters')
     .max(100, 'First name must not exceed 100 characters')
+    .matches(/^[a-zA-Z\s]{0,98}[a-zA-Z0-9\s]{0,2}$/, 'Only letters, spaces, and up to 2 special characters allowed')
     .trim()
     .required('First name is required'),
   lastName: Yup.string()
     .min(2, 'Last name must be at least 2 characters')
     .max(100, 'Last name must not exceed 100 characters')
+    .matches(/^[a-zA-Z\s]{0,98}[a-zA-Z0-9\s]{0,2}$/, 'Only letters, spaces, and up to 2 special characters allowed')
     .trim()
     .required('Last name is required'),
   email: Yup.string()
     .email('Please enter a valid email address')
     .max(255, 'Email must not exceed 255 characters')
+    .matches(/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/, 'Please enter a valid email address')
     .required('Email is required'),
   phone: Yup.string()
     .required('Phone number is required')
@@ -181,7 +184,11 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                     value={formik.values.firstName}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                      if (value.length > 100) {
+                        toast.error("First name must not exceed 100 characters");
+                        return;
+                      }
+                      const specialChars = value.match(/[^a-zA-Z\s]/g) || [];
                       if (specialChars.length > 2) {
                         toast.error("Only 2 special characters are allowed in First Name");
                         return;
@@ -189,8 +196,12 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                       formik.handleChange(e);
                     }}
                     onBlur={formik.handleBlur}
+                    maxLength={100}
                     className={`mt-2 ${formik.touched.firstName && formik.errors.firstName ? 'border-danger' : ''}`}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formik.values.firstName.length}/100 characters
+                  </p>
                   {formik.touched.firstName && formik.errors.firstName && (
                     <p className="text-danger text-xs mt-1 break-words max-w-full">
                       {formik.errors.firstName}
@@ -206,7 +217,11 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                     value={formik.values.lastName}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                      if (value.length > 100) {
+                        toast.error("Last name must not exceed 100 characters");
+                        return;
+                      }
+                      const specialChars = value.match(/[^a-zA-Z\s]/g) || [];
                       if (specialChars.length > 2) {
                         toast.error("Only 2 special characters are allowed in Last Name");
                         return;
@@ -214,8 +229,12 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                       formik.handleChange(e);
                     }}
                     onBlur={formik.handleBlur}
+                    maxLength={100}
                     className={`mt-2 ${formik.touched.lastName && formik.errors.lastName ? 'border-danger' : ''}`}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formik.values.lastName.length}/100 characters
+                  </p>
                   {formik.touched.lastName && formik.errors.lastName && (
                     <p className="text-danger text-xs mt-1 break-words max-w-full">
                       {formik.errors.lastName}
@@ -286,11 +305,22 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   id="address"
                   placeholder="Enter full address"
                   value={formik.values.address}
-                  onChange={formik.handleChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 500) {
+                      formik.handleChange(e);
+                    } else {
+                      toast.error("Address must not exceed 500 characters");
+                    }
+                  }}
                   onBlur={formik.handleBlur}
+                  maxLength={500}
                   rows={3}
                   className={`mt-2 ${formik.touched.address && formik.errors.address ? 'border-danger' : ''}`}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {formik.values.address.length}/500 characters
+                </p>
                 {formik.touched.address && formik.errors.address && (
                   <p className="text-danger text-xs mt-1 break-words max-w-full">
                     {formik.errors.address}
@@ -305,10 +335,21 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                     id="city"
                     placeholder="Enter city"
                     value={formik.values.city}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 50) {
+                        formik.handleChange(e);
+                      } else {
+                        toast.error("City must not exceed 50 characters");
+                      }
+                    }}
                     onBlur={formik.handleBlur}
+                    maxLength={50}
                     className={`mt-2 ${formik.touched.city && formik.errors.city ? 'border-danger' : ''}`}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formik.values.city.length}/50 characters
+                  </p>
                   {formik.touched.city && formik.errors.city && (
                     <p className="text-danger text-xs mt-1 break-words max-w-full">
                       {formik.errors.city}
@@ -322,10 +363,21 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                     id="state"
                     placeholder="Enter state"
                     value={formik.values.state}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 50) {
+                        formik.handleChange(e);
+                      } else {
+                        toast.error("State must not exceed 50 characters");
+                      }
+                    }}
                     onBlur={formik.handleBlur}
+                    maxLength={50}
                     className={`mt-2 ${formik.touched.state && formik.errors.state ? 'border-danger' : ''}`}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formik.values.state.length}/50 characters
+                  </p>
                   {formik.touched.state && formik.errors.state && (
                     <p className="text-danger text-xs mt-1 break-words max-w-full">
                       {formik.errors.state}
@@ -337,10 +389,17 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                   <Label htmlFor="pincode">Pincode *</Label>
                   <Input
                     id="pincode"
-                    placeholder="Enter Pincode"
+                    placeholder="Enter Pincode (6 digits)"
                     value={formik.values.pincode}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                      if (value.length <= 6) {
+                        formik.setFieldValue('pincode', value);
+                      }
+                    }}
                     onBlur={formik.handleBlur}
+                    maxLength={6}
+                    pattern="[0-9]{6}"
                     className={`mt-2 ${formik.touched.pincode && formik.errors.pincode ? 'border-danger' : ''}`}
                   />
                   {formik.touched.pincode && formik.errors.pincode && (
@@ -392,12 +451,23 @@ const AddUserForm = ({ isOpen, onClose, onSave }: IAddUserFormProps) => {
                 <Textarea
                   id="notes"
                   value={formik.values.notes}
-                  onChange={formik.handleChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 1000) {
+                      formik.handleChange(e);
+                    } else {
+                      toast.error("Notes must not exceed 1000 characters");
+                    }
+                  }}
                   onBlur={formik.handleBlur}
+                  maxLength={1000}
                   rows={3}
                   className={`mt-2 ${formik.touched.notes && formik.errors.notes ? 'border-danger' : ''}`}
                   placeholder="Additional notes about the user..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {formik.values.notes.length}/1000 characters
+                </p>
                 {formik.touched.notes && formik.errors.notes && (
                   <p className="text-danger text-xs mt-1 break-words max-w-full">
                     {formik.errors.notes}

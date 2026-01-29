@@ -144,6 +144,7 @@ export interface IGetCouponDetailResponse {
  */
 export interface IUpdateCouponRequest extends Partial<ICreateCouponRequest> {
   status?: CouponStatus;
+  is_active?: boolean;
 }
 
 /**

@@ -91,6 +91,10 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
         if (phoneValue.startsWith('+91')) {
           phoneValue = phoneValue.substring(3).trim();
         }
+        // Also handle phone_country_code if present
+        if (dataToUse.phone_country_code && phoneValue.includes(dataToUse.phone_country_code)) {
+          phoneValue = phoneValue.replace(new RegExp(`^${dataToUse.phone_country_code.replace('+', '\\+')}\\s*`, 'g'), '').trim();
+        }
       }
 
       // Handle name - split if first_name/last_name not available
@@ -138,7 +142,8 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
     if (email.length > 255) {
       return 'Email must not exceed 255 characters';
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Enhanced email regex with proper validation
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     if (!emailRegex.test(email)) {
       return 'Please enter a valid email address';
     }
@@ -210,16 +215,26 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                       value={formData.firstName}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                        // Limit to 100 characters
+                        if (value.length > 100) {
+                          toast.error("First name must not exceed 100 characters");
+                          return;
+                        }
+                        // Allow only letters, spaces, and up to 2 special characters
+                        const specialChars = value.match(/[^a-zA-Z\s]/g) || [];
                         if (specialChars.length > 2) {
                           toast.error("Only 2 special characters are allowed in First Name");
                           return;
                         }
                         handleInputChange('firstName', value);
                       }}
+                      maxLength={100}
                       required
                       className="mt-2"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.firstName.length}/100 characters
+                    </p>
                   </div>
 
                   <div>
@@ -229,16 +244,26 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                       value={formData.lastName}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const specialChars = value.match(/[^a-zA-Z0-9\s]/g) || [];
+                        // Limit to 100 characters
+                        if (value.length > 100) {
+                          toast.error("Last name must not exceed 100 characters");
+                          return;
+                        }
+                        // Allow only letters, spaces, and up to 2 special characters
+                        const specialChars = value.match(/[^a-zA-Z\s]/g) || [];
                         if (specialChars.length > 2) {
                           toast.error("Only 2 special characters are allowed in Last Name");
                           return;
                         }
                         handleInputChange('lastName', value);
                       }}
+                      maxLength={100}
                       required
                       className="mt-2"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.lastName.length}/100 characters
+                    </p>
                   </div>
                 </div>
 
@@ -302,10 +327,21 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                   <Textarea
                     id="address"
                     value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 500) {
+                        handleInputChange('address', value);
+                      } else {
+                        toast.error("Address must not exceed 500 characters");
+                      }
+                    }}
+                    maxLength={500}
                     rows={3}
                     className="mt-2"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.address.length}/500 characters
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -314,9 +350,20 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 50) {
+                          handleInputChange('city', value);
+                        } else {
+                          toast.error("City must not exceed 50 characters");
+                        }
+                      }}
+                      maxLength={50}
                       className="mt-2"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.city.length}/50 characters
+                    </p>
                   </div>
 
                   <div>
@@ -324,9 +371,20 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                     <Input
                       id="state"
                       value={formData.state}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 50) {
+                          handleInputChange('state', value);
+                        } else {
+                          toast.error("State must not exceed 50 characters");
+                        }
+                      }}
+                      maxLength={50}
                       className="mt-2"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.state.length}/50 characters
+                    </p>
                   </div>
 
                   <div>
@@ -334,9 +392,20 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                     <Input
                       id="pincode"
                       value={formData.pincode}
-                      onChange={(e) => handleInputChange('pincode', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 6) {
+                          handleInputChange('pincode', value);
+                        }
+                      }}
+                      maxLength={6}
+                      pattern="[0-9]{6}"
                       className="mt-2"
+                      placeholder="6 digits"
                     />
+                    {formData.pincode && formData.pincode.length !== 6 && (
+                      <p className="text-xs text-danger mt-1">Pincode must be exactly 6 digits</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -374,11 +443,22 @@ const EditUserForm = ({ isOpen, onClose, onSave, userData }: IEditUserFormProps)
                   <Textarea
                     id="notes"
                     value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 1000) {
+                        handleInputChange('notes', value);
+                      } else {
+                        toast.error("Notes must not exceed 1000 characters");
+                      }
+                    }}
+                    maxLength={1000}
                     rows={3}
                     className="mt-2"
                     placeholder="Additional notes about the user..."
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.notes.length}/1000 characters
+                  </p>
                 </div>
               </div>
 

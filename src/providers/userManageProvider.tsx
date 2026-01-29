@@ -97,7 +97,7 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         await mutation.mutateAsync(payload);
     };
 
-    const fetchUserDetails = async (userId: string) => {
+    const fetchUserDetails = React.useCallback(async (userId: string) => {
         setUserDetailsLoading(true);
         try {
             const response = await userService.getUserDetails(userId);
@@ -109,7 +109,7 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         } finally {
             setUserDetailsLoading(false);
         }
-    };
+    }, [enqueueSnackbar]);
 
     const statusMutation = useMutation(
         ({ userId, status }: { userId: string; status: 'ACTIVE' | 'SUSPENDED' }) =>
