@@ -338,7 +338,7 @@ const NotificationTemplates = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-semibold">Email Templates</h4>
-                <Button size="sm" onClick={handleAddTemplate} className="mt-1">
+                <Button size="sm" onClick={handleAddTemplate} className="flex-shrink-0">
                   <KeenIcon icon="plus" className="me-2" />
                   Add Template
                 </Button>
@@ -409,7 +409,7 @@ const NotificationTemplates = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-semibold">SMS Templates</h4>
-                <Button size="sm" onClick={handleAddTemplate} className="mt-1">
+                <Button size="sm" onClick={handleAddTemplate} className="flex-shrink-0">
                   <KeenIcon icon="plus" className="me-2" />
                   Add Template
                 </Button>
@@ -460,12 +460,12 @@ const NotificationTemplates = () => {
                           </TableCell>
                           <TableCell className="w-[120px]">
                             <div className="flex items-center justify-end gap-2">
-                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0 p-1">
-                                <KeenIcon icon="pencil" className="text-sm" />
+                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0">
+                                <KeenIcon icon="pencil" className="me-1" />
                                 Edit
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="flex-shrink-0 p-1 border-destructive text-destructive hover:bg-destructive hover:text-white">
-                                <KeenIcon icon="trash" className="text-sm" />
+                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="flex-shrink-0 border-destructive text-destructive hover:bg-destructive hover:text-white">
+                                <KeenIcon icon="trash" className="me-1" />
                                 Delete
                               </Button>
                             </div>
@@ -474,7 +474,7 @@ const NotificationTemplates = () => {
                       ))
                         : (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-4 text-gray-500">No sms templates found</TableCell>
+                            <TableCell colSpan={5} className="text-center py-4 text-gray-500">No SMS templates found</TableCell>
                           </TableRow>
                         )}
                     </TableBody>
@@ -489,7 +489,7 @@ const NotificationTemplates = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-semibold">Push Notification Templates</h4>
-                <Button size="sm" onClick={handleAddTemplate} className="mt-1">
+                <Button size="sm" onClick={handleAddTemplate} className="flex-shrink-0">
                   <KeenIcon icon="plus" className="me-2" />
                   Add Template
                 </Button>
@@ -533,12 +533,12 @@ const NotificationTemplates = () => {
                             <div className="text-sm">{formatDate(template.last_modified)}</div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)} className="flex-shrink-0">
                                 <KeenIcon icon="pencil" className="me-1" />
                                 Edit
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="border-destructive text-destructive hover:bg-destructive hover:text-white">
+                              <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.template_id)} className="flex-shrink-0 border-destructive text-destructive hover:bg-destructive hover:text-white">
                                 <KeenIcon icon="trash" className="me-1" />
                                 Delete
                               </Button>
@@ -565,7 +565,7 @@ const NotificationTemplates = () => {
           <DialogHeader className="px-6 py-4">
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="edit" className="text-primary" />
-              Edit {editingTemplate?.name}
+              Edit Template
             </DialogTitle>
           </DialogHeader>
 
@@ -640,15 +640,20 @@ const NotificationTemplates = () => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
+                <Button variant="outline" onClick={() => setIsEditorOpen(false)} className="flex-shrink-0">
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveTemplate} disabled={updateMutation.isLoading}>
-                  {updateMutation.isLoading ? 'Saving...' : (
+                <Button onClick={handleSaveTemplate} disabled={updateMutation.isLoading} className="flex-shrink-0">
+                  {updateMutation.isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Saving...
+                    </>
+                  ) : (
                     <>
                       <KeenIcon icon="check" className="me-2" />
-                      Save Template
+                      Save Changes
                     </>
                   )}
                 </Button>
@@ -746,12 +751,17 @@ const NotificationTemplates = () => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={handleCloseAddForm}>
+                <Button variant="outline" onClick={handleCloseAddForm} className="flex-shrink-0">
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveNewTemplate} disabled={createMutation.isLoading}>
-                  {createMutation.isLoading ? 'Creating...' : (
+                <Button onClick={handleSaveNewTemplate} disabled={createMutation.isLoading} className="flex-shrink-0">
+                  {createMutation.isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Creating...
+                    </>
+                  ) : (
                     <>
                       <KeenIcon icon="check" className="me-2" />
                       Create Template
@@ -776,6 +786,7 @@ const NotificationTemplates = () => {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              className="flex-shrink-0"
             >
               Cancel
             </Button>
@@ -783,8 +794,16 @@ const NotificationTemplates = () => {
               variant="destructive"
               onClick={confirmDelete}
               disabled={deleteMutation.isLoading}
+              className="flex-shrink-0"
             >
-              {deleteMutation.isLoading ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

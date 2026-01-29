@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { KeenIcon } from '@/components';
-import { Button } from '@/components/ui/button';
+// import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -213,14 +213,14 @@ const CommissionsReportsTab = () => {
                   <SelectItem value="this-year">This Year</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => handleDownloadReport('PDF')}>
+              {/* <Button variant="outline" onClick={() => handleDownloadReport('PDF')}>
                 <KeenIcon icon="file-down" className="me-2" />
                 Download PDF
               </Button>
               <Button variant="outline" onClick={() => handleDownloadReport('CSV')}>
                 <KeenIcon icon="file-down" className="me-2" />
                 Download CSV
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>
@@ -243,37 +243,39 @@ const CommissionsReportsTab = () => {
             </div>
           ) : (
             <div className="overflow-x-auto w-full">
-              <Table className="w-full table-auto">
+              <Table className="w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[150px]">Gateway</TableHead>
-                    <TableHead className="hidden sm:table-cell min-w-[120px]">Transactions</TableHead>
-                    <TableHead className="hidden md:table-cell min-w-[120px]">Revenue</TableHead>
-                    <TableHead className="hidden lg:table-cell min-w-[100px]">Rate</TableHead>
-                    <TableHead className="hidden sm:table-cell min-w-[120px]">Commission</TableHead>
+                    <TableHead className="px-4">Gateway</TableHead>
+                    <TableHead className="hidden sm:table-cell px-4 text-center">Transactions</TableHead>
+                    <TableHead className="hidden md:table-cell px-4 text-center">Revenue</TableHead>
+                    <TableHead className="hidden lg:table-cell px-4 text-center">Rate</TableHead>
+                    <TableHead className="hidden sm:table-cell px-4 text-center">Commission</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {commissionBreakdown.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">{item.service}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                      <TableCell className="px-4 font-medium">{item.service}</TableCell>
+                      <TableCell className="hidden sm:table-cell px-4">
                         <div className="text-center">
                           <div className="font-semibold">{item.totalBookings}</div>
                           <div className="text-xs text-gray-500">transactions</div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden md:table-cell px-4">
                         <div className="text-center">
                           <div className="font-semibold">{formatCurrency(item.grossRevenue)}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <Badge variant="outline" className="badge-outline">
-                          {item.commissionRate}
-                        </Badge>
+                      <TableCell className="hidden lg:table-cell px-4">
+                        <div className="text-center">
+                          <Badge variant="outline" className="badge-outline">
+                            {item.commissionRate}
+                          </Badge>
+                        </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                      <TableCell className="hidden sm:table-cell px-4">
                         <div className="text-center">
                           <div className="font-semibold text-success">{formatCurrency(item.commission)}</div>
                         </div>

@@ -578,6 +578,7 @@ const SubServiceManagement = ({
                               <Switch
                                 checked={subService.status === 'active'}
                                 onCheckedChange={(checked) => handleToggleStatus(subService.id, checked)}
+                                className="data-[state=checked]:bg-danger"
                               />
                             </div>
                           </TableCell>

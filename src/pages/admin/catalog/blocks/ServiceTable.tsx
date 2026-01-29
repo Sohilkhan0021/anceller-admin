@@ -39,7 +39,7 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useServices, useDeleteService, useUpdateService } from '@/services';
+import { useServices, useDeleteService, useUpdateService, useCategories } from '@/services';
 import { IService } from '@/services/service.types';
 import { toast } from 'sonner';
 import { ContentLoader } from '@/components/loaders';
@@ -63,6 +63,12 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+
+  // Fetch categories for dropdown
+  const { categories, isLoading: isLoadingCategories } = useCategories(
+    { status: 'active', limit: 100 },
+    { enabled: true }
+  );
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -210,14 +216,14 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { variant: 'success', text: 'Active' },
-      inactive: { variant: 'destructive', text: 'Inactive' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'outline', text: status };
-    return <Badge variant={config.variant as any}>{config.text}</Badge>;
+    return status === 'active' ? (
+      <Badge variant="default" className="bg-success text-white">Active</Badge>
+    ) : (
+      <Badge variant="outline">Inactive</Badge>
+    );
   };
+  
+  
 
   const getPopularityBadge = (popularity: number) => {
     if (popularity >= 90) return { variant: 'success', text: 'Very Popular' };
@@ -327,14 +333,24 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="electrical">Electrical</SelectItem>
-                <SelectItem value="plumbing">Plumbing</SelectItem>
-                <SelectItem value="ac">AC</SelectItem>
-                <SelectItem value="cleaning">Cleaning</SelectItem>
-                <SelectItem value="carpentry">Carpentry</SelectItem>
-                <SelectItem value="appliance">Appliance</SelectItem>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="all" className="font-medium">All Categories</SelectItem>
+                {isLoadingCategories ? (
+                  <div className="p-2">
+                    <ContentLoader />
+                  </div>
+                ) : categories.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500">No categories available</div>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem 
+                      key={category.id || category.public_id} 
+                      value={category.id || category.public_id || ''}
+                    >
+                      {category.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
 
@@ -373,7 +389,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                   Columns
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 max-h-[400px] overflow-y-auto">
                 <div className="p-2 space-y-2">
                   <div className="flex items-center space-x-2 px-2 py-1.5">
                     <Checkbox
@@ -453,16 +469,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                     />
                     <label htmlFor="col-status" className="text-sm font-medium leading-none cursor-pointer">
                       Status
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-popularity"
-                      checked={columnVisibility.popularity}
-                      onCheckedChange={() => toggleColumn('popularity')}
-                    />
-                    <label htmlFor="col-popularity" className="text-sm font-medium leading-none cursor-pointer">
-                      Popularity
                     </label>
                   </div>
                   <div className="flex items-center space-x-2 px-2 py-1.5">
@@ -623,11 +629,13 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Switch
-                                    checked={service.status === 'active'}
-                                    onCheckedChange={(checked) => handleToggleStatus(service.id, checked)}
-                                    className="flex-shrink-0"
-                                  />
+                                  <span>
+                                    <Switch
+                                      checked={service.status === 'active'}
+                                      onCheckedChange={(checked) => handleToggleStatus(service.id, checked)}
+                                      className="service-status-switch flex-shrink-0 data-[state=checked]:bg-danger data-[state=unchecked]:bg-transparent"
+                                    />
+                                  </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Changes affect new bookings only</p>
@@ -699,7 +707,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && (
               <div className="card-footer">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}

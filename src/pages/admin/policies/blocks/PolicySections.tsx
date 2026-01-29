@@ -206,6 +206,16 @@ const PolicySections = () => {
     return <Badge variant="default" className="bg-warning text-white">Draft</Badge>;
   };
 
+  const formatPolicyTitle = (tabValue: string) => {
+    const titleMap: Record<string, string> = {
+      'TERMS_AND_CONDITIONS': 'Terms & Conditions',
+      'PRIVACY_POLICY': 'Privacy Policy',
+      'REFUND_POLICY': 'Refund & Cancellation Policy',
+      'CODE_OF_CONDUCT': 'Provider Code of Conduct'
+    };
+    return titleMap[tabValue] || tabValue.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const renderPolicyContent = (title: string, policy: IPolicy | null, isLoading: boolean) => {
     if (isLoading) {
       return (
@@ -226,14 +236,14 @@ const PolicySections = () => {
               {policy ? `Last modified: ${new Date(policy.last_modified).toLocaleDateString()}` : 'No policy created yet'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {policy && getStatusBadge(policy.is_published)}
-            <Button size="sm" onClick={handleEditPolicy} className="w-full sm:w-auto">
+            <Button size="sm" onClick={handleEditPolicy} className="flex-shrink-0 whitespace-nowrap">
               <KeenIcon icon="pencil" className="me-2" />
               {policy ? 'Edit' : 'Create'}
             </Button>
             {policy && !policy.is_published && (
-              <Button size="sm" variant="outline" onClick={handlePublishPolicy} className="w-full sm:w-auto border-success text-success hover:bg-success hover:text-white" disabled={publishPolicyMutation.isLoading}>
+              <Button size="sm" variant="outline" onClick={handlePublishPolicy} className="flex-shrink-0 whitespace-nowrap border-success text-success hover:bg-success hover:text-white" disabled={publishPolicyMutation.isLoading}>
                 <KeenIcon icon="check-circle" className="me-2" />
                 Publish
               </Button>
@@ -347,7 +357,7 @@ const PolicySections = () => {
           <DialogHeader className="px-6 py-4">
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="edit" className="text-primary" />
-              Edit {activeTab.replace(/_/g, ' ')}
+              Edit {formatPolicyTitle(activeTab)}
             </DialogTitle>
           </DialogHeader>
 
@@ -380,13 +390,16 @@ const PolicySections = () => {
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
+                <Button variant="outline" onClick={() => setIsEditorOpen(false)} className="flex-shrink-0">
                   <KeenIcon icon="cross" className="me-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSavePolicy} disabled={updatePolicyMutation.isLoading || createPolicyMutation.isLoading}>
+                <Button onClick={handleSavePolicy} disabled={updatePolicyMutation.isLoading || createPolicyMutation.isLoading} className="flex-shrink-0">
                   {updatePolicyMutation.isLoading || createPolicyMutation.isLoading ? (
-                    <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</>
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Saving...
+                    </>
                   ) : (
                     <>
                       <KeenIcon icon="check" className="me-2" />

@@ -50,13 +50,10 @@ const CustomerPaymentsTab = () => {
 
   const exportMutation = useExportPaymentData();
 
-  // Debounce search
+  // Reset page when filters change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    setCurrentPage(1);
+  }, [statusFilter, gatewayFilter, searchTerm]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -200,14 +197,17 @@ const CustomerPaymentsTab = () => {
 
             {/* Gateway Filter */}
             <div>
-              <Select value={gatewayFilter} onValueChange={setGatewayFilter}>
+              <Select value={gatewayFilter} onValueChange={(value) => {
+                setGatewayFilter(value);
+                setCurrentPage(1);
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by gateway" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Gateways</SelectItem>
                   <SelectItem value="razorpay">Razorpay</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="cash_on_delivery">Cash</SelectItem>
                 </SelectContent>
               </Select>
             </div>

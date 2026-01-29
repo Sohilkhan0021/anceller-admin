@@ -52,6 +52,7 @@ const PricingEditorModal = ({ isOpen, onClose, onSave }: IPricingEditorModalProp
   const [editingPricing, setEditingPricing] = useState<IServicePricing | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [pricingStates, setPricingStates] = useState<Record<string, boolean>>({});
 
   // Mock data - in real app, this would come from API
   const serviceCategories = [
@@ -110,6 +111,24 @@ const PricingEditorModal = ({ isOpen, onClose, onSave }: IPricingEditorModalProp
       ]
     }
   ];
+
+  // Initialize pricing states from servicePricing
+  const getPricingState = (pricingId: string) => {
+    if (pricingStates[pricingId] !== undefined) {
+      return pricingStates[pricingId];
+    }
+    const pricing = servicePricing.find(p => p.id === pricingId);
+    return pricing?.isActive ?? true;
+  };
+
+  const handleTogglePricingStatus = (pricingId: string, checked: boolean) => {
+    setPricingStates(prev => ({
+      ...prev,
+      [pricingId]: checked
+    }));
+    // TODO: Implement API call to update pricing status
+    console.log('Toggling pricing status:', pricingId, checked);
+  };
 
   const handleEditPricing = (pricing: IServicePricing) => {
     setEditingPricing(pricing);
@@ -314,7 +333,14 @@ const PricingEditorModal = ({ isOpen, onClose, onSave }: IPricingEditorModalProp
                               <div className="text-sm">{pricing.duration}</div>
                             </td>
                             <td className="py-3 px-4">
-                              {getStatusBadge(pricing.isActive)}
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(getPricingState(pricing.id))}
+                                <Switch
+                                  checked={getPricingState(pricing.id)}
+                                  onCheckedChange={(checked) => handleTogglePricingStatus(pricing.id, checked)}
+                                  className="data-[state=checked]:bg-danger"
+                                />
+                              </div>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex gap-2">

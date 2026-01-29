@@ -376,45 +376,47 @@ const ProviderManagementTable = ({
             </div>
 
             {/* Pagination Controls */}
-            {pagination && pagination.totalPages > 1 && onPageChange && (
+            {pagination && onPageChange && (
               <div className="card-footer">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
                     {pagination.total} providers
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (pagination.page > 1 && !isLoading) {
-                          onPageChange(pagination.page - 1);
-                        }
-                      }}
-                      disabled={pagination.page <= 1 || isLoading}
-                    >
-                      <KeenIcon icon="arrow-left" className="me-1" />
-                      Previous
-                    </Button>
-                    <div className="text-sm text-gray-600">
-                      Page {pagination.page} of {pagination.totalPages}
+                  {pagination.totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (pagination.page > 1 && !isLoading) {
+                            onPageChange(pagination.page - 1);
+                          }
+                        }}
+                        disabled={pagination.page <= 1 || isLoading}
+                      >
+                        <KeenIcon icon="arrow-left" className="me-1" />
+                        Previous
+                      </Button>
+                      <div className="text-sm text-gray-600">
+                        Page {pagination.page} of {pagination.totalPages}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (pagination.page < pagination.totalPages && !isLoading) {
+                            onPageChange(pagination.page + 1);
+                          }
+                        }}
+                        disabled={pagination.page >= pagination.totalPages || isLoading}
+                      >
+                        Next
+                        <KeenIcon icon="arrow-right" className="ms-1" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (pagination.page < pagination.totalPages && !isLoading) {
-                          onPageChange(pagination.page + 1);
-                        }
-                      }}
-                      disabled={pagination.page >= pagination.totalPages || isLoading}
-                    >
-                      Next
-                      <KeenIcon icon="arrow-right" className="ms-1" />
-                    </Button>
-                  </div>
+                  )}
                 </div>
               </div>
             )}

@@ -14,11 +14,11 @@ const PoliciesManagementHeader = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* <Button variant="outline" size="sm" className="w-full sm:w-auto">
+          {/* <Button variant="outline" size="sm" className="flex-shrink-0">
             <KeenIcon icon="file-down" className="me-2" />
             Export Content
           </Button> */}
-          <Button size="sm" className="w-full sm:w-auto">
+          <Button size="sm" className="flex-shrink-0">
             <KeenIcon icon="check" className="me-2" />
             Publish Changes
           </Button>

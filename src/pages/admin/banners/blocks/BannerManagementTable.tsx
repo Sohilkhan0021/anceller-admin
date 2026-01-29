@@ -69,25 +69,20 @@ const BannerManagementTable = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Sr.</TableHead>
-                  <TableHead>Banner Title</TableHead>
-                  <TableHead>Banner Image</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {banners.map((banner, index) => {
-                  const serialNumber = pagination
-                    ? ((pagination.page - 1) * pagination.limit) + index + 1
-                    : index + 1;
-                  return (
-                    <TableRow key={banner.banner_id}>
-                      <TableCell className="font-medium">{serialNumber}</TableCell>
-                      <TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Banner Title</TableHead>
+                    <TableHead>Banner Image</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {banners.map((banner) => {
+                    return (
+                      <TableRow key={banner.banner_id}>
+                        <TableCell>
                         <div className="font-medium">{banner.title || 'N/A'}</div>
                       </TableCell>
                       <TableCell>
