@@ -152,7 +152,6 @@ const UserManagementTable = ({
                     <TableHead className='pl-8'>Name</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden lg:table-cell">Phone</TableHead>
-                    <TableHead className="hidden sm:table-cell">Bookings</TableHead>
                     <TableHead className="hidden md:table-cell">Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -199,14 +198,6 @@ const UserManagementTable = ({
                           }
                           return phone;
                         })()}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="text-center">
-                          <div className="font-semibold">{user.totalBookings || 0}</div>
-                          <div className="text-sm text-gray-500">
-                            {formatCurrency(user.totalSpent || 0)}
-                          </div>
-                        </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">{getStatusBadge(user.status)}</TableCell>
                       <TableCell>
