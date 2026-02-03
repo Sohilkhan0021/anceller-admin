@@ -28,13 +28,15 @@ interface IEditServiceFormProps {
   onClose: () => void;
   onSave: (serviceData: any) => void;
   serviceData: any;
+  availableCategories?: Array<{ id: string; name: string; public_id?: string; category_id?: string }>;
 }
 
-const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceFormProps) => {
+const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCategories = [] }: IEditServiceFormProps) => {
   const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    categoryId: '',
     status: 'active',
     displayOrder: 1
   });
@@ -75,9 +77,57 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
           statusValue = serviceData.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
         }
         
+        // Extract category_id from serviceData - check multiple possible locations
+        // Priority: categoryId (normalized) > category_id > category object fields
+        let categoryId = serviceData.categoryId || 
+                       serviceData.category_id || 
+                       serviceData.category?.category_id || 
+                       serviceData.category?.public_id || 
+                       serviceData.category?.id || 
+                       '';
+        
+        // If we have a categoryId, try to match it with availableCategories
+        // The dropdown uses public_id || id as the value, so we need to find the matching category
+        if (categoryId && availableCategories.length > 0) {
+          // Try to find matching category by comparing all possible ID fields
+          const matchingCategory = availableCategories.find(
+            cat => {
+              // Compare with all possible ID formats
+              const catId = cat.public_id || cat.id || '';
+              const catCategoryId = cat.category_id || '';
+              return catId === categoryId || 
+                     catCategoryId === categoryId ||
+                     cat.id === categoryId ||
+                     cat.public_id === categoryId;
+            }
+          );
+          
+          // If found, use the value format that matches the dropdown (public_id || id)
+          if (matchingCategory) {
+            categoryId = matchingCategory.public_id || matchingCategory.id || categoryId;
+          }
+        }
+        
+        // Debug log (remove in production)
+        if (import.meta.env.DEV) {
+          console.log('EditServiceForm - Category ID extraction:', {
+            categoryId,
+            serviceDataCategoryId: serviceData.categoryId,
+            serviceDataCategory_id: serviceData.category_id,
+            serviceDataCategory: serviceData.category,
+            availableCategoriesCount: availableCategories.length,
+            availableCategoryIds: availableCategories.map(c => ({ 
+              id: c.id, 
+              public_id: c.public_id, 
+              category_id: c.category_id 
+            }))
+          });
+        }
+        
         setFormData({
           name: serviceData.name || '',
           description: serviceData.description || '',
+          categoryId: categoryId,
           status: statusValue as 'active' | 'inactive',
           displayOrder: serviceData.sort_order || serviceData.displayOrder || serviceData.display_order || 1
         });
@@ -96,6 +146,7 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
         setFormData({
           name: '',
           description: '',
+          categoryId: '',
           status: 'active',
           displayOrder: 1
         });
@@ -204,6 +255,10 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
       newErrors.description = 'Description is required';
     }
 
+    if (!formData.categoryId) {
+      newErrors.categoryId = 'Service is required';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return false;
@@ -216,6 +271,7 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
     setFormData({
       name: '',
       description: '',
+      categoryId: '',
       status: 'active',
       displayOrder: 1
     });
@@ -252,6 +308,7 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
       id: serviceData.id || serviceData.service_id || serviceData.public_id,
       name: formData.name,
       description: formData.description || '',
+      category_id: formData.categoryId, // Required: Sub-Service must belong to a Service
       image: imageFile || undefined,
       is_active: formData.status === 'active',
       sort_order: formData.displayOrder
@@ -274,6 +331,37 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
             
+            <div>
+              <Label htmlFor="categoryId">
+                Service <span className="text-danger">*</span>
+              </Label>
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => handleInputChange('categoryId', value)}
+              >
+                <SelectTrigger id="categoryId" className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCategories.map((category) => {
+                    // Use public_id if available, otherwise use id (which could be public_id or category_id)
+                    const categoryValue = category.public_id || category.id || '';
+                    return (
+                      <SelectItem key={categoryValue} value={categoryValue}>
+                        {category.name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.categoryId && (
+                <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
+              )}
+              {availableCategories.length === 0 && (
+                <p className="text-warning text-sm mt-1">No services available. Please create a service first.</p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="name">Sub-Service Name *</Label>
               <Input

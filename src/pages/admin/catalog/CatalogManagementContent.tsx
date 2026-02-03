@@ -3,12 +3,13 @@ import { CatalogManagementHeader } from './blocks/CatalogManagementHeader';
 import { ServiceTable } from './blocks/ServiceTable';
 import { CategoryManagement } from './blocks/CategoryManagement';
 import { SubServiceManagement } from './blocks/SubServiceManagement';
-import { AddOnsManagement } from './blocks/AddOnsManagement';
+// import { AddOnsManagement } from './blocks/AddOnsManagement';
 import { AddServiceForm } from './forms/AddServiceForm';
 import { EditServiceForm } from './forms/EditServiceForm';
 import { PricingEditorModal } from './forms/PricingEditorModal';
 import { Tabs, TabsList, Tab, TabPanel } from '@/components/tabs';
 import { KeenIcon } from '@/components';
+import { useCategories } from '@/services';
 
 const CatalogManagementContent = () => {
   const [activeTab, setActiveTab] = useState('categories');
@@ -16,6 +17,13 @@ const CatalogManagementContent = () => {
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [isPricingEditorOpen, setIsPricingEditorOpen] = useState(false);
   const [editService, setEditService] = useState<any>(null);
+
+  // Fetch categories (Services in new flow) for dropdown
+  const { categories } = useCategories({
+    page: 1,
+    limit: 1000, // Get all categories for dropdown
+    status: 'active' // Only active categories
+  });
 
   const handleAddService = () => {
     setIsAddFormOpen(true);
@@ -73,7 +81,7 @@ const CatalogManagementContent = () => {
         onChange={(event, newValue) => setActiveTab(String(newValue) || 'categories')}
         className="w-full max-w-full overflow-x-hidden"
       >
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <Tab value="categories">
             <KeenIcon icon="category" className="me-2" />
             Services
@@ -86,10 +94,11 @@ const CatalogManagementContent = () => {
             <KeenIcon icon="category" className="me-2" />
             Items
           </Tab>
-          <Tab value="addons">
+          {/* Add-Ons Tab - Commented out */}
+          {/* <Tab value="addons">
             <KeenIcon icon="plus" className="me-2" />
             Add-Ons
-          </Tab>
+          </Tab> */}
         </TabsList>
 
         {/* Categories Tab */}
@@ -107,10 +116,10 @@ const CatalogManagementContent = () => {
           <SubServiceManagement />
         </TabPanel>
 
-        {/* Add-Ons Tab */}
-        <TabPanel value="addons" className="mt-6 w-full max-w-full">
+        {/* Add-Ons Tab - Commented out */}
+        {/* <TabPanel value="addons" className="mt-6 w-full max-w-full">
           <AddOnsManagement />
-        </TabPanel>
+        </TabPanel> */}
       </Tabs>
 
       {/* Add Service Form */}
@@ -118,6 +127,7 @@ const CatalogManagementContent = () => {
         isOpen={isAddFormOpen}
         onClose={handleCloseAddForm}
         onSave={handleSaveService}
+        availableCategories={categories || []}
       />
 
       {/* Edit Service Form */}
@@ -126,6 +136,7 @@ const CatalogManagementContent = () => {
         onClose={handleCloseEditForm}
         onSave={handleUpdateService}
         serviceData={editService}
+        availableCategories={categories || []}
       />
 
       {/* Pricing Editor Modal */}

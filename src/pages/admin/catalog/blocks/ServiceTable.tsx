@@ -184,7 +184,12 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
         image_url: service.image_url || service.image,
         status: service.status || ((service as any).is_active === false ? 'inactive' : 'active'),
         displayOrder: service.displayOrder || service.display_order || (service as any).sort_order || 1,
-        is_active: service.status === 'active' || ((service as any).is_active !== false && service.status !== 'inactive')
+        is_active: service.status === 'active' || ((service as any).is_active !== false && service.status !== 'inactive'),
+        // Include categoryId - already normalized by useServices hook
+        categoryId: service.categoryId || (service as any).category_id,
+        category_id: service.categoryId || (service as any).category_id,
+        // Include category object if available
+        category: service.category || (service as any).category
       };
       onEditService(serviceWithData);
     }

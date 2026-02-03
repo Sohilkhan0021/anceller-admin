@@ -27,13 +27,15 @@ interface IAddServiceFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (serviceData: any) => void;
+  availableCategories?: Array<{ id: string; name: string; public_id?: string }>;
 }
 
-const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
+const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: IAddServiceFormProps) => {
   const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    categoryId: '',
     status: 'active',
     displayOrder: 1
   });
@@ -161,6 +163,10 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
       newErrors.description = 'Description is required';
     }
 
+    if (!formData.categoryId) {
+      newErrors.categoryId = 'Service is required';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return false;
@@ -174,6 +180,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
     setFormData({
       name: '',
       description: '',
+      categoryId: '',
       status: 'active',
       displayOrder: 1
     });
@@ -200,6 +207,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
     createServiceMutation.mutate({
       name: formData.name,
       description: formData.description || '',
+      category_id: formData.categoryId, // Required: Sub-Service must belong to a Service
       image: imageFile || undefined, // Image is optional
       is_active: formData.status === 'active',
       sort_order: formData.displayOrder
@@ -222,6 +230,37 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
             
+            <div>
+              <Label htmlFor="categoryId">
+                Service <span className="text-danger">*</span>
+              </Label>
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => handleInputChange('categoryId', value)}
+              >
+                <SelectTrigger id="categoryId" className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCategories.map((category) => {
+                    // Use public_id if available, otherwise use id (which could be public_id or category_id)
+                    const categoryValue = category.public_id || category.id || '';
+                    return (
+                      <SelectItem key={categoryValue} value={categoryValue}>
+                        {category.name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.categoryId && (
+                <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
+              )}
+              {availableCategories.length === 0 && (
+                <p className="text-warning text-sm mt-1">No services available. Please create a service first.</p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="name">Sub-Service Name *</Label>
               <Input
