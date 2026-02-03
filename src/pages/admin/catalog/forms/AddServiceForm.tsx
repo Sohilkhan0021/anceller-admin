@@ -196,20 +196,11 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
       return;
     }
 
-    if (!imageFile) {
-      enqueueSnackbar('Please upload a sub-service image', { 
-        variant: 'solid', 
-        state: 'warning',
-        icon: 'information-2'
-      });
-      return;
-    }
-
-    // Create service with FormData
+    // Create service with FormData - image is optional
     createServiceMutation.mutate({
       name: formData.name,
       description: formData.description || '',
-      image: imageFile,
+      image: imageFile || undefined, // Image is optional
       is_active: formData.status === 'active',
       sort_order: formData.displayOrder
     });
@@ -267,7 +258,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
             <h3 className="text-lg font-semibold text-gray-900">Sub-Service Image</h3>
             
             <div>
-              <Label htmlFor="image">Sub-Service Image</Label>
+              <Label htmlFor="image">
+                Sub-Service Image <span className="text-gray-600 text-xs font-normal">(Optional - can be added later)</span>
+              </Label>
               <div className="mt-2">
                 {imagePreview ? (
                   <div className="space-y-3">
@@ -316,7 +309,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
                     <p className={`text-sm ${isDragging ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDragging ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 1MB</p>
+                    <p className="text-xs text-gray-500">Optional: PNG, JPG, WebP up to 1MB. You can skip this and add an image later.</p>
                   </div>
                 )}
                 <input

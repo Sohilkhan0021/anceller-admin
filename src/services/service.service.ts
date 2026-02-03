@@ -138,18 +138,6 @@ export const createService = async (
       formData.append('image', data.image);
     }
 
-    if (data.base_price !== undefined) {
-      formData.append('base_price', data.base_price.toString());
-    }
-
-    if (data.currency) {
-      formData.append('currency', 'INR'); // Currency is always INR
-    }
-
-    if (data.estimated_duration_minutes !== undefined) {
-      formData.append('estimated_duration_minutes', data.estimated_duration_minutes.toString());
-    }
-
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
     }
@@ -228,18 +216,6 @@ export const updateService = async (
 
     if (data.image) {
       formData.append('image', data.image);
-    }
-
-    if (data.base_price !== undefined) {
-      formData.append('base_price', data.base_price.toString());
-    }
-
-    if (data.currency) {
-      formData.append('currency', 'INR'); // Currency is always INR
-    }
-
-    if (data.estimated_duration_minutes !== undefined) {
-      formData.append('estimated_duration_minutes', data.estimated_duration_minutes.toString());
     }
 
     if (data.is_active !== undefined) {

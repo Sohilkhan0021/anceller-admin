@@ -313,6 +313,7 @@ const SubServiceManagement = ({
       });
     } else {
       // Create new sub-service
+      console.log('handleSaveSubService - Creating new item', { subServiceData });
       setIsCreating(true);
       try {
         const createData: any = {
@@ -326,10 +327,12 @@ const SubServiceManagement = ({
           duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
         };
 
+        console.log('🟢 Create data prepared:', createData);
+
         // Include image if uploaded
         if (subServiceData.image instanceof File) {
           createData.image = subServiceData.image;
-          console.log('Sub-service create: Image file provided', {
+          console.log('🟢 Sub-service create: Image file provided', {
             fileName: subServiceData.image.name,
             fileSize: subServiceData.image.size,
             fileType: subServiceData.image.type,
@@ -337,25 +340,30 @@ const SubServiceManagement = ({
           });
         } else if (subServiceData.image_url) {
           createData.image_url = subServiceData.image_url;
-          console.log('Sub-service create: image_url provided', { image_url: subServiceData.image_url });
+          console.log('🟢 Sub-service create: image_url provided', { image_url: subServiceData.image_url });
         } else {
-          console.log('Sub-service create: No image provided');
+          console.log('🟢 Sub-service create: No image provided');
         }
 
-        console.log('Sub-service create: Sending data to service', {
+        console.log('Sub-service create: Calling API with data', {
           hasImage: !!createData.image,
           hasImageUrl: !!createData.image_url,
-          imageType: createData.image instanceof File ? 'File' : typeof createData.image
+          imageType: createData.image instanceof File ? 'File' : typeof createData.image,
+          createData
         });
 
-        await subServiceService.createSubService(createData);
+        const response = await subServiceService.createSubService(createData);
+        console.log(' API response received:', response);
+        
         toast.success('Item created successfully');
         refetch();
         setIsFormOpen(false);
         setEditingSubService(null);
         onCreateSubService?.(subServiceData);
       } catch (error: any) {
+        console.error('❌ Error creating item:', error);
         toast.error(error.message || 'Failed to create item');
+        throw error; // Re-throw to let form handle it
       } finally {
         setIsCreating(false);
       }

@@ -310,7 +310,9 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
             <h3 className="text-lg font-semibold text-gray-900">Sub-Service Image</h3>
             
             <div>
-              <Label htmlFor="image">Sub-Service Image</Label>
+              <Label htmlFor="image">
+                Sub-Service Image <span className="text-gray-600 text-xs font-normal">(Optional)</span>
+              </Label>
               <div className="mt-2">
                 {imagePreview ? (
                   <div className="space-y-3">
@@ -359,7 +361,7 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData }: IEditServiceF
                     <p className={`text-sm ${isDragging ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDragging ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 1MB</p>
+                    <p className="text-xs text-gray-500">Optional: PNG, JPG, WebP up to 1MB. You can skip this and add an image later.</p>
                   </div>
                 )}
                 <input

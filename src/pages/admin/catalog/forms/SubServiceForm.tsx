@@ -144,6 +144,13 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     }
   }, [subServiceDetails, subServiceData, isOpen]);
 
+  // Reset submitting state when form closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -251,37 +258,76 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('🔵 Form submit triggered', { 
+      isSubmitting, 
+      formData: {
+        name: formData.name,
+        serviceId: formData.serviceId,
+        base_price: formData.base_price,
+        duration_minutes: formData.duration_minutes,
+        status: formData.status
+      }
+    });
 
-    if (!validateForm() || isSubmitting) {
+    const isValid = validateForm();
+    console.log('🔵 Form validation result:', { isValid, errors });
+    
+    if (!isValid) {
+      console.log('❌ Form validation failed, errors:', errors);
+      return;
+    }
+    
+    if (isSubmitting) {
+      console.log('❌ Form is already submitting, ignoring');
       return;
     }
 
     // Set submitting state to prevent multiple clicks
     setIsSubmitting(true);
+    console.log('✅ Starting form submission...');
 
-    // CRITICAL: Ensure File object is preserved when passing to onSave
-    // Log to verify File object is still intact
-    if (import.meta.env.DEV) {
-      console.log('SubServiceForm - Submitting form data:', {
+    try {
+      // CRITICAL: Ensure File object is preserved when passing to onSave
+      console.log('🔵 SubServiceForm - Submitting form data:', {
         hasImage: !!formData.image,
         imageType: typeof formData.image,
         isFile: formData.image instanceof File,
         imageName: formData.image instanceof File ? formData.image.name : 'not a file',
         imageSize: formData.image instanceof File ? formData.image.size : 'not a file',
-        image_url: formData.image_url
+        image_url: formData.image_url,
+        formData: {
+          name: formData.name,
+          serviceId: formData.serviceId,
+          base_price: formData.base_price,
+          duration_minutes: formData.duration_minutes,
+          status: formData.status
+        }
       });
+
+      // Create a copy of formData to ensure File object is preserved
+      const dataToSave = {
+        ...formData,
+        // Explicitly preserve the File object if it exists
+        image: formData.image instanceof File ? formData.image : (formData.image || null)
+      };
+
+      console.log('🔵 Calling onSave with data:', dataToSave);
+      
+      // Wait for onSave to complete (it's async)
+      await onSave(dataToSave);
+      
+      console.log('✅ onSave completed successfully');
+    } catch (error) {
+      // Error is already handled in handleSaveSubService, just reset submitting state
+      console.error('❌ Form submission error:', error);
+    } finally {
+      // Always reset submitting state
+      console.log('🔵 Resetting isSubmitting state');
+      setIsSubmitting(false);
     }
-
-    // Create a copy of formData to ensure File object is preserved
-    const dataToSave = {
-      ...formData,
-      // Explicitly preserve the File object if it exists
-      image: formData.image instanceof File ? formData.image : (formData.image || null)
-    };
-
-    onSave(dataToSave);
   };
 
   return (
@@ -521,6 +567,15 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               <Button 
                 type="submit"
                 disabled={isSubmitting}
+                onClick={(e) => {
+                  console.log('Submit button clicked directly');
+                  // Let the form handle submission, but log for debugging
+                  if (isSubmitting) {
+                    e.preventDefault();
+                    console.log('❌ Button click prevented - already submitting');
+                    return;
+                  }
+                }}
               >
                 {isSubmitting ? (
                   <>

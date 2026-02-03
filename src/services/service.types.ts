@@ -85,13 +85,10 @@ export interface IGetServicesResponse {
  * Request structure for creating a service
  */
 export interface ICreateServiceRequest {
-  category_id: string; // Category ID
+  category_id?: string; // Category ID (optional - backend will use default if not provided)
   name: string;
   description?: string;
   image?: File;
-  base_price?: number;
-  currency?: string;
-  estimated_duration_minutes?: number;
   is_active?: boolean;
   sort_order?: number;
   meta_data?: string;
@@ -102,13 +99,10 @@ export interface ICreateServiceRequest {
  */
 export interface IUpdateServiceRequest {
   id: string; // service_id for URL
-  category_id?: string; // This corresponds to sub-service UI selection
+  category_id?: string; // Category ID (optional - backend will use default if not provided)
   name?: string;
   description?: string;
   image?: File;
-  base_price?: number;
-  currency?: string;
-  estimated_duration_minutes?: number;
   is_active?: boolean;
   sort_order?: number;
   meta_data?: string;
