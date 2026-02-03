@@ -21,7 +21,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useSnackbar } from 'notistack';
 import { useCreateService } from '@/services/service.hooks';
-import { useCategories } from '@/services/category.hooks';
 import { ContentLoader } from '@/components/loaders';
 
 interface IAddServiceFormProps {
@@ -34,13 +33,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
   const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     name: '',
-    categoryId: '', // Category ID
     description: '',
     status: 'active',
-    displayOrder: 1,
-    base_price: '' as string | number,
-    currency: 'INR',
-    estimated_duration_minutes: '' as string | number
+    displayOrder: 1
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -49,15 +44,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Fetch categories for dropdown
-  const { categories, isLoading: isLoadingCategories } = useCategories(
-    { status: 'active', limit: 100 },
-    { enabled: isOpen }
-  );
-
   const createServiceMutation = useCreateService({
     onSuccess: (data) => {
-      enqueueSnackbar('Service created successfully', { 
+      enqueueSnackbar('Sub-Service created successfully', { 
         variant: 'solid', 
         state: 'success',
         icon: 'check-circle'
@@ -66,7 +55,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
       handleClose();
     },
     onError: (error) => {
-      enqueueSnackbar(error.message || 'Failed to create service', { 
+      enqueueSnackbar(error.message || 'Failed to create sub-service', { 
         variant: 'solid', 
         state: 'danger',
         icon: 'cross-circle'
@@ -97,9 +86,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
       return;
     }
     
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      enqueueSnackbar('Image size must be less than 5MB', { 
+    // Validate file size (1MB max)
+    if (file.size > 1 * 1024 * 1024) {
+      enqueueSnackbar('Image size must be less than 1MB', { 
         variant: 'solid', 
         state: 'warning',
         icon: 'information-2'
@@ -161,31 +150,15 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Service name is required';
+      newErrors.name = 'Sub-Service name is required';
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Service name must be at least 2 characters long';
+      newErrors.name = 'Sub-Service name must be at least 2 characters long';
     } else if (formData.name.trim().length > 100) {
-      newErrors.name = 'Service name must not exceed 100 characters';
-    }
-
-    if (!formData.categoryId) {
-      newErrors.categoryId = 'Category is required';
+      newErrors.name = 'Sub-Service name must not exceed 100 characters';
     }
 
     if (!formData.description?.trim()) {
       newErrors.description = 'Description is required';
-    }
-
-    if (!formData.base_price || formData.base_price === '') {
-      newErrors.base_price = 'Base price is required';
-    } else if (isNaN(Number(formData.base_price)) || Number(formData.base_price) < 0) {
-      newErrors.base_price = 'Base price must be a valid number greater than or equal to 0';
-    }
-
-    if (!formData.estimated_duration_minutes || formData.estimated_duration_minutes === '') {
-      newErrors.estimated_duration_minutes = 'Duration (minutes) is required';
-    } else if (isNaN(Number(formData.estimated_duration_minutes)) || Number(formData.estimated_duration_minutes) < 0) {
-      newErrors.estimated_duration_minutes = 'Duration must be a valid number greater than or equal to 0';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -200,13 +173,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
     // Reset form
     setFormData({
       name: '',
-      categoryId: '',
       description: '',
       status: 'active',
-      displayOrder: 1,
-      base_price: '',
-      currency: 'INR',
-      estimated_duration_minutes: ''
+      displayOrder: 1
     });
     setImagePreview(null);
     setImageFile(null);
@@ -228,7 +197,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
     }
 
     if (!imageFile) {
-      enqueueSnackbar('Please upload a service image', { 
+      enqueueSnackbar('Please upload a sub-service image', { 
         variant: 'solid', 
         state: 'warning',
         icon: 'information-2'
@@ -238,15 +207,11 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
 
     // Create service with FormData
     createServiceMutation.mutate({
-      category_id: formData.categoryId,
       name: formData.name,
       description: formData.description || '',
       image: imageFile,
       is_active: formData.status === 'active',
-      sort_order: formData.displayOrder,
-      base_price: formData.base_price ? parseFloat(formData.base_price.toString()) : 0,
-      currency: 'INR', // Currency is always INR
-      estimated_duration_minutes: formData.estimated_duration_minutes ? parseInt(formData.estimated_duration_minutes.toString(), 10) : 0,
+      sort_order: formData.displayOrder
     });
   };
 
@@ -256,7 +221,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <KeenIcon icon="category" className="text-primary" />
-            Add New Service
+            Add New Sub-Service
           </DialogTitle>
         </DialogHeader>
 
@@ -266,54 +231,22 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Service Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`mt-2 ${errors.name ? 'border-danger' : ''}`}
-                  placeholder="e.g., Standard Fan Installation, Premium AC Service"
-                />
-                {errors.name && (
-                  <p className="text-danger text-sm mt-1">{errors.name}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="categoryId">Category *</Label>
-                <Select 
-                  value={formData.categoryId} 
-                  onValueChange={(value) => handleInputChange('categoryId', value)}
-                >
-                  <SelectTrigger className={`mt-2 ${errors.categoryId ? 'border-danger' : ''}`}>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingCategories ? (
-                      <div className="p-4">
-                        <ContentLoader />
-                      </div>
-                    ) : categories.length === 0 ? (
-                      <div className="p-4 text-sm text-gray-500">No categories available</div>
-                    ) : (
-                      categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id || category.public_id || ''}>
-                          {category.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {errors.categoryId && (
-                  <p className="text-danger text-sm mt-1">{errors.categoryId}</p>
-                )}
-              </div>
+            <div>
+              <Label htmlFor="name">Sub-Service Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className={`mt-2 ${errors.name ? 'border-danger' : ''}`}
+                placeholder="e.g., Standard Fan Installation, Premium AC Service"
+              />
+              {errors.name && (
+                <p className="text-danger text-sm mt-1">{errors.name}</p>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="description">Service Description *</Label>
+              <Label htmlFor="description">Sub-Service Description *</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -327,67 +260,21 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
               )}
             </div>
 
-            {/* Base Price, Currency, and Duration */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="base_price">Base Price *</Label>
-                <Input
-                  id="base_price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.base_price}
-                  onChange={(e) => handleInputChange('base_price', e.target.value)}
-                  className={`mt-2 ${errors.base_price ? 'border-danger' : ''}`}
-                  placeholder="0.00"
-                />
-                {errors.base_price && (
-                  <p className="text-danger text-sm mt-1">{errors.base_price}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="currency">Currency *</Label>
-                <Input
-                  id="currency"
-                  value="INR"
-                  disabled
-                  className="mt-2 bg-gray-100"
-                  readOnly
-                />
-                <p className="text-xs text-gray-500 mt-1">Currency is fixed to INR</p>
-              </div>
-              <div>
-                <Label htmlFor="estimated_duration_minutes">Duration (Minutes) *</Label>
-                <Input
-                  id="estimated_duration_minutes"
-                  type="number"
-                  min="0"
-                  max="1440"
-                  value={formData.estimated_duration_minutes}
-                  onChange={(e) => handleInputChange('estimated_duration_minutes', e.target.value)}
-                  className={`mt-2 ${errors.estimated_duration_minutes ? 'border-danger' : ''}`}
-                  placeholder="0"
-                />
-                {errors.estimated_duration_minutes && (
-                  <p className="text-danger text-sm mt-1">{errors.estimated_duration_minutes}</p>
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* Service Image */}
+          {/* Sub-Service Image */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Service Image</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Sub-Service Image</h3>
             
             <div>
-              <Label htmlFor="image">Service Image</Label>
+              <Label htmlFor="image">Sub-Service Image</Label>
               <div className="mt-2">
                 {imagePreview ? (
                   <div className="space-y-3">
                     <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300">
                       <img 
                         src={imagePreview} 
-                        alt="Service preview"
+                        alt="Sub-Service preview"
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -429,7 +316,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
                     <p className={`text-sm ${isDragging ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDragging ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 5MB</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 1MB</p>
                   </div>
                 )}
                 <input
@@ -443,9 +330,9 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
             </div>
           </div>
 
-          {/* Service Settings */}
+          {/* Sub-Service Settings */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Service Settings</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Sub-Service Settings</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -490,7 +377,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave }: IAddServiceFormProps) => {
               ) : (
                 <>
                   <KeenIcon icon="check" className="me-2" />
-                  Create Service
+                  Create Sub-Service
                 </>
               )}
             </Button>

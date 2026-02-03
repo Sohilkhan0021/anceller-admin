@@ -39,7 +39,7 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useServices, useDeleteService, useUpdateService, useCategories } from '@/services';
+import { useServices, useDeleteService, useUpdateService } from '@/services';
 import { IService } from '@/services/service.types';
 import { toast } from 'sonner';
 import { ContentLoader } from '@/components/loaders';
@@ -53,7 +53,6 @@ interface IServiceTableProps {
 
 const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const [sortBy, setSortBy] = useState('displayOrder');
-  const [categoryFilter, setCategoryFilter] = useState('all');
   const [subServiceFilter, setSubServiceFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,11 +63,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
-  // Fetch categories for dropdown
-  const { categories, isLoading: isLoadingCategories } = useCategories(
-    { status: 'active', limit: 100 },
-    { enabled: true }
-  );
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -93,7 +87,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     page: currentPage,
     limit: pageSize,
     status: '', // We'll handle status filtering client-side if needed
-    category_id: categoryFilter === 'all' ? '' : categoryFilter,
     search: debouncedSearch,
   });
 
@@ -103,35 +96,29 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update service status');
+      toast.error(error.message || 'Failed to update sub-service status');
     }
   });
 
   // Delete service mutation
   const { mutate: deleteService, isLoading: isDeleting } = useDeleteService({
     onSuccess: (data) => {
-      toast.success(data.message || 'Service deleted successfully');
+      toast.success(data.message || 'Sub-Service deleted successfully');
       setDeleteDialogOpen(false);
       setServiceToDelete(null);
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete service');
+      toast.error(error.message || 'Failed to delete sub-service');
     }
   });
 
-  // Handle filter changes
-  const handleCategoryFilterChange = useCallback((value: string) => {
-    setCategoryFilter(value);
-    setCurrentPage(1); // Reset to first page when filter changes
-  }, []);
 
   // Column visibility state - description and popularity hidden by default
   const [columnVisibility, setColumnVisibility] = useState({
     service: true,
     subService: true,
     description: false, // Hidden by default
-    category: true,
     basePrice: true,
     duration: true,
     skills: true,
@@ -193,7 +180,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
         id: service.id || service.public_id || (service as any).service_id,
         // Map all fields properly
         name: service.name,
-        categoryId: service.category_id || service.categoryId || (typeof service.category === 'object' && service.category?.category_id) || '',
         description: service.description,
         image_url: service.image_url || service.image,
         status: service.status || ((service as any).is_active === false ? 'inactive' : 'active'),
@@ -232,18 +218,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     return { variant: 'secondary', text: 'Low' };
   };
 
-  const getCategoryIcon = (category: string) => {
-    const iconMap = {
-      'Electrical': 'element-11',
-      'Plumbing': 'water-drop',
-      'AC': 'air-conditioner-2',
-      'Cleaning': 'broom-2',
-      'Carpentry': 'hammer-2',
-      'Appliance': 'setting-2'
-    };
-
-    return iconMap[category as keyof typeof iconMap] || 'category';
-  };
 
   // Extract unique sub-services from services for filter dropdown
   const uniqueSubServices = Array.from(
@@ -288,14 +262,14 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
           <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
-                Service Management {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
+                Sub-Service Management {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
               </h3>
-              <p className="text-sm text-gray-600">Manage service pricing and availability</p>
+              <p className="text-sm text-gray-600">Manage sub-service pricing and availability</p>
             </div>
 
             <Button size="sm" onClick={onAddService}>
               <KeenIcon icon="plus" className="me-2" />
-              Add New Service
+              Add New Sub-Service
             </Button>
           </div>
 
@@ -322,37 +296,12 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search by name or category..."
+                placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
-
-            <Select value={categoryFilter} onValueChange={handleCategoryFilterChange}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                <SelectItem value="all" className="font-medium">All Categories</SelectItem>
-                {isLoadingCategories ? (
-                  <div className="p-2">
-                    <ContentLoader />
-                  </div>
-                ) : categories.length === 0 ? (
-                  <div className="p-2 text-sm text-gray-500">No categories available</div>
-                ) : (
-                  categories.map((category) => (
-                    <SelectItem 
-                      key={category.id || category.public_id} 
-                      value={category.id || category.public_id || ''}
-                    >
-                      {category.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
 
             <Select value={subServiceFilter} onValueChange={setSubServiceFilter}>
               <SelectTrigger className="w-40">
@@ -419,16 +368,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                     />
                     <label htmlFor="col-description" className="text-sm font-medium leading-none cursor-pointer">
                       Description
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-category"
-                      checked={columnVisibility.category}
-                      onCheckedChange={() => toggleColumn('category')}
-                    />
-                    <label htmlFor="col-category" className="text-sm font-medium leading-none cursor-pointer">
-                      Category
                     </label>
                   </div>
                   <div className="flex items-center space-x-2 px-2 py-1.5">
@@ -506,7 +445,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
         ) : filteredServices.length === 0 ? (
           <div className="p-8 text-center">
             <KeenIcon icon="tag" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No services found</p>
+            <p className="text-gray-600">No sub-services found</p>
             <p className="text-sm text-gray-500 mt-2">
               Try adjusting your search or filter criteria
             </p>
@@ -520,7 +459,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                     {columnVisibility.service && <TableHead className="w-[200px]">Service</TableHead>}
                     {/* {columnVisibility.subService && <TableHead className="w-[150px]">Sub-Service</TableHead>} */}
                     {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
-                    {columnVisibility.category && <TableHead className="w-[100px]">Category</TableHead>}
                     {/* {columnVisibility.basePrice && <TableHead className="w-[90px] text-center">Base Price</TableHead>} */}
                     {/* {columnVisibility.duration && <TableHead className="w-[90px] text-center">Duration</TableHead>} */}
                     {/* {columnVisibility.skills && <TableHead className="w-[140px]">Skills/Tags</TableHead>} */}
@@ -538,7 +476,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                         <TableCell className="w-[200px]">
                           <div className="flex items-center gap-2">
                             {(() => {
-                              // Try multiple possible image field names - same as category implementation
+                              // Try multiple possible image field names
                               const imageUrl = (service as any).image_url || (service as any).imageUrl || (service as any).image || '';
                               const fullImageUrl = getImageUrl(imageUrl);
 
@@ -587,16 +525,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                         <TableCell className="w-[160px]">
                           <div className="text-sm text-gray-600 truncate" title={service.description}>
                             {service.description || '—'}
-                          </div>
-                        </TableCell>
-                      )}
-                      {columnVisibility.category && (
-                        <TableCell className="w-[100px]">
-                          <div className="text-sm truncate">
-                            {service.categoryName ||
-                              (typeof service.category === 'string' ? service.category :
-                                (service.category && typeof service.category === 'object' ? service.category.name : 'N/A')) ||
-                              'N/A'}
                           </div>
                         </TableCell>
                       )}
@@ -683,7 +611,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditService(service.id)}>
                                   <KeenIcon icon="pencil" className="me-2" />
-                                  Edit Service
+                                  Edit Sub-Service
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleDeleteClick(service.id)}
@@ -691,7 +619,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                                   disabled={isDeleting}
                                 >
                                   <KeenIcon icon="trash" className="me-2" />
-                                  Delete Service
+                                  Delete Sub-Service
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -757,7 +685,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="trash" className="text-danger" />
-              Delete Service
+              Delete Sub-Service
             </DialogTitle>
           </DialogHeader>
           <DialogBody>

@@ -8,7 +8,7 @@ const CatalogManagementHeader = () => {
           <KeenIcon icon="category" className="text-primary text-2xl" />
           <div>
             <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Catalog & Pricing Management</h1>
-            <p className="text-sm text-gray-600">Manage categories, sub-services, and pricing</p>
+            <p className="text-sm text-gray-600">Manage catalog services, sub-services, and pricing</p>
           </div>
         </div>
       </div>

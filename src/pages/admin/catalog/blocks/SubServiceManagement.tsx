@@ -147,7 +147,7 @@ const SubServiceManagement = ({
 
         // Always show success and refetch - the list will have the correct data with image
         // The refetch will get the updated sub-service with the image_url from the database
-        toast.success('Sub-service updated successfully');
+        toast.success('Item updated successfully');
         refetch(); // Refresh the list to show updated data including image
         setIsFormOpen(false);
         setEditingSubService(null);
@@ -178,9 +178,9 @@ const SubServiceManagement = ({
       // Success - show appropriate message
       if (responseData.image_url) {
         // toast.success(`Sub-service updated successfully. Image: ${responseData.image_url}`);
-        toast.success(`Sub-service updated successfully`);
+        toast.success(`Item updated successfully`);
       } else {
-        toast.success('Sub-service updated successfully');
+        toast.success('Item updated successfully');
       }
 
       refetch(); // Refresh the list to show updated data including image
@@ -189,7 +189,7 @@ const SubServiceManagement = ({
     },
     onError: (error: Error) => {
       console.error('Sub-service update error', { error: error.message, stack: error.stack });
-      toast.error(error.message || 'Failed to update sub-service');
+      toast.error(error.message || 'Failed to update item');
     }
   });
 
@@ -199,13 +199,13 @@ const SubServiceManagement = ({
   // Delete sub-service mutation
   const { mutate: deleteSubService, isLoading: isDeleting } = useDeleteSubService({
     onSuccess: (data) => {
-      toast.success(data.message || 'Sub-service deleted successfully');
+      toast.success(data.message || 'Item deleted successfully');
       setDeleteDialogOpen(false);
       setSubServiceToDelete(null);
       refetch(); // Refresh the list
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete sub-service');
+      toast.error(error.message || 'Failed to delete item');
     }
   });
 
@@ -349,13 +349,13 @@ const SubServiceManagement = ({
         });
 
         await subServiceService.createSubService(createData);
-        toast.success('Sub-service created successfully');
+        toast.success('Item created successfully');
         refetch();
         setIsFormOpen(false);
         setEditingSubService(null);
         onCreateSubService?.(subServiceData);
       } catch (error: any) {
-        toast.error(error.message || 'Failed to create sub-service');
+        toast.error(error.message || 'Failed to create item');
       } finally {
         setIsCreating(false);
       }
@@ -390,7 +390,7 @@ const SubServiceManagement = ({
     );
   };
 
-  const getCategoryName = (subService: ISubService) => {
+  const getServiceName = (subService: ISubService) => {
     // First try to get categoryName from the normalized data
     if ((subService as any).categoryName) {
       return (subService as any).categoryName;
@@ -417,14 +417,14 @@ const SubServiceManagement = ({
           <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
-                Sub-Services {pagination ? `(${pagination.total})` : `(${subServices.length})`}
+                Items {pagination ? `(${pagination.total})` : `(${subServices.length})`}
               </h3>
-              <p className="text-sm text-gray-600">Manage sub-services (name and icon only)</p>
+              <p className="text-sm text-gray-600">Manage items (name and icon only)</p>
             </div>
 
             <Button size="sm" onClick={handleAddSubService}>
               <KeenIcon icon="plus" className="me-2" />
-              Add Sub-Service
+              Add Item
             </Button>
           </div>
         </div>
@@ -435,7 +435,7 @@ const SubServiceManagement = ({
             <Alert variant="danger" className="mb-4">
               <div className="flex items-center justify-between">
                 <span>
-                  {error?.message || 'Failed to load sub-services. Please try again.'}
+                  {error?.message || 'Failed to load items. Please try again.'}
                 </span>
                 <button
                   onClick={() => refetch()}
@@ -454,7 +454,7 @@ const SubServiceManagement = ({
                 <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Search sub-services..."
+                  placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -500,14 +500,14 @@ const SubServiceManagement = ({
           ) : subServices.length === 0 ? (
             <div className="p-8 text-center">
               <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
-              <p className="text-gray-600">No sub-services found</p>
+              <p className="text-gray-600">No items found</p>
               <p className="text-sm text-gray-500 mt-2">
                 Try adjusting your search or filter criteria
               </p>
             </div>
           ) : (
             <>
-              {/* Sub-Services Table */}
+              {/* Items Table */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -515,7 +515,7 @@ const SubServiceManagement = ({
                       <TableHead className="w-[50px]">Order</TableHead>
                       <TableHead className="w-[80px]">Image</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
+                      <TableHead>Service</TableHead>
                       <TableHead className="w-[100px]">Status</TableHead>
                       <TableHead className="w-[150px]">Actions</TableHead>
                     </TableRow>
@@ -569,7 +569,7 @@ const SubServiceManagement = ({
                           </TableCell>
                           <TableCell>
                             <div className="text-sm text-gray-600">
-                              {getCategoryName(subService)}
+                              {getServiceName(subService)}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -615,7 +615,7 @@ const SubServiceManagement = ({
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                    {pagination.total} sub-services
+                    {pagination.total} items
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -655,7 +655,7 @@ const SubServiceManagement = ({
         </div>
       </div>
 
-      {/* Sub-Service Form Modal */}
+      {/* Item Form Modal */}
       <SubServiceForm
         isOpen={isFormOpen}
         onClose={() => {
@@ -674,12 +674,12 @@ const SubServiceManagement = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="trash" className="text-danger" />
-              Delete Sub-Service
+              Delete Item
             </DialogTitle>
           </DialogHeader>
           <DialogBody>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete the sub-service <strong className="text-black">"{subServiceToDelete ? subServices.find(s => s.id === subServiceToDelete)?.name || 'this sub-service' : 'this sub-service'}"</strong>?
+              Are you sure you want to delete the item <strong className="text-black">"{subServiceToDelete ? subServices.find(s => s.id === subServiceToDelete)?.name || 'this item' : 'this item'}"</strong>?
               This action cannot be undone.
             </p>
           </DialogBody>

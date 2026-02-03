@@ -108,7 +108,12 @@ export const updateAdminProfile = async (
     }
     if (data.profile_picture_url !== undefined && !data.profile_picture) {
       // Only send URL if no file is being uploaded
-      formData.append('profile_picture_url', data.profile_picture_url);
+      // Handle null/empty as empty string to remove image
+      // FormData will convert null to string "null", so we explicitly use empty string
+      const urlValue = data.profile_picture_url === null || data.profile_picture_url === '' 
+        ? '' 
+        : data.profile_picture_url;
+      formData.append('profile_picture_url', urlValue);
     }
 
     const response = await axios.put<IUpdateAdminProfileResponse>(

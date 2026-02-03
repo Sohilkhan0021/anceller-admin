@@ -63,23 +63,23 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
 
   const createCategoryMutation = useCreateCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Category created successfully');
+      toast.success(data.message || 'Service created successfully');
       handleClose();
       // Don't call onSave here - let CategoryManagement handle the refetch
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create category');
+      toast.error(error.message || 'Failed to create service');
     }
   });
 
   const updateCategoryMutation = useUpdateCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Category updated successfully');
+      toast.success(data.message || 'Service updated successfully');
       handleClose();
       // Don't call onSave here - let CategoryManagement handle the refetch
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update category');
+      toast.error(error.message || 'Failed to update service');
     }
   });
 
@@ -123,7 +123,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
           displayOrder: categoryData.sort_order || categoryData.displayOrder || categoryData.display_order || 1
         });
         
-        // Set image preview from existing category
+        // Set image preview from existing service
         const imageUrl = categoryData.image_url || categoryData.imageUrl || categoryData.image;
         if (imageUrl) {
           // Use the centralized getImageUrl utility to properly construct the full URL
@@ -137,7 +137,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         // Icon preview commented out - icon section not working
         // setIconPreview(null);
       } else {
-        // Reset form for new category
+        // Reset form for new service
         setFormData({
           name: '',
           icon: 'category',
@@ -261,10 +261,10 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Category name is required';
+      newErrors.name = 'Service name is required';
     }
 
-    // Check for duplicate name (excluding current category)
+    // Check for duplicate name (excluding current service)
     // In real app, this would be an API check
 
     if (newErrors.name) {
@@ -301,10 +301,10 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
     }
 
     if (categoryData) {
-      // Update existing category
+      // Update existing service
       const categoryId = categoryData.id || categoryData.category_id || categoryData.public_id;
       if (!categoryId) {
-        toast.error('Category ID is missing');
+        toast.error('Service ID is missing');
         return;
       }
 
@@ -318,9 +318,9 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         is_active: formData.status === 'active' // Explicitly set is_active
       });
     } else {
-      // Create new category - ensure name is not empty
+      // Create new service - ensure name is not empty
       if (!formData.name.trim()) {
-        setErrors({ name: 'Category name is required' });
+        setErrors({ name: 'Service name is required' });
         return;
       }
 
@@ -341,16 +341,16 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <KeenIcon icon="category" className="text-primary" />
-            {categoryData ? 'Edit Category' : 'Add New Category'}
+            {categoryData ? 'Edit Service' : 'Add New Service'}
           </DialogTitle>
         </DialogHeader>
 
         <DialogBody>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Category Name */}
+            {/* Service Name */}
             <div>
               <Label htmlFor="name">
-                Category Name <span className="text-danger">*</span>
+                Service Name <span className="text-danger">*</span>
               </Label>
               <Input
                 id="name"
@@ -373,26 +373,26 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={3}
                 className="mt-2"
-                placeholder="Short tagline or description for this category..."
+                placeholder="Short tagline or description for this service..."
                 maxLength={600}
               />
             </div>
 
             {/* Icon Selection - COMMENTED OUT - Icon not working */}
             {/* <div className="space-y-4">
-              <Label>Category Icon</Label>
+              <Label>Service Icon</Label>
               ... icon selection code commented out ...
             </div> */}
 
             {/* Category Image - COMMENTED OUT - 1:1 image upload section */}
             {/* <div className="space-y-4">
-              <Label>Category Image</Label>
+              <Label>Service Image</Label>
               ... 1:1 image upload code commented out ...
             </div> */}
 
             {/* Category Image - Regular image upload (not 1:1 ratio required) */}
             <div className="space-y-4">
-              <Label>Category Image</Label>
+              <Label>Service Image</Label>
               <div>
                 {imagePreview ? (
                   <div className="space-y-3">
@@ -447,7 +447,7 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                     <p className={`text-sm ${isDraggingImage ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDraggingImage ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 5MB</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 1MB</p>
                   </div>
                 )}
                 <input
@@ -516,11 +516,11 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                 ) : (
                   <>
                     <KeenIcon icon="check" className="me-2" />
-                    {categoryData ? 'Update Category' : 'Create Category'}
+                    {categoryData ? 'Update Service' : 'Create Service'}
                   </>
                 )}
               </Button>
-            </div>
+            </div>  
           </form>
         </DialogBody>
       </DialogContent>

@@ -76,15 +76,15 @@ const CatalogManagementContent = () => {
         <TabsList className="grid w-full grid-cols-4">
           <Tab value="categories">
             <KeenIcon icon="category" className="me-2" />
-            Categories
-          </Tab>
-          <Tab value="subservices">
-            <KeenIcon icon="category" className="me-2" />
-            Sub-Services
+            Services
           </Tab>
           <Tab value="services">
             <KeenIcon icon="tag" className="me-2" />
-            Services
+            Sub-Service
+          </Tab>
+          <Tab value="subservices">
+            <KeenIcon icon="category" className="me-2" />
+            Items
           </Tab>
           <Tab value="addons">
             <KeenIcon icon="plus" className="me-2" />
@@ -97,14 +97,14 @@ const CatalogManagementContent = () => {
           <CategoryManagement />
         </TabPanel>
 
-        {/* Sub-Services Tab */}
-        <TabPanel value="subservices" className="mt-6 w-full max-w-full">
-          <SubServiceManagement />
-        </TabPanel>
-
         {/* Services Tab */}
         <TabPanel value="services" className="mt-6 w-full max-w-full overflow-x-hidden">
           <ServiceTable onEditService={handleEditService} onAddService={handleAddService} />
+        </TabPanel>
+
+        {/* Sub-Services Tab */}
+        <TabPanel value="subservices" className="mt-6 w-full max-w-full">
+          <SubServiceManagement />
         </TabPanel>
 
         {/* Add-Ons Tab */}

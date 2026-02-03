@@ -170,11 +170,11 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         return;
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (max 1MB)
+      if (file.size > 1 * 1024 * 1024) {
         setErrors(prev => ({
           ...prev,
-          image: 'Image size should be less than 5MB'
+          image: 'Image size should be less than 1MB'
         }));
         return;
       }
@@ -220,14 +220,14 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Sub-service name is required';
+      newErrors.name = 'Item name is required';
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Sub-service name must be at least 2 characters long';
+      newErrors.name = 'Item name must be at least 2 characters long';
     } else if (formData.name.trim().length > 100) {
-      newErrors.name = 'Sub-service name must not exceed 100 characters';
+      newErrors.name = 'Item name must not exceed 100 characters';
     }
     if (!formData.serviceId) {
-      newErrors.serviceId = 'Service is required';
+      newErrors.serviceId = 'Sub-Service is required';
     }
     if (!formData.base_price || formData.base_price === '') {
       newErrors.base_price = 'Base price is required';
@@ -290,7 +290,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <KeenIcon icon="category" className="text-primary" />
-            {subServiceData ? 'Edit Sub-Service' : 'Add New Sub-Service'}
+            {subServiceData ? 'Edit Item' : 'Add New Item'}
           </DialogTitle>
         </DialogHeader>
 
@@ -299,15 +299,15 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600">Loading sub-service details...</p>
+                <p className="text-sm text-gray-600">Loading item details...</p>
               </div>
             </div>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Sub-Service Name */}
+            {/* Item Name */}
             <div>
               <Label htmlFor="name">
-                Sub-Service Name <span className="text-danger">*</span>
+                Item Name <span className="text-danger">*</span>
               </Label>
               <Input
                 id="name"
@@ -321,10 +321,10 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               )}
             </div>
 
-            {/* Service */}
+            {/* Sub-Service */}
             <div>
               <Label htmlFor="serviceId">
-                Service <span className="text-danger">*</span>
+                Sub-Service <span className="text-danger">*</span>
               </Label>
 
               <Select
@@ -339,7 +339,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                 }}
               >
                 <SelectTrigger id="serviceId" className={`mt-2 ${errors.serviceId ? 'border-danger' : ''}`}>
-                  <SelectValue placeholder="Select service" />
+                  <SelectValue placeholder="Select sub-service" />
                 </SelectTrigger>
 
                 <SelectContent>
@@ -460,7 +460,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                   <p className="text-danger text-sm mt-1">{errors.image}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Recommended: Square image, max 5MB (JPG, PNG, GIF)
+                  Recommended: Square image, max 1MB (JPG, PNG, GIF)
                 </p>
               </div>
 
@@ -528,12 +528,12 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                     {subServiceData ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
-                  <>
-                    <KeenIcon icon="check" className="me-2" />
-                    {subServiceData ? 'Update Sub-Service' : 'Create Sub-Service'}
-                  </>
-                )}
-              </Button>
+                <>
+                  <KeenIcon icon="check" className="me-2" />
+                  {subServiceData ? 'Update Item' : 'Create Item'}
+                </>
+              )}
+            </Button>
             </div>
           </form>
           )}

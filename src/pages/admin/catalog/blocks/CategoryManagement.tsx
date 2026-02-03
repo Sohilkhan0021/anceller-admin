@@ -156,26 +156,26 @@ const CategoryManagement = ({
   // Create category mutation
   const { mutate: createCategory, isLoading: isCreating } = useCreateCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Category created successfully');
+      toast.success(data.message || 'Service created successfully');
       setIsFormOpen(false);
       setEditingCategory(null);
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create category');
+      toast.error(error.message || 'Failed to create service');
     }
   });
 
   // Update category mutation
   const { mutate: updateCategory, isLoading: isUpdating } = useUpdateCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Category updated successfully');
+      toast.success(data.message || 'Service updated successfully');
       setIsFormOpen(false);
       setEditingCategory(null);
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update category');
+      toast.error(error.message || 'Failed to update service');
     }
   });
 
@@ -185,18 +185,18 @@ const CategoryManagement = ({
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update category status');
+      toast.error(error.message || 'Failed to update service status');
     }
   });
 
   // Delete category mutation
   const { mutate: deleteCategory, isLoading: isDeleting } = useDeleteCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Category deleted successfully');
+      toast.success(data.message || 'Service deleted successfully');
       refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete category');
+      toast.error(error.message || 'Failed to delete service');
     }
   });
 
@@ -273,7 +273,7 @@ const CategoryManagement = ({
       // Find the category to update
       const category = categories.find(cat => cat.id === categoryId);
       if (!category) {
-        toast.error('Category not found');
+        toast.error('Service not found');
         return;
       }
 
@@ -306,14 +306,14 @@ const CategoryManagement = ({
           <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
-                Categories {pagination ? `(${pagination.total})` : `(${categories.length})`}
+                Services {pagination ? `(${pagination.total})` : `(${categories.length})`}
               </h3>
-              <p className="text-sm text-gray-600">Manage service categories</p>
+              <p className="text-sm text-gray-600">Manage services</p>
             </div>
 
             <Button size="sm" onClick={handleAddCategory}>
               <KeenIcon icon="plus" className="me-2" />
-              Add Category
+              Add Service
             </Button>
           </div>
         </div>
@@ -324,7 +324,7 @@ const CategoryManagement = ({
             <Alert variant="danger" className="mb-4">
               <div className="flex items-center justify-between">
                 <span>
-                  {error?.message || 'Failed to load categories. Please try again.'}
+                  {error?.message || 'Failed to load services. Please try again.'}
                 </span>
                 <button
                   onClick={() => refetch()}
@@ -343,7 +343,7 @@ const CategoryManagement = ({
                 <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Search categories..."
+                  placeholder="Search services..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -373,14 +373,14 @@ const CategoryManagement = ({
           ) : categories.length === 0 ? (
             <div className="p-8 text-center">
               <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
-              <p className="text-gray-600">No categories found</p>
+              <p className="text-gray-600">No services found</p>
               <p className="text-sm text-gray-500 mt-2">
                 Try adjusting your search or filter criteria
               </p>
             </div>
           ) : (
             <>
-              {/* Categories Table */}
+              {/* Services Table */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -499,7 +499,7 @@ const CategoryManagement = ({
                   <div className="text-sm text-gray-600">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                    {pagination.total} categories
+                    {pagination.total} services
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -539,13 +539,13 @@ const CategoryManagement = ({
         </div>
       </div>
 
-      {/* Category Form Modal */}
+      {/* Service Form Modal */}
       <CategoryForm
         isOpen={isFormOpen}
         onClose={() => {
           setIsFormOpen(false);
           setEditingCategory(null);
-          refetch(); // Refetch categories when form closes
+          refetch(); // Refetch services when form closes
         }}
         onSave={handleSaveCategory}
         categoryData={editingCategory}
@@ -557,12 +557,12 @@ const CategoryManagement = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="trash" className="text-danger" />
-              Delete Category
+              Delete Service
             </DialogTitle>
           </DialogHeader>
           <DialogBody>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete the category <strong className="text-black">"{categoryToDelete ? categories.find(c => c.id === categoryToDelete)?.name || 'this category' : 'this category'}"</strong>?
+              Are you sure you want to delete the service <strong className="text-black">"{categoryToDelete ? categories.find(c => c.id === categoryToDelete)?.name || 'this service' : 'this service'}"</strong>?
               This action cannot be undone.
             </p>
           </DialogBody>
@@ -601,14 +601,14 @@ const CategoryManagement = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <KeenIcon icon="category" className="text-primary" />
-              {viewingCategory?.name || 'Category Details'}
+              {viewingCategory?.name || 'Service Details'}
             </DialogTitle>
           </DialogHeader>
           <DialogBody>
             {viewingCategory && (
               <div className="mt-4">
                 <div className="flex flex-col md:flex-row gap-6">
-                  {/* Category Image - Left Side */}
+                  {/* Service Image - Left Side */}
                   <div className="flex-shrink-0">
                     {(() => {
                       const imageUrl = (viewingCategory as any).image_url || (viewingCategory as any).imageUrl || (viewingCategory as any).icon_url || (viewingCategory as any).image;
@@ -633,11 +633,11 @@ const CategoryManagement = ({
                     })()}
                   </div>
 
-                  {/* Category Details - Right Side */}
+                  {/* Service Details - Right Side */}
                   <div className="flex-1 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category Name</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Service Name</div>
                         <div className="text-sm font-medium">{viewingCategory.name || 'N/A'}</div>
                       </div>
                       <div className="space-y-1">
@@ -654,7 +654,7 @@ const CategoryManagement = ({
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category ID</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Service ID</div>
                         <div className="text-sm">{viewingCategory.id || 'N/A'}</div>
                       </div>
                     </div>

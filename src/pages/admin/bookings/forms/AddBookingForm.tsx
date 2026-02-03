@@ -155,7 +155,7 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
                 </div>
 
                 <div>
-                  <Label htmlFor="serviceName">Service Name *</Label>
+                  <Label htmlFor="serviceName">Service Name1*</Label>
                   <Input
                     id="serviceName"
                     value={formData.serviceName}

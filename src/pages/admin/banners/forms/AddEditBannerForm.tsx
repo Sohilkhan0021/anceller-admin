@@ -133,20 +133,20 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
         return;
       }
 
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // Validate file size (max 1MB)
+      const maxSize = 1 * 1024 * 1024; // 1MB
       if (file.size > maxSize) {
         setErrors(prev => ({
           ...prev,
-          image: 'Image size must be less than 5MB'
+          image: 'Image size must be less than 1MB'
         }));
         return;
       }
 
       try {
-        // Compress image if it's larger than 2MB to avoid 413 errors
+        // Compress image if it's larger than 500KB to avoid 413 errors
         let processedFile = file;
-        if (file.size > 2 * 1024 * 1024) { // 2MB
+        if (file.size > 500 * 1024) { // 500KB
           // Show loading state
           setErrors(prev => ({
             ...prev,
@@ -217,10 +217,10 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
         newErrors.image = 'Only PNG, JPG, GIF, or WEBP files are allowed';
       }
 
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // Validate file size (max 1MB)
+      const maxSize = 1 * 1024 * 1024; // 1MB
       if (imageFile.size > maxSize) {
-        newErrors.image = 'Image size must be less than 5MB';
+        newErrors.image = 'Image size must be less than 1MB';
       }
     }
 
@@ -345,7 +345,7 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
                   >
                     <KeenIcon icon="image" className="text-gray-400 text-2xl mb-2" />
                     <p className="text-sm text-gray-600">Click to upload banner image</p>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP up to 5MB</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP up to 1MB</p>
                   </div>
                 )}
                 <input
