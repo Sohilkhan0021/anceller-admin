@@ -193,10 +193,18 @@ export const useDeleteCategory = (options?: {
   onSuccess?: (data: IDeleteCategoryResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<IDeleteCategoryResponse, Error, string> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (categoryId: string) => categoryService.deleteCategory(categoryId),
     {
-      onSuccess: (data) => {
+      onSuccess: (data, categoryId) => {
+        // Invalidate categories query to refresh the list
+        queryClient.invalidateQueries(['categories']);
+        // Also invalidate services query as they depend on categories
+        queryClient.invalidateQueries(['services']);
+        // Also invalidate sub-services as they depend on services which depend on categories
+        queryClient.invalidateQueries(['sub-services']);
         if (options?.onSuccess) {
           options.onSuccess(data);
         }

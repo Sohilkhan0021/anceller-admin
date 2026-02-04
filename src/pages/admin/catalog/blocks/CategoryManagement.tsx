@@ -192,7 +192,7 @@ const CategoryManagement = ({
   // Delete category mutation
   const { mutate: deleteCategory, isLoading: isDeleting } = useDeleteCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Service deleted successfully');
+      toast.success('Service deleted successfully');
       refetch();
     },
     onError: (error: Error) => {

@@ -199,6 +199,38 @@ export const useSubServiceById = (
 };
 
 /**
+ * Custom hook to create a sub-service
+ * 
+ * @returns Mutation result for creating a sub-service
+ */
+export const useCreateSubService = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, any> => {
+  const queryClient = useQueryClient();
+  
+  return useMutation(
+    (data: any) => subServiceService.createSubService(data),
+    {
+      onSuccess: (data) => {
+        // Invalidate sub-services query to refresh the list
+        queryClient.invalidateQueries(['sub-services']);
+        // Also invalidate services query in case sub-service count changed
+        queryClient.invalidateQueries(['services']);
+        if (options?.onSuccess) {
+          options.onSuccess(data);
+        }
+      },
+      onError: (error) => {
+        if (options?.onError) {
+          options.onError(error);
+        }
+      },
+    }
+  );
+};
+
+/**
  * Custom hook to delete a sub-service
  * 
  * @returns Mutation result for deleting a sub-service
@@ -207,10 +239,16 @@ export const useDeleteSubService = (options?: {
   onSuccess?: (data: IDeleteSubServiceResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<IDeleteSubServiceResponse, Error, string> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (subServiceId: string) => subServiceService.deleteSubService(subServiceId),
     {
-      onSuccess: (data) => {
+      onSuccess: (data, subServiceId) => {
+        // Invalidate sub-services query to refresh the list
+        queryClient.invalidateQueries(['sub-services']);
+        // Also invalidate the specific sub-service
+        queryClient.invalidateQueries(['sub-service', subServiceId]);
         if (options?.onSuccess) {
           options.onSuccess(data);
         }

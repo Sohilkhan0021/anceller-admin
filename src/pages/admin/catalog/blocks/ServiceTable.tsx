@@ -103,7 +103,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   // Delete service mutation
   const { mutate: deleteService, isLoading: isDeleting } = useDeleteService({
     onSuccess: (data) => {
-      toast.success(data.message || 'Sub-Service deleted successfully');
+      toast.success('Sub-Service deleted successfully');
       setDeleteDialogOpen(false);
       setServiceToDelete(null);
       refetch();

@@ -29,8 +29,7 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useSubServices, useDeleteSubService, useUpdateSubService } from '@/services';
-import { subServiceService } from '@/services/subservice.service';
+import { useSubServices, useDeleteSubService, useUpdateSubService, useCreateSubService } from '@/services';
 import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
@@ -152,20 +151,6 @@ const SubServiceManagement = ({
         setIsFormOpen(false);
         setEditingSubService(null);
 
-        // Optionally try to fetch full data for logging, but don't block on it
-        if (subServiceId) {
-          subServiceService.getSubServiceById(subServiceId)
-            .then((fullSubService) => {
-              console.log('Fetched full sub-service data after update:', fullSubService);
-              if (fullSubService?.data?.image_url) {
-                console.log('Image URL confirmed:', fullSubService.data.image_url);
-              }
-            })
-            .catch((fetchError) => {
-              console.warn('Could not fetch full sub-service data (non-critical):', fetchError);
-            });
-        }
-
         return;
       }
 
@@ -193,13 +178,25 @@ const SubServiceManagement = ({
     }
   });
 
-  // Create sub-service state
-  const [isCreating, setIsCreating] = useState(false);
+  // Create sub-service mutation
+  const { mutate: createSubService, isLoading: isCreating } = useCreateSubService({
+    onSuccess: (data) => {
+      toast.success('Item created successfully');
+      refetch(); // This will be called automatically via query invalidation, but keeping for immediate feedback
+      setIsFormOpen(false);
+      setEditingSubService(null);
+      onCreateSubService?.(data);
+    },
+    onError: (error: Error) => {
+      console.error('Error creating item:', error);
+      toast.error(error.message || 'Failed to create item');
+    }
+  });
 
   // Delete sub-service mutation
   const { mutate: deleteSubService, isLoading: isDeleting } = useDeleteSubService({
     onSuccess: (data) => {
-      toast.success(data.message || 'Item deleted successfully');
+      toast.success('Item deleted successfully');
       setDeleteDialogOpen(false);
       setSubServiceToDelete(null);
       refetch(); // Refresh the list
@@ -314,59 +311,45 @@ const SubServiceManagement = ({
     } else {
       // Create new sub-service
       console.log('handleSaveSubService - Creating new item', { subServiceData });
-      setIsCreating(true);
-      try {
-        const createData: any = {
-          service_id: subServiceData.serviceId,
-          name: subServiceData.name,
-          description: subServiceData.description || '',
-          is_active: subServiceData.status === 'active',
-          sort_order: subServiceData.displayOrder || 1,
-          base_price: subServiceData.base_price ? parseFloat(subServiceData.base_price.toString()) : 0,
-          currency: subServiceData.currency || 'INR',
-          duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
-        };
+      
+      const createData: any = {
+        service_id: subServiceData.serviceId,
+        name: subServiceData.name,
+        description: subServiceData.description || '',
+        is_active: subServiceData.status === 'active',
+        sort_order: subServiceData.displayOrder || 1,
+        base_price: subServiceData.base_price ? parseFloat(subServiceData.base_price.toString()) : 0,
+        currency: subServiceData.currency || 'INR',
+        duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
+      };
 
-        console.log('🟢 Create data prepared:', createData);
+      console.log('🟢 Create data prepared:', createData);
 
-        // Include image if uploaded
-        if (subServiceData.image instanceof File) {
-          createData.image = subServiceData.image;
-          console.log('🟢 Sub-service create: Image file provided', {
-            fileName: subServiceData.image.name,
-            fileSize: subServiceData.image.size,
-            fileType: subServiceData.image.type,
-            isFile: subServiceData.image instanceof File
-          });
-        } else if (subServiceData.image_url) {
-          createData.image_url = subServiceData.image_url;
-          console.log('🟢 Sub-service create: image_url provided', { image_url: subServiceData.image_url });
-        } else {
-          console.log('🟢 Sub-service create: No image provided');
-        }
-
-        console.log('Sub-service create: Calling API with data', {
-          hasImage: !!createData.image,
-          hasImageUrl: !!createData.image_url,
-          imageType: createData.image instanceof File ? 'File' : typeof createData.image,
-          createData
+      // Include image if uploaded
+      if (subServiceData.image instanceof File) {
+        createData.image = subServiceData.image;
+        console.log('🟢 Sub-service create: Image file provided', {
+          fileName: subServiceData.image.name,
+          fileSize: subServiceData.image.size,
+          fileType: subServiceData.image.type,
+          isFile: subServiceData.image instanceof File
         });
-
-        const response = await subServiceService.createSubService(createData);
-        console.log(' API response received:', response);
-        
-        toast.success('Item created successfully');
-        refetch();
-        setIsFormOpen(false);
-        setEditingSubService(null);
-        onCreateSubService?.(subServiceData);
-      } catch (error: any) {
-        console.error('❌ Error creating item:', error);
-        toast.error(error.message || 'Failed to create item');
-        throw error; // Re-throw to let form handle it
-      } finally {
-        setIsCreating(false);
+      } else if (subServiceData.image_url) {
+        createData.image_url = subServiceData.image_url;
+        console.log('🟢 Sub-service create: image_url provided', { image_url: subServiceData.image_url });
+      } else {
+        console.log('🟢 Sub-service create: No image provided');
       }
+
+      console.log('Sub-service create: Calling API with data', {
+        hasImage: !!createData.image,
+        hasImageUrl: !!createData.image_url,
+        imageType: createData.image instanceof File ? 'File' : typeof createData.image,
+        createData
+      });
+
+      // Use the mutation hook which will handle query invalidation automatically
+      createSubService(createData);
     }
   };
 

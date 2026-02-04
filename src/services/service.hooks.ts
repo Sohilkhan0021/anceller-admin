@@ -5,7 +5,7 @@
  * Uses React Query for data fetching, caching, and state management
  */
 
-import { useQuery, UseQueryResult, useMutation, UseMutationResult } from 'react-query';
+import { useQuery, UseQueryResult, useMutation, UseMutationResult, useQueryClient } from 'react-query';
 import { useMemo } from 'react';
 import { serviceService } from './service.service';
 import type {
@@ -164,10 +164,16 @@ export const useCreateService = (options?: {
   onSuccess?: (data: ICreateServiceResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<ICreateServiceResponse, Error, ICreateServiceRequest> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (data: ICreateServiceRequest) => serviceService.createService(data),
     {
       onSuccess: (data) => {
+        // Invalidate services query to refresh the list
+        queryClient.invalidateQueries(['services']);
+        // Also invalidate categories query in case service count changed
+        queryClient.invalidateQueries(['categories']);
         if (options?.onSuccess) {
           options.onSuccess(data);
         }
@@ -190,10 +196,18 @@ export const useUpdateService = (options?: {
   onSuccess?: (data: IUpdateServiceResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<IUpdateServiceResponse, Error, IUpdateServiceRequest> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (data: IUpdateServiceRequest) => serviceService.updateService(data),
     {
-      onSuccess: (data) => {
+      onSuccess: (data, variables) => {
+        // Invalidate services query to refresh the list
+        queryClient.invalidateQueries(['services']);
+        // Also invalidate the specific service if we have its ID
+        if (variables.id) {
+          queryClient.invalidateQueries(['service', variables.id]);
+        }
         if (options?.onSuccess) {
           options.onSuccess(data);
         }
@@ -216,10 +230,18 @@ export const useDeleteService = (options?: {
   onSuccess?: (data: IDeleteServiceResponse) => void;
   onError?: (error: Error) => void;
 }): UseMutationResult<IDeleteServiceResponse, Error, string> => {
+  const queryClient = useQueryClient();
+  
   return useMutation(
     (serviceId: string) => serviceService.deleteService(serviceId),
     {
-      onSuccess: (data) => {
+      onSuccess: (data, serviceId) => {
+        // Invalidate services query to refresh the list
+        queryClient.invalidateQueries(['services']);
+        // Also invalidate the specific service
+        queryClient.invalidateQueries(['service', serviceId]);
+        // Invalidate sub-services as they depend on services
+        queryClient.invalidateQueries(['sub-services']);
         if (options?.onSuccess) {
           options.onSuccess(data);
         }
