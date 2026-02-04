@@ -20,6 +20,13 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SubServiceForm } from '../forms/SubServiceForm';
 import {
   Dialog,
@@ -29,7 +36,7 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useSubServices, useDeleteSubService, useUpdateSubService, useCreateSubService } from '@/services';
+import { useSubServices, useDeleteSubService, useUpdateSubService, useCreateSubService, useSubServiceById } from '@/services';
 import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
@@ -70,6 +77,23 @@ const SubServiceManagement = ({
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const { services } = useServices();
+
+  // Column visibility state
+  const [columnVisibility, setColumnVisibility] = useState({
+    order: true,
+    image: true,
+    name: true,
+    service: true,
+    status: true,
+    actions: true,
+  });
+
+  const toggleColumn = (column: keyof typeof columnVisibility) => {
+    setColumnVisibility(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  };
 
   // Mock categories (for backward compatibility)
   const mockCategories = [
@@ -238,6 +262,34 @@ const SubServiceManagement = ({
     };
     setEditingSubService(subServiceWithData);
     setIsFormOpen(true);
+  };
+
+  const handleCloneSubService = async (subService: ISubService) => {
+    try {
+      // Prepare cloned data with "Copy" appended to name
+      const clonedData: any = {
+        service_id: subService.serviceId || subService.service_id || (subService as any).service?.service_id,
+        name: `${subService.name} (Copy)`,
+        description: (subService as any).description || '',
+        is_active: false, // Clone as inactive by default
+        sort_order: (subService.displayOrder || subService.display_order || (subService as any).sort_order || 1) + 1,
+        base_price: (subService as any).base_price || 0,
+        currency: (subService as any).currency || 'INR',
+        duration_minutes: (subService as any).duration_minutes || (subService as any).estimated_duration_minutes || 1,
+      };
+
+      // Include image_url if available (but not the file itself)
+      const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image;
+      if (imageUrl && typeof imageUrl === 'string') {
+        clonedData.image_url = imageUrl;
+      }
+
+      // Create the cloned item
+      createSubService(clonedData);
+    } catch (error: any) {
+      console.error('Error cloning item:', error);
+      toast.error(error.message || 'Failed to clone item');
+    }
   };
 
   const handleSaveSubService = async (subServiceData: any) => {
@@ -413,10 +465,84 @@ const SubServiceManagement = ({
               <p className="text-sm text-gray-600">Manage items (name and icon only)</p>
             </div>
 
-            <Button size="sm" onClick={handleAddSubService}>
-              <KeenIcon icon="plus" className="me-2" />
-              Add Item
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Columns Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-32">
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 max-h-[400px] overflow-y-auto">
+                  <div className="p-2 space-y-2">
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
+                        id="col-order"
+                        checked={columnVisibility.order}
+                        onCheckedChange={() => toggleColumn('order')}
+                      />
+                      <label htmlFor="col-order" className="text-sm font-medium leading-none cursor-pointer">
+                        Order
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
+                        id="col-image"
+                        checked={columnVisibility.image}
+                        onCheckedChange={() => toggleColumn('image')}
+                      />
+                      <label htmlFor="col-image" className="text-sm font-medium leading-none cursor-pointer">
+                        Image
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
+                        id="col-name"
+                        checked={columnVisibility.name}
+                        onCheckedChange={() => toggleColumn('name')}
+                      />
+                      <label htmlFor="col-name" className="text-sm font-medium leading-none cursor-pointer">
+                        Name
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
+                        id="col-service"
+                        checked={columnVisibility.service}
+                        onCheckedChange={() => toggleColumn('service')}
+                      />
+                      <label htmlFor="col-service" className="text-sm font-medium leading-none cursor-pointer">
+                        Sub-Service
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
+                        id="col-status"
+                        checked={columnVisibility.status}
+                        onCheckedChange={() => toggleColumn('status')}
+                      />
+                      <label htmlFor="col-status" className="text-sm font-medium leading-none cursor-pointer">
+                        Status
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
+                        id="col-actions"
+                        checked={columnVisibility.actions}
+                        onCheckedChange={() => toggleColumn('actions')}
+                      />
+                      <label htmlFor="col-actions" className="text-sm font-medium leading-none cursor-pointer">
+                        Actions
+                      </label>
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" onClick={handleAddSubService}>
+                <KeenIcon icon="plus" className="me-2" />
+                Add Item
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -503,12 +629,12 @@ const SubServiceManagement = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">Order</TableHead>
-                      <TableHead className="w-[80px]">Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead className="w-[100px]">Status</TableHead>
-                      <TableHead className="w-[150px]">Actions</TableHead>
+                      {columnVisibility.order && <TableHead className="w-[50px]">Order</TableHead>}
+                      {columnVisibility.image && <TableHead className="w-[80px]">Image</TableHead>}
+                      {columnVisibility.name && <TableHead>Name</TableHead>}
+                      {columnVisibility.service && <TableHead>Sub-Service</TableHead>}
+                      {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
+                      {columnVisibility.actions && <TableHead className="w-[150px]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -518,10 +644,13 @@ const SubServiceManagement = ({
 
                       return (
                         <TableRow key={subService.id}>
-                          <TableCell>
-                            <div className="text-sm font-medium text-center">{displayOrder}</div>
-                          </TableCell>
-                          <TableCell>
+                          {columnVisibility.order && (
+                            <TableCell>
+                              <div className="text-sm font-medium text-center">{displayOrder}</div>
+                            </TableCell>
+                          )}
+                          {columnVisibility.image && (
+                            <TableCell>
                             {(() => {
                               // Use sub-service's own image_url only (no fallback to icon_url)
                               const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image || (subService as any).image_path || '';
@@ -554,45 +683,63 @@ const SubServiceManagement = ({
                                 </div>
                               );
                             })()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">{subService.name || 'N/A'}</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-gray-600">
-                              {getServiceName(subService)}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusBadge(subService.status || 'inactive')}
-                              <Switch
-                                checked={subService.status === 'active'}
-                                onCheckedChange={(checked) => handleToggleStatus(subService.id, checked)}
-                                className="data-[state=checked]:bg-danger"
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditSubService(subService)}
-                              >
-                                <KeenIcon icon="pencil" className="me-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteClick(subService.id)}
-                              >
-                                <KeenIcon icon="trash" className="me-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
+                            </TableCell>
+                          )}
+                          {columnVisibility.name && (
+                            <TableCell>
+                              <div className="font-medium">{subService.name || 'N/A'}</div>
+                            </TableCell>
+                          )}
+                          {columnVisibility.service && (
+                            <TableCell>
+                              <div className="text-sm text-gray-600">
+                                {getServiceName(subService)}
+                              </div>
+                            </TableCell>
+                          )}
+                          {columnVisibility.status && (
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(subService.status || 'inactive')}
+                                <Switch
+                                  checked={subService.status === 'active'}
+                                  onCheckedChange={(checked) => handleToggleStatus(subService.id, checked)}
+                                  className="data-[state=checked]:bg-danger"
+                                />
+                              </div>
+                            </TableCell>
+                          )}
+                          {columnVisibility.actions && (
+                            <TableCell>
+                              <div className="flex items-center justify-center">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
+                                      <KeenIcon icon="dots-vertical" className="text-base" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditSubService(subService)}>
+                                      <KeenIcon icon="pencil" className="me-2" />
+                                      Edit Item
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleCloneSubService(subService)}>
+                                      <KeenIcon icon="copy" className="me-2" />
+                                      Clone Item
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeleteClick(subService.id)}
+                                      className="text-danger"
+                                      disabled={isDeleting}
+                                    >
+                                      <KeenIcon icon="trash" className="me-2" />
+                                      Delete Item
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
