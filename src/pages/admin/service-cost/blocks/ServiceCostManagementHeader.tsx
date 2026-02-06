@@ -23,7 +23,7 @@ const ServiceCostManagementHeader = ({ onCreate, activeConfig }: IServiceCostMan
         <div className="flex items-center gap-3">
           {activeConfig && (
             <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
-              <Badge variant="success" className="text-xs">
+              <Badge variant="default" className="bg-green-500 text-white text-xs">
                 Active
               </Badge>
               <span className="text-sm text-gray-700">

@@ -35,6 +35,11 @@ export const MENU_SIDEBAR: TMenuConfig = [
     path: '/admin/catalog'
   },
   {
+    title: 'MEP Management',
+    icon: 'category',
+    path: '/admin/mep'
+  },
+  {
     title: 'Coupons & Promo',
     icon: 'gift',
     path: '/admin/coupons'
@@ -63,6 +68,11 @@ export const MENU_SIDEBAR: TMenuConfig = [
     title: 'Service Cost Config',
     icon: 'calculator',
     path: '/admin/service-cost'
+  },
+  {
+    title: 'MEP Management',
+    icon: 'category',
+    path: '/admin/mep'
   },
   /* Commented out - Notifications & Support tab
   {
