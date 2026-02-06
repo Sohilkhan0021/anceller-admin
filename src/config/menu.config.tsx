@@ -59,6 +59,11 @@ export const MENU_SIDEBAR: TMenuConfig = [
     icon: 'security-user',
     path: '/admin/roles'
   },
+  {
+    title: 'Service Cost Config',
+    icon: 'calculator',
+    path: '/admin/service-cost'
+  },
   /* Commented out - Notifications & Support tab
   {
     title: 'Notifications & Support',

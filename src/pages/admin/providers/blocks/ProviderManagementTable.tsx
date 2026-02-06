@@ -30,7 +30,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { IProvider, IPaginationMeta } from '@/services/provider.types';
 import { ContentLoader } from '@/components/loaders';
 import {
-  useUpdateProviderStatus
+  useUpdateProviderStatus,
+  useDeleteProvider
 } from '@/services';
 import { toAbsoluteUrl } from '@/utils';
 
@@ -82,6 +83,15 @@ const ProviderManagementTable = ({
     },
   });
 
+  const deleteProviderMutation = useDeleteProvider({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Provider deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete provider');
+    },
+  });
+
   const handleViewProfile = (provider: IProvider) => {
     onProviderSelect(provider);
   };
@@ -121,6 +131,18 @@ const ProviderManagementTable = ({
       variant: 'success',
       illustration: '1', // Person with laptop illustration from ref
       onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'ACTIVE' }),
+    });
+  };
+
+  const handleDeleteProvider = (providerId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Provider',
+      description: 'Are you sure you want to delete this provider? This action cannot be undone. All provider data, KYC documents, and related information will be permanently removed.',
+      confirmText: 'Delete Provider',
+      variant: 'destructive',
+      illustration: '23', // Warning illustration
+      onConfirm: () => deleteProviderMutation.mutate(providerId),
     });
   };
 
@@ -365,6 +387,14 @@ const ProviderManagementTable = ({
                                   Activate Provider
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteProvider(provider.id)}
+                                className="text-danger"
+                                disabled={deleteProviderMutation.isLoading || updateStatusMutation.isLoading}
+                              >
+                                <KeenIcon icon="trash" className="me-2" />
+                                Delete Provider
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -473,9 +503,9 @@ const ProviderManagementTable = ({
                   confirmModal.onConfirm();
                   setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 }}
-                disabled={updateStatusMutation.isLoading}
+                disabled={updateStatusMutation.isLoading || deleteProviderMutation.isLoading}
               >
-                {confirmModal.confirmText}
+                {(updateStatusMutation.isLoading || deleteProviderMutation.isLoading) ? 'Processing...' : confirmModal.confirmText}
               </Button>
             </div>
           </DialogBody>

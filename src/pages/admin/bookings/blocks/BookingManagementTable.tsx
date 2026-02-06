@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { IBooking, IPaginationMeta } from '@/services/booking.types';
-import { useCancelBooking } from '@/services';
+import { useCancelBooking, useDeleteBooking } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 
 interface IBookingManagementTableProps {
@@ -70,9 +70,24 @@ const BookingManagementTable = ({
     },
   });
 
+  const deleteBookingMutation = useDeleteBooking({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Booking deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete booking');
+    },
+  });
+
   const handleCancelBooking = (bookingId: string) => {
     if (window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
       cancelBookingMutation.mutate({ bookingId, reason: 'Cancelled by admin' });
+    }
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    if (window.confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+      deleteBookingMutation.mutate(bookingId);
     }
   };
 
@@ -346,10 +361,13 @@ const BookingManagementTable = ({
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              <DropdownMenuItem onClick={() => handleRefund(booking.id)}>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteBooking(booking.id)}
+                                className="text-danger"
+                                disabled={deleteBookingMutation.isLoading}
+                              >
                                 <KeenIcon icon="trash" className="me-2" />
-                                {/* Refund / Manual Override */}
-                                delete
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

@@ -55,7 +55,7 @@ const UserManagementTable = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
-  const { updateUserStatus } = useUserManage();
+  const { updateUserStatus, deleteUser, isDeletingUser } = useUserManage();
 
   const handleViewUser = (user: IUser) => {
     onUserSelect(user);
@@ -76,15 +76,15 @@ const UserManagementTable = ({
 
   const handleConfirmDelete = async () => {
     if (userToDelete) {
-      await handleDeleteUser(userToDelete);
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
+      try {
+        await deleteUser(userToDelete);
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+      } catch (error) {
+        // Error is handled by provider (toast)
+        console.error('Failed to delete user:', error);
+      }
     }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    console.log('Delete user:', userId);
-    // delete API call in future
   };
 
 
@@ -330,9 +330,10 @@ const UserManagementTable = ({
             <Button
               variant="destructive"
               onClick={handleConfirmDelete}
+              disabled={isDeletingUser}
             >
               <KeenIcon icon="trash" className="me-2" />
-              Delete
+              {isDeletingUser ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

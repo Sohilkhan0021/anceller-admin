@@ -16,6 +16,8 @@ interface IUserManageContext {
     isUpdatingStatus: boolean;
     updateUser: (userId: string, userData: any) => Promise<void>;
     isUpdatingUser: boolean;
+    deleteUser: (userId: string) => Promise<void>;
+    isDeletingUser: boolean;
 }
 
 const UserManageContext = createContext<IUserManageContext | undefined>(undefined);
@@ -186,6 +188,23 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
         await updateUserMutation.mutateAsync({ userId, userData });
     };
 
+    const deleteUserMutation = useMutation(
+        (userId: string) => userService.deleteUser(userId),
+        {
+            onSuccess: () => {
+                toast.success('User deleted successfully');
+                queryClient.invalidateQueries(['users']);
+            },
+            onError: (error: Error) => {
+                toast.error(error.message || 'Failed to delete user');
+            }
+        }
+    );
+
+    const deleteUser = async (userId: string) => {
+        await deleteUserMutation.mutateAsync(userId);
+    };
+
     return (
         <UserManageContext.Provider value={{
             createUser,
@@ -196,7 +215,9 @@ export const UserManageProvider: React.FC<{ children: ReactNode }> = ({ children
             updateUserStatus,
             isUpdatingStatus: statusMutation.isLoading,
             updateUser,
-            isUpdatingUser: updateUserMutation.isLoading
+            isUpdatingUser: updateUserMutation.isLoading,
+            deleteUser,
+            isDeletingUser: deleteUserMutation.isLoading
         }}>
             {children}
         </UserManageContext.Provider>

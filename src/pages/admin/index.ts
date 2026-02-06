@@ -9,3 +9,4 @@ export * from './system';
 export * from './roles';
 export * from './support';
 export * from './banners';
+export * from './service-cost';

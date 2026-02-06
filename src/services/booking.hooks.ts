@@ -193,6 +193,34 @@ export const useCancelBooking = (options?: {
 };
 
 /**
+ * Hook to delete booking
+ * 
+ * @param options - Callback options for success and error handling
+ * @returns Mutation object with delete function and loading/error states
+ */
+export const useDeleteBooking = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, string> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    (bookingId: string) => bookingService.deleteBooking(bookingId),
+    {
+      onSuccess: (data) => {
+        // Invalidate bookings queries to refetch data
+        queryClient.invalidateQueries(['bookings']);
+        queryClient.invalidateQueries(['booking']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
  * Hook to update booking status
  * 
  * @param options - Callback options for success and error handling

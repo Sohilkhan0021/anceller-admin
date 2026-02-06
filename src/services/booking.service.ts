@@ -252,6 +252,39 @@ export const cancelBooking = async (
 };
 
 /**
+ * Delete booking (soft delete)
+ * 
+ * @param bookingId - ID of the booking to delete
+ * @returns Promise resolving to deletion result
+ * @throws Error if API request fails
+ */
+export const deleteBooking = async (
+  bookingId: string
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  try {
+    const response = await axios.delete<{ status: number; message: string; data?: any }>(
+      `${BOOKING_BASE_URL}/${bookingId}`
+    );
+    
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to delete booking');
+    }
+    
+    return {
+      success: true,
+      message: response.data.message || 'Booking deleted successfully',
+      data: response.data.data
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to delete booking';
+      throw new Error(errorMessage);
+    }
+    throw error;
+  }
+};
+
+/**
  * Update booking status
  * 
  * @param bookingId - ID of the booking to update
@@ -299,6 +332,7 @@ export const bookingService = {
   getBookings,
   getBookingDetail,
   cancelBooking,
+  deleteBooking,
   updateBookingStatus,
 };
 

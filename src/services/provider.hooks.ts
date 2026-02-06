@@ -282,6 +282,29 @@ export const useProviderStats = (providers: IProvider[]): {
 };
 
 /**
+ * Hook to delete provider
+ */
+export const useDeleteProvider = (options?: {
+  onSuccess?: (data: { message?: string }) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<{ message?: string }, Error, string> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    (providerId: string) => providerService.deleteProvider(providerId),
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['providers']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};
+
+/**
  * Hook to create provider
  */
 export const useCreateProvider = (options?: {

@@ -428,6 +428,39 @@ export const updateProvider = async (
 };
 
 /**
+ * Delete provider (soft delete)
+ * 
+ * @param providerId - Provider ID
+ * @returns Promise resolving to delete result
+ * @throws Error if API request fails
+ */
+export const deleteProvider = async (
+  providerId: string
+): Promise<{ message?: string }> => {
+  try {
+    const response = await axios.delete<{ status: number; message: string; data?: any }>(
+      `${PROVIDER_BASE_URL}/${providerId}`
+    );
+    
+    // Check if the response indicates an error (status 0)
+    if (response.data.status === 0 || response.data.status !== 1) {
+      throw new Error(response.data.message || 'Failed to delete provider');
+    }
+    
+    // Return data with message
+    return {
+      message: response.data.message,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to delete provider';
+      throw new Error(errorMessage);
+    }
+    throw error;
+  }
+};
+
+/**
  * Provider Service Object
  * 
  * Centralized service object for all provider-related operations
@@ -443,5 +476,6 @@ export const providerService = {
   createProvider,
   verifyKycDocument,
   updateProvider,
+  deleteProvider,
 };
 

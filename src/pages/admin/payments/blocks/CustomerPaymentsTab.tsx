@@ -207,7 +207,7 @@ const CustomerPaymentsTab = () => {
                 <SelectContent>
                   <SelectItem value="all">All Gateways</SelectItem>
                   <SelectItem value="razorpay">Razorpay</SelectItem>
-                  <SelectItem value="cash_on_delivery">Cash</SelectItem>
+                  <SelectItem value="Pay After Service">Cash</SelectItem>
                 </SelectContent>
               </Select>
             </div>

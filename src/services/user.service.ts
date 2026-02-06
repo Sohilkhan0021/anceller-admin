@@ -435,6 +435,32 @@ export const getUserSupportTickets = async (
 };
 
 /**
+ * Delete user (soft delete)
+ * 
+ * @param userId - ID of the user to delete
+ * @returns Promise resolving to delete response
+ */
+export const deleteUser = async (
+  userId: string
+): Promise<import('./user.types').IUpdateUserStatusResponse> => {
+  try {
+    const response = await axios.delete<import('./user.types').IUpdateUserStatusResponse>(
+      `${USER_BASE_URL}/${userId}`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const apiError: IApiError = error.response?.data || {
+        success: false,
+        message: error.message || 'Error deleting user',
+      };
+      throw new Error(apiError.message);
+    }
+    throw new Error('An unexpected error occurred while deleting user');
+  }
+};
+
+/**
  * User Service Object
  * 
  * Centralized service object for all user-related operations
@@ -452,9 +478,9 @@ export const userService = {
   getUserBookings,
   getUserPayments,
   getUserSupportTickets,
+  deleteUser,
   // Future methods can be added here:
   // getUserById,
-  // deleteUser,
   // blockUser,
   // unblockUser,
 };
