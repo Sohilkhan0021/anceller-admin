@@ -391,8 +391,13 @@ export const createItem = async (
     }
     const isActive = data.is_active !== undefined ? data.is_active : true;
     formData.append('is_active', isActive.toString());
-    if (data.meta_data && data.meta_data.trim()) {
-      formData.append('meta_data', data.meta_data);
+    if (data.meta_data) {
+      // Handle meta_data as object or string
+      if (typeof data.meta_data === 'object' && data.meta_data !== null) {
+        formData.append('meta_data', JSON.stringify(data.meta_data));
+      } else if (typeof data.meta_data === 'string' && data.meta_data.trim()) {
+        formData.append('meta_data', data.meta_data);
+      }
     }
 
     const response = await axios.post<ICreateMEPItemResponse>(ITEM_BASE_URL, formData, {
@@ -438,7 +443,12 @@ export const updateItem = async (
       formData.append('is_active', data.is_active.toString());
     }
     if (data.meta_data !== undefined) {
-      formData.append('meta_data', data.meta_data || '');
+      // Handle meta_data as object or string
+      if (typeof data.meta_data === 'object' && data.meta_data !== null) {
+        formData.append('meta_data', JSON.stringify(data.meta_data));
+      } else if (typeof data.meta_data === 'string') {
+        formData.append('meta_data', data.meta_data || '');
+      }
     }
 
     const response = await axios.put<IUpdateMEPItemResponse>(

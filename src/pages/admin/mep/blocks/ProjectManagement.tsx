@@ -39,7 +39,7 @@ import {
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { getImageUrl } from '@/utils/imageUrl';
-import { useProjects, useDeleteProject } from '@/services';
+import { useProjects, useDeleteProject, useUpdateProject } from '@/services';
 
 interface IProject {
   id: string;
@@ -131,11 +131,29 @@ const ProjectManagement = ({
     // So this is just a placeholder - the actual save happens in ProjectForm
   };
 
+  const updateProjectMutation = useUpdateProject({
+    onSuccess: () => {
+      toast.success('Project status updated');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update project status');
+    }
+  });
+
   const handleToggleStatus = useCallback((projectId: string, checked: boolean) => {
-    // TODO: Implement API call for status update
-    toast.success('Project status updated');
-    refetch();
-  }, [refetch]);
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    updateProjectMutation.mutate({
+      id: projectId,
+      name: project.name,
+      description: project.description || '',
+      image_url: (project as any).image_url || (project as any).imageUrl || undefined,
+      sort_order: project.displayOrder || (project as any).sort_order || 1,
+      is_active: checked
+    });
+  }, [projects, updateProjectMutation]);
 
   const handleDeleteClick = (projectId: string) => {
     setProjectToDelete(projectId);

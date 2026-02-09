@@ -154,7 +154,7 @@ export interface ICreateMEPItemRequest {
   unit?: string;
   sort_order?: number;
   is_active?: boolean;
-  meta_data?: string;
+  meta_data?: string | object;
 }
 
 export interface ICreateMEPProjectResponse {

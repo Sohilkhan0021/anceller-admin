@@ -69,11 +69,11 @@ export const MENU_SIDEBAR: TMenuConfig = [
     icon: 'calculator',
     path: '/admin/service-cost'
   },
-  {
-    title: 'MEP Management',
-    icon: 'category',
-    path: '/admin/mep'
-  },
+  // {
+  //   title: 'MEP Management',
+  //   icon: 'category',
+  //   path: '/admin/mep'
+  // },
   /* Commented out - Notifications & Support tab
   {
     title: 'Notifications & Support',

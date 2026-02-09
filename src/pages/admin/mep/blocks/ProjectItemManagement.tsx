@@ -45,7 +45,7 @@ import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { getImageUrl } from '@/utils/imageUrl';
 import { ProjectItemForm } from '../forms/ProjectItemForm';
-import { useProjects, useProjectItems, useDeleteProjectItem } from '@/services';
+import { useProjects, useProjectItems, useDeleteProjectItem, useUpdateProjectItem } from '@/services';
 
 interface IProjectItemTableProps {
   onEditProjectItem?: (projectItem: any) => void;
@@ -137,14 +137,34 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
+      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
+  const updateProjectItemMutation = useUpdateProjectItem({
+    onSuccess: () => {
+      toast.success('Project item status updated');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update project item status');
+    }
+  });
+
   const handleToggleStatus = useCallback((projectItemId: string, newStatus: boolean) => {
-    // TODO: Implement API call for status update
-    toast.success('Project item status updated');
-    refetch();
-  }, [refetch]);
+    const projectItem = projectItems.find(p => p.id === projectItemId);
+    if (!projectItem) return;
+    
+    updateProjectItemMutation.mutate({
+      id: projectItemId,
+      name: projectItem.name,
+      description: projectItem.description || '',
+      project_id: projectItem.project_id || (projectItem as any).project?.id || (projectItem as any).project?.project_id || '',
+      image_url: (projectItem as any).image_url || (projectItem as any).imageUrl || undefined,
+      sort_order: projectItem.displayOrder || (projectItem as any).sort_order || 1,
+      is_active: newStatus
+    });
+  }, [projectItems, updateProjectItemMutation]);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProjectItem, setEditingProjectItem] = useState<any>(null);

@@ -123,6 +123,7 @@ const ItemsManagement = ({
 
   const updateItemMutation = useUpdateItem({
     onSuccess: () => {
+      toast.success('Item status updated');
       refetch();
     },
     onError: (error) => {
@@ -248,10 +249,6 @@ const ItemsManagement = ({
       unit: (item as any).unit || '',
       sort_order: item.displayOrder || (item as any).sort_order || 1,
       is_active: checked
-    }, {
-      onSuccess: () => {
-        toast.success('Item status updated');
-      }
     });
   }, [items, updateItemMutation]);
 
@@ -299,6 +296,7 @@ const ItemsManagement = ({
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 2,
+      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
     }).format(price);
   };
 

@@ -181,6 +181,7 @@ const AddOnsManagement = ({
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
+      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
