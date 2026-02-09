@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useBookingDetail } from '@/services/booking.hooks';
 import { ContentLoader } from '@/components/loaders';
+import { ProviderSearchSelect } from '@/components/ProviderSearchSelect';
 
 interface IEditBookingFormProps {
   isOpen: boolean;
@@ -243,15 +244,12 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
                   </div>
 
                   <div>
-                    <Label htmlFor="providerId">Provider ID *</Label>
-                    <Input
-                      id="providerId"
+                    <ProviderSearchSelect
                       value={formData.providerId}
-                      onChange={(e) => handleInputChange('providerId', e.target.value)}
+                      onChange={(providerId) => handleInputChange('providerId', providerId)}
+                      label="Provider"
+                      placeholder="Search provider by name, phone, or ID..."
                       required
-                      maxLength={16}
-                      className="mt-2"
-                      placeholder="Enter provider ID"
                     />
                   </div>
                 </div>

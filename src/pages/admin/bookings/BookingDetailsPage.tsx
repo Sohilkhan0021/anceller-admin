@@ -22,17 +22,22 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useBookingDetail, useCancelBooking } from '@/services';
+import { useBookingDetail, useCancelBooking, useAssignProvider } from '@/services';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { formatCurrency } from '@/utils';
+import { ProviderSearchSelect } from '@/components/ProviderSearchSelect';
 
 const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState('');
+  const [assignNotes, setAssignNotes] = useState('');
   
   const { booking, isLoading, isError, error, refetch } = useBookingDetail(id || null);
   
@@ -46,6 +51,19 @@ const BookingDetailsPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to cancel booking');
+    },
+  });
+
+  const assignProviderMutation = useAssignProvider({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Provider assigned successfully');
+      setAssignDialogOpen(false);
+      setSelectedProviderId('');
+      setAssignNotes('');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to assign provider');
     },
   });
 
@@ -76,14 +94,6 @@ const BookingDetailsPage = () => {
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
-    }).format(amount);
-  };
 
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -389,7 +399,17 @@ const BookingDetailsPage = () => {
                 <div className="card-body">
                   <div className="text-center py-4">
                     <KeenIcon icon="user-tie" className="text-4xl text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">No provider assigned</p>
+                    <p className="text-sm text-gray-600 mb-4">No provider assigned</p>
+                    {booking.status && !['CANCELLED', 'COMPLETED', 'cancelled', 'completed'].includes(booking.status) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAssignDialogOpen(true)}
+                      >
+                        <KeenIcon icon="user-plus" className="me-2" />
+                        Assign Provider
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -529,6 +549,70 @@ const BookingDetailsPage = () => {
               disabled={cancelBookingMutation.isLoading}
             >
               {cancelBookingMutation.isLoading ? 'Cancelling...' : 'Confirm Cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Provider Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Provider</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Search and select a provider to assign to this booking.
+              </p>
+              <ProviderSearchSelect
+                value={selectedProviderId}
+                onChange={setSelectedProviderId}
+                label="Provider"
+                placeholder="Search provider by name, phone, or ID..."
+                required
+              />
+              <div>
+                <Label htmlFor="assignNotes">Assignment Notes (Optional)</Label>
+                <Textarea
+                  id="assignNotes"
+                  value={assignNotes}
+                  onChange={(e) => setAssignNotes(e.target.value)}
+                  placeholder="Enter any notes for this assignment..."
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAssignDialogOpen(false);
+                setSelectedProviderId('');
+                setAssignNotes('');
+              }}
+              disabled={assignProviderMutation.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!selectedProviderId) {
+                  toast.error('Please select a provider');
+                  return;
+                }
+                if (!id) return;
+                assignProviderMutation.mutate({
+                  bookingId: id,
+                  providerId: selectedProviderId,
+                  notes: assignNotes || undefined,
+                });
+              }}
+              disabled={assignProviderMutation.isLoading || !selectedProviderId}
+            >
+              {assignProviderMutation.isLoading ? 'Assigning...' : 'Assign Provider'}
             </Button>
           </DialogFooter>
         </DialogContent>

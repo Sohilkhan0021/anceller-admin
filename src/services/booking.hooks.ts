@@ -248,3 +248,32 @@ export const useUpdateBookingStatus = (options?: {
     }
   );
 };
+
+/**
+ * Hook to assign provider to booking
+ * 
+ * @param options - Callback options for success and error handling
+ * @returns Mutation object with assign function and loading/error states
+ */
+export const useAssignProvider = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { bookingId: string; providerId: string; notes?: string }> => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ bookingId, providerId, notes }: { bookingId: string; providerId: string; notes?: string }) =>
+      bookingService.assignProvider(bookingId, providerId, notes),
+    {
+      onSuccess: (data) => {
+        // Invalidate bookings queries to refetch data
+        queryClient.invalidateQueries(['bookings']);
+        queryClient.invalidateQueries(['booking']);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error);
+      },
+    }
+  );
+};

@@ -7,6 +7,7 @@
 
 import axios from 'axios';
 import { API_URL } from '@/config/api.config';
+import { getErrorMessage, isNetworkError } from '@/utils/networkError';
 import type {
   IGetBookingsParams,
   IGetBookingsResponse,
@@ -129,6 +130,11 @@ export const getBookings = async (
 
     return transformedData;
   } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
     // Handle axios errors with better error messages
     if (axios.isAxiosError(error)) {
       // Log error details for debugging
@@ -184,7 +190,7 @@ export const getBookings = async (
     }
     
     // Handle unexpected errors
-    throw new Error('An unexpected error occurred while fetching bookings');
+    throw new Error(getErrorMessage(error, 'An unexpected error occurred while fetching bookings'));
   }
 };
 
@@ -204,6 +210,11 @@ export const getBookingDetail = async (
     );
     return response.data;
   } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
     if (axios.isAxiosError(error)) {
       const apiError: IApiError = error.response?.data || {
         success: false,
@@ -211,7 +222,7 @@ export const getBookingDetail = async (
       };
       throw new Error(apiError.message);
     }
-    throw new Error('An unexpected error occurred while fetching booking details');
+    throw new Error(getErrorMessage(error, 'An unexpected error occurred while fetching booking details'));
   }
 };
 
@@ -243,11 +254,16 @@ export const cancelBooking = async (
       data: response.data.data
     };
   } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
     if (axios.isAxiosError(error)) {
       const errorMessage = error.response?.data?.message || 'Failed to cancel booking';
       throw new Error(errorMessage);
     }
-    throw error;
+    throw new Error(getErrorMessage(error, 'Failed to cancel booking'));
   }
 };
 
@@ -276,11 +292,16 @@ export const deleteBooking = async (
       data: response.data.data
     };
   } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
     if (axios.isAxiosError(error)) {
       const errorMessage = error.response?.data?.message || 'Failed to delete booking';
       throw new Error(errorMessage);
     }
-    throw error;
+    throw new Error(getErrorMessage(error, 'Failed to delete booking'));
   }
 };
 
@@ -314,11 +335,59 @@ export const updateBookingStatus = async (
       data: response.data.data
     };
   } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
     if (axios.isAxiosError(error)) {
       const errorMessage = error.response?.data?.message || 'Failed to update booking status';
       throw new Error(errorMessage);
     }
-    throw error;
+    throw new Error(getErrorMessage(error, 'Failed to update booking status'));
+  }
+};
+
+/**
+ * Assign provider to booking
+ * 
+ * @param bookingId - ID of the booking
+ * @param providerId - Provider ID (public_id or UUID)
+ * @param notes - Optional assignment notes
+ * @returns Promise resolving to assignment result
+ * @throws Error if API request fails
+ */
+export const assignProvider = async (
+  bookingId: string,
+  providerId: string,
+  notes?: string
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  try {
+    const response = await axios.post<{ status: number; message: string; data?: any }>(
+      `${BOOKING_BASE_URL}/${bookingId}/assign`,
+      { provider_id: providerId, notes: notes || null }
+    );
+    
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to assign provider');
+    }
+    
+    return {
+      success: true,
+      message: response.data.message || 'Provider assigned successfully',
+      data: response.data.data
+    };
+  } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to assign provider';
+      throw new Error(errorMessage);
+    }
+    throw new Error(getErrorMessage(error, 'Failed to assign provider'));
   }
 };
 
@@ -334,5 +403,6 @@ export const bookingService = {
   cancelBooking,
   deleteBooking,
   updateBookingStatus,
+  assignProvider,
 };
 

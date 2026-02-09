@@ -43,7 +43,12 @@ export const formatCurrency = (
     currencyDisplay: 'symbol', // Ensure symbol (₹) is displayed
   }).format(numAmount);
 
-  return formatted;
+  // Fallback: Replace "INR" or "Rs" with "₹" if browser doesn't respect currencyDisplay
+  // This ensures we never show "INR" or "Rs" to users
+  return formatted
+    .replace(/\bINR\s*/gi, '₹')
+    .replace(/\bRs\.?\s*/gi, '₹')
+    .replace(/\bRs\s+/gi, '₹');
 };
 
 /**
@@ -97,4 +102,46 @@ export const parseCurrency = (currencyString: string): number => {
   
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
+};
+
+/**
+ * Get currency symbol from currency code
+ * Converts currency codes like "INR" to their display symbols like "₹"
+ * @param currencyCode - Currency code (e.g., "INR", "USD")
+ * @returns Currency symbol (e.g., "₹", "$")
+ */
+export const getCurrencySymbol = (currencyCode: string | null | undefined): string => {
+  if (!currencyCode) return '₹'; // Default to ₹ for INR
+  
+  const currencyMap: Record<string, string> = {
+    'INR': '₹',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'CNY': '¥',
+    'AUD': 'A$',
+    'CAD': 'C$',
+  };
+  
+  return currencyMap[currencyCode.toUpperCase()] || currencyCode;
+};
+
+/**
+ * Format currency code for display
+ * Replaces currency codes with their symbols (e.g., "INR" -> "₹")
+ * @param currencyCode - Currency code or text that might contain currency codes
+ * @returns Formatted string with currency symbol
+ */
+export const formatCurrencyCode = (currencyCode: string | null | undefined): string => {
+  if (!currencyCode) return '₹';
+  
+  // Replace common currency code patterns with symbols
+  return currencyCode
+    .replace(/\bINR\b/gi, '₹')
+    .replace(/\bRs\.?\b/gi, '₹')
+    .replace(/\bRs\s+/gi, '₹')
+    .replace(/\bUSD\b/gi, '$')
+    .replace(/\bEUR\b/gi, '€')
+    .replace(/\bGBP\b/gi, '£');
 };
