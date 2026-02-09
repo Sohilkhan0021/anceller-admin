@@ -63,6 +63,11 @@ export const getImageUrl = (imagePath: string | null | undefined): string | null
     return null;
   }
 
+  // Ensure imagePath is a string
+  if (typeof imagePath !== 'string') {
+    imagePath = String(imagePath);
+  }
+
   // Clean the image path - remove any environment variable strings that might have been accidentally included
   let cleanedPath = imagePath.trim();
   

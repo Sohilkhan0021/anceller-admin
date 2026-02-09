@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -44,6 +45,7 @@ import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { getImageUrl } from '@/utils/imageUrl';
 import { ProjectItemForm } from '../forms/ProjectItemForm';
+import { useProjects, useProjectItems, useDeleteProjectItem } from '@/services';
 
 interface IProjectItemTableProps {
   onEditProjectItem?: (projectItem: any) => void;
@@ -57,10 +59,42 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [projectItems, setProjectItems] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+
+  // Fetch projects for the dropdown
+  const { projects, isLoading: isLoadingProjects } = useProjects({
+    page: 1,
+    limit: 100, // Get all projects for dropdown
+    status: 'active', // Only active projects
+  });
+
+  // Fetch project items from API
+  const { 
+    projectItems, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch, 
+    isFetching 
+  } = useProjectItems({
+    page: currentPage,
+    limit: pageSize,
+    status: projectFilter === 'all' ? '' : projectFilter,
+    project_id: projectFilter !== 'all' ? projectFilter : '',
+    search: debouncedSearch,
+  });
+
+  const deleteProjectItemMutation = useDeleteProjectItem({
+    onSuccess: () => {
+      toast.success('Project item deleted successfully');
+      setDeleteDialogOpen(false);
+      setProjectItemToDelete(null);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete project item');
+    }
+  });
 
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -76,16 +110,6 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const pagination = {
-    total: projectItems.length,
-    page: currentPage,
-    limit: pageSize,
-    totalPages: Math.ceil(projectItems.length / pageSize)
-  };
-
-  const refetch = () => {
-    // TODO: Implement API call
-  };
 
   // Column visibility state - description and popularity hidden by default
   const [columnVisibility, setColumnVisibility] = useState({
@@ -117,10 +141,10 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
   };
 
   const handleToggleStatus = useCallback((projectItemId: string, newStatus: boolean) => {
-    // TODO: Implement API call
-    setProjectItems(prev => prev.map(p => p.id === projectItemId ? { ...p, status: newStatus ? 'active' : 'inactive' } : p));
+    // TODO: Implement API call for status update
     toast.success('Project item status updated');
-  }, []);
+    refetch();
+  }, [refetch]);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProjectItem, setEditingProjectItem] = useState<any>(null);
@@ -139,21 +163,8 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
   };
 
   const handleSaveProjectItem = (projectItemData: any) => {
-    if (editingProjectItem) {
-      setProjectItems(prev => prev.map(p => p.id === editingProjectItem.id ? { ...p, ...projectItemData } : p));
-      toast.success('Project item updated successfully');
-    } else {
-      const newProjectItem: any = {
-        id: `project-item-${Date.now()}`,
-        ...projectItemData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setProjectItems(prev => [...prev, newProjectItem]);
-      toast.success('Project item created successfully');
-    }
-    setIsFormOpen(false);
-    setEditingProjectItem(null);
+    // This function is called from ProjectItemForm's onSave, but ProjectItemForm now handles mutations directly
+    // So this is just a placeholder - the actual save happens in ProjectItemForm
   };
 
   const handleDeleteClick = (projectItemId: string) => {
@@ -163,10 +174,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
 
   const handleConfirmDelete = () => {
     if (projectItemToDelete) {
-      setProjectItems(prev => prev.filter(p => p.id !== projectItemToDelete));
-      toast.success('Project item deleted successfully');
-      setDeleteDialogOpen(false);
-      setProjectItemToDelete(null);
+      deleteProjectItemMutation.mutate(projectItemToDelete);
     }
   };
 
@@ -191,33 +199,9 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
       .filter(item => item.project_id)
       .map(item => [item.project_id, {
         id: item.project_id!,
-        name: item.project_name || 'Unknown'
+        name: item.project_name || item.project?.name || 'Unknown'
       }])).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
-
-  // Client-side filtering for project (if API doesn't support it)
-  let filteredProjectItems = projectItems.filter(item => {
-    const matchesProject = projectFilter === 'all' || item.project_id === projectFilter;
-    return matchesProject;
-  });
-
-  // Sort project items (client-side sorting)
-  filteredProjectItems = [...filteredProjectItems].sort((a, b) => {
-    switch (sortBy) {
-      case 'displayOrder':
-        return (a.displayOrder || 999) - (b.displayOrder || 999);
-      case 'name':
-        return (a.name || '').localeCompare(b.name || '');
-      case 'popularity':
-        return (b.popularity || 0) - (a.popularity || 0);
-      case 'bookings':
-        return (b.bookings || 0) - (a.bookings || 0);
-      case 'revenue':
-        return (b.revenue || 0) - (a.revenue || 0);
-      default:
-        return (a.displayOrder || 999) - (b.displayOrder || 999);
-    }
-  });
 
   return (
     <div className="card max-w-full w-full overflow-hidden">
@@ -226,7 +210,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
           <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
-                Project Item Management {pagination ? `(${pagination.total})` : `(${filteredProjectItems.length})`}
+                Project Item Management {pagination ? `(${pagination.total})` : `(${projectItems.length})`}
               </h3>
               <p className="text-sm text-gray-600">Manage project item pricing and availability</p>
             </div>
@@ -238,11 +222,11 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
           </div>
 
           {/* Error State */}
-          {false && (
+          {isError && (
             <Alert variant="danger">
               <div className="flex items-center justify-between">
                 <span>
-                  Failed to load project items. Please try again.
+                  {error?.message || 'Failed to load project items. Please try again.'}
                 </span>
                 <button
                   onClick={() => refetch()}
@@ -385,7 +369,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
           <div className="p-8">
             <ContentLoader />
           </div>
-        ) : filteredProjectItems.length === 0 ? (
+        ) : projectItems.length === 0 ? (
           <div className="p-8 text-center">
             <KeenIcon icon="tag" className="text-gray-400 text-4xl mx-auto mb-4" />
             <p className="text-gray-600">No project items found</p>
@@ -396,7 +380,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
         ) : (
           <>
             <div className="scrollable-x-auto" style={{ width: '100%', maxWidth: '100%' }}>
-              <table className="caption-bottom text-sm" style={{ minWidth: '1200px' }}>
+              <Table className="caption-bottom text-sm" style={{ minWidth: '1200px' }}>
                 <TableHeader>
                   <TableRow>
                     {columnVisibility.order && <TableHead className="w-[50px] text-center">Order</TableHead>}
@@ -411,7 +395,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProjectItems.map((projectItem, index) => {
+                  {projectItems.map((projectItem, index) => {
                     const displayOrder = projectItem.displayOrder ?? (index + 1);
                     return (
                       <TableRow key={projectItem.id}>
@@ -425,7 +409,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
                             <div className="flex items-center gap-2">
                               {(() => {
                                 const imageUrl = projectItem.image_url || projectItem.imageUrl || projectItem.image || '';
-                                const fullImageUrl = getImageUrl(imageUrl);
+                                const fullImageUrl = getImageUrl(typeof imageUrl === 'string' ? imageUrl : String(imageUrl || ''));
 
                                 if (!fullImageUrl && imageUrl) {
                                   return (
@@ -552,7 +536,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
                     );
                   })}
                 </TableBody>
-              </table>
+              </Table>
             </div>
 
             {/* Pagination Controls */}
@@ -611,7 +595,7 @@ const ProjectItemManagement = ({ onEditProjectItem, onAddProjectItem }: IProject
         }}
         onSave={handleSaveProjectItem}
         projectItemData={editingProjectItem}
-        availableProjects={projects}
+        availableProjects={projects || []}
       />
 
       {/* Delete Confirmation Dialog */}

@@ -14,6 +14,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { getImageUrl } from '@/utils/imageUrl';
+import { useCreateProject, useUpdateProject } from '@/services';
 
 interface IProjectFormProps {
   isOpen: boolean;
@@ -34,6 +35,26 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDraggingImage, setIsDraggingImage] = useState(false);
+
+  const createProjectMutation = useCreateProject({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Project created successfully');
+      handleClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create project');
+    }
+  });
+
+  const updateProjectMutation = useUpdateProject({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Project updated successfully');
+      handleClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update project');
+    }
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -195,17 +216,37 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
       return;
     }
 
-    // TODO: Implement API calls
     if (projectData) {
       // Update existing project
-      toast.success('Project updated successfully');
+      const projectId = projectData.id || projectData.project_id || projectData.public_id;
+      if (!projectId) {
+        toast.error('Project ID is missing');
+        return;
+      }
+
+      updateProjectMutation.mutate({
+        id: projectId,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        image: imageFile || undefined,
+        sort_order: formData.displayOrder,
+        is_active: formData.status === 'active'
+      });
     } else {
       // Create new project
-      toast.success('Project created successfully');
+      if (!formData.name.trim()) {
+        setErrors({ name: 'Project name is required' });
+        return;
+      }
+
+      createProjectMutation.mutate({
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        image: imageFile || undefined,
+        sort_order: formData.displayOrder,
+        is_active: formData.status === 'active'
+      });
     }
-    
-    handleClose();
-    onSave?.(formData);
   };
 
   return (
@@ -357,15 +398,28 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
+                disabled={createProjectMutation.isLoading || updateProjectMutation.isLoading}
               >
                 <KeenIcon icon="cross" className="me-2" />
                 Cancel
               </Button>
               <Button 
                 type="submit"
+                disabled={createProjectMutation.isLoading || updateProjectMutation.isLoading}
               >
-                <KeenIcon icon="check" className="me-2" />
-                {projectData ? 'Update Project' : 'Create Project'}
+                {(createProjectMutation.isLoading || updateProjectMutation.isLoading) ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2">
+                      
+                    </div>
+                    {projectData ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <KeenIcon icon="check" className="me-2" />
+                    {projectData ? 'Update Project' : 'Create Project'}
+                  </>
+                )}
               </Button>
             </div>  
           </form>

@@ -39,6 +39,7 @@ import {
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { getImageUrl } from '@/utils/imageUrl';
+import { useProjects, useDeleteProject } from '@/services';
 
 interface IProject {
   id: string;
@@ -75,9 +76,25 @@ const ProjectManagement = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [projects, setProjects] = useState<IProject[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+
+  const { projects, pagination, isLoading, isError, error, refetch, isFetching } = useProjects({
+    page: currentPage,
+    limit: pageSize,
+    status: statusFilter === 'all' ? '' : statusFilter,
+    search: debouncedSearch,
+  });
+
+  const deleteProjectMutation = useDeleteProject({
+    onSuccess: () => {
+      toast.success('Project deleted successfully');
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete project');
+    }
+  });
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -88,31 +105,6 @@ const ProjectManagement = ({
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
-  // Filter projects
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = !debouncedSearch || 
-      project.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      project.description?.toLowerCase().includes(debouncedSearch.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const pagination = {
-    total: filteredProjects.length,
-    page: currentPage,
-    limit: pageSize,
-    totalPages: Math.ceil(filteredProjects.length / pageSize)
-  };
-
-  const paginatedProjects = filteredProjects.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  const refetch = () => {
-    // TODO: Implement API call
-  };
 
   // Handle status filter change
   const handleStatusFilterChange = useCallback((value: string) => {
@@ -140,10 +132,10 @@ const ProjectManagement = ({
   };
 
   const handleToggleStatus = useCallback((projectId: string, checked: boolean) => {
-    // TODO: Implement API call
-    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: checked ? 'active' : 'inactive', is_active: checked } : p));
+    // TODO: Implement API call for status update
     toast.success('Project status updated');
-  }, []);
+    refetch();
+  }, [refetch]);
 
   const handleDeleteClick = (projectId: string) => {
     setProjectToDelete(projectId);
@@ -157,24 +149,16 @@ const ProjectManagement = ({
 
   const handleConfirmDelete = () => {
     if (projectToDelete) {
-      setProjects(prev => prev.filter(p => p.id !== projectToDelete));
-      toast.success('Project deleted successfully');
-      setDeleteDialogOpen(false);
-      setProjectToDelete(null);
+      deleteProjectMutation.mutate(projectToDelete);
       onDeleteProject?.(projectToDelete);
     }
   };
 
   const handleUpdateDisplayOrder = async (projectId: string, newOrder: number) => {
     try {
-      const project = projects.find(p => p.id === projectId);
-      if (!project) {
-        toast.error('Project not found');
-        return;
-      }
-
-      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, displayOrder: newOrder } : p));
+      // TODO: Implement API call for display order update
       toast.success('Display order updated');
+      refetch();
     } catch (error: any) {
       toast.error(error.message || 'Failed to update display order');
     }
@@ -209,11 +193,11 @@ const ProjectManagement = ({
 
         <div className="card-body">
           {/* Error State */}
-          {false && (
+          {isError && (
             <Alert variant="danger" className="mb-4">
               <div className="flex items-center justify-between">
                 <span>
-                  Failed to load projects. Please try again.
+                  {error?.message || 'Failed to load projects. Please try again.'}
                 </span>
                 <button
                   onClick={() => refetch()}
@@ -259,7 +243,7 @@ const ProjectManagement = ({
             <div className="p-8">
               <ContentLoader />
             </div>
-          ) : filteredProjects.length === 0 ? (
+          ) : projects.length === 0 ? (
             <div className="p-8 text-center">
               <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
               <p className="text-gray-600">No projects found</p>
@@ -283,7 +267,7 @@ const ProjectManagement = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedProjects.map((project, index) => {
+                    {projects.map((project, index) => {
                       const displayOrder = project.displayOrder ?? (index + 1);
                       const imageUrl = project.image_url || project.imageUrl || project.icon_url || project.image;
                       const fullImageUrl = getImageUrl(imageUrl);
@@ -318,7 +302,7 @@ const ProjectManagement = ({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {Array.from({ length: pagination?.total || projects.length }, (_, index) => (
+                                {Array.from({ length: Math.max(pagination?.total || projects.length, projects.length) }, (_, index) => (
                                   <SelectItem key={index + 1} value={(index + 1).toString()}>
                                     {index + 1}
                                   </SelectItem>

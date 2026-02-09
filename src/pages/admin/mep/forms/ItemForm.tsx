@@ -20,6 +20,8 @@ import {
   DialogBody,
 } from '@/components/ui/dialog';
 import { getImageUrl } from '@/utils/imageUrl';
+import { useCreateItem, useUpdateItem } from '@/services';
+import { toast } from 'sonner';
 
 interface IItemFormProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
     description: '',
     quantity: undefined as number | undefined,
     unit: '',
+    price: undefined as number | undefined,
     status: 'active' as 'active' | 'inactive',
     displayOrder: 1
   });
@@ -44,6 +47,26 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDraggingImage, setIsDraggingImage] = useState(false);
+
+  const createItemMutation = useCreateItem({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Item created successfully');
+      handleClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create item');
+    }
+  });
+
+  const updateItemMutation = useUpdateItem({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Item updated successfully');
+      handleClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update item');
+    }
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -55,12 +78,21 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
           statusValue = itemData.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
         }
         
+        // Extract price from itemData.price or meta_data.price
+        let price = itemData.price;
+        if (!price && itemData.meta_data) {
+          if (typeof itemData.meta_data === 'object' && itemData.meta_data.price) {
+            price = typeof itemData.meta_data.price === 'number' ? itemData.meta_data.price : parseFloat(itemData.meta_data.price);
+          }
+        }
+        
         setFormData({
           name: itemData.name || '',
           project_item_id: itemData.project_item_id || itemData.project_item_id || '',
           description: itemData.description || '',
           quantity: itemData.quantity,
           unit: itemData.unit || '',
+          price: price || undefined,
           status: statusValue as 'active' | 'inactive',
           displayOrder: itemData.sort_order || itemData.displayOrder || itemData.display_order || 1
         });
@@ -79,6 +111,7 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
           description: '',
           quantity: undefined,
           unit: '',
+          price: undefined,
           status: 'active',
           displayOrder: 1
         });
@@ -200,6 +233,7 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
       description: '',
       quantity: undefined,
       unit: '',
+      price: undefined,
       status: 'active',
       displayOrder: 1
     });
@@ -217,13 +251,65 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
       return;
     }
 
-    const submitData: any = {
-      ...formData,
-      image: imageFile || undefined,
-      image_url: !imageFile && itemData ? (itemData.image_url || itemData.imageUrl || itemData.image) : undefined
-    };
+    if (itemData) {
+      // Update existing item
+      const itemId = itemData.id || itemData.item_id || itemData.public_id;
+      if (!itemId) {
+        toast.error('Item ID is missing');
+        return;
+      }
 
-    onSave(submitData);
+      // Prepare meta_data with price if provided, merge with existing meta_data
+      const existingMetaData = itemData?.meta_data || {};
+      const metaData: any = { ...existingMetaData };
+      if (formData.price !== undefined && formData.price !== null) {
+        metaData.price = formData.price;
+      } else if (formData.price === undefined || formData.price === null) {
+        // Remove price if it was cleared
+        delete metaData.price;
+      }
+      
+      updateItemMutation.mutate({
+        id: itemId,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        project_item_id: formData.project_item_id,
+        quantity: formData.quantity,
+        unit: formData.unit || undefined,
+        image: imageFile || undefined,
+        sort_order: formData.displayOrder,
+        is_active: formData.status === 'active',
+        meta_data: Object.keys(metaData).length > 0 ? metaData : undefined
+      });
+    } else {
+      // Create new item
+      if (!formData.name.trim()) {
+        setErrors({ name: 'Item name is required' });
+        return;
+      }
+      if (!formData.project_item_id) {
+        setErrors({ project_item_id: 'Project item is required' });
+        return;
+      }
+
+      // Prepare meta_data with price if provided
+      const metaData: any = {};
+      if (formData.price !== undefined && formData.price !== null) {
+        metaData.price = formData.price;
+      }
+      
+      createItemMutation.mutate({
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        project_item_id: formData.project_item_id,
+        quantity: formData.quantity,
+        unit: formData.unit || undefined,
+        image: imageFile || undefined,
+        sort_order: formData.displayOrder,
+        is_active: formData.status === 'active',
+        meta_data: Object.keys(metaData).length > 0 ? metaData : undefined
+      });
+    }
   };
 
   return (
@@ -394,6 +480,24 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
               </div>
             </div>
 
+            {/* Price */}
+            <div>
+              <Label htmlFor="price">Price (Optional)</Label>
+              <div className="relative mt-2">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.price || ''}
+                  onChange={(e) => handleInputChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  className="pl-8"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
             {/* Display Order */}
             <div>
               <Label htmlFor="displayOrder">Display Order</Label>
@@ -428,15 +532,28 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
+                disabled={createItemMutation.isLoading || updateItemMutation.isLoading}
               >
                 <KeenIcon icon="cross" className="me-2" />
                 Cancel
               </Button>
               <Button 
                 type="submit"
+                disabled={createItemMutation.isLoading || updateItemMutation.isLoading}
               >
-                <KeenIcon icon="check" className="me-2" />
-                {itemData ? 'Update Item' : 'Create Item'}
+                {(createItemMutation.isLoading || updateItemMutation.isLoading) ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2">
+                      
+                    </div>
+                    {itemData ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <KeenIcon icon="check" className="me-2" />
+                    {itemData ? 'Update Item' : 'Create Item'}
+                  </>
+                )}
               </Button>
             </div>  
           </form>

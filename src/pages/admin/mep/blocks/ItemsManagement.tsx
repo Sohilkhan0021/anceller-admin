@@ -39,6 +39,7 @@ import {
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { getImageUrl } from '@/utils/imageUrl';
+import { useProjectItems, useItems, useCreateItem, useUpdateItem, useDeleteItem } from '@/services';
 
 interface IItem {
   id: string;
@@ -48,12 +49,14 @@ interface IItem {
   description?: string;
   quantity?: number;
   unit?: string;
+  price?: number;
   status: 'active' | 'inactive';
   displayOrder?: number;
   image_url?: string;
   imageUrl?: string;
   image?: string;
   is_active?: boolean;
+  meta_data?: any;
 }
 
 interface IItemsManagementProps {
@@ -79,9 +82,65 @@ const ItemsManagement = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [items, setItems] = useState<IItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+
+  // Fetch project items for the dropdown
+  const { projectItems: fetchedProjectItems } = useProjectItems({
+    page: 1,
+    limit: 100, // Get all project items for dropdown
+    status: 'active', // Only active project items
+  });
+
+  // Use fetched project items or fallback to props
+  const availableProjectItems = fetchedProjectItems.length > 0 ? fetchedProjectItems : (projectItems || []);
+
+  // Fetch items from API
+  const { 
+    items: fetchedItems, 
+    pagination, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch, 
+    isFetching 
+  } = useItems({
+    page: currentPage,
+    limit: pageSize,
+    status: statusFilter === 'all' ? '' : statusFilter,
+    project_item_id: projectItemFilter !== 'all' ? projectItemFilter : '',
+    search: debouncedSearch,
+  });
+
+  const items = fetchedItems || [];
+
+  const createItemMutation = useCreateItem({
+    onSuccess: () => {
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create item');
+    }
+  });
+
+  const updateItemMutation = useUpdateItem({
+    onSuccess: () => {
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update item');
+    }
+  });
+
+  const deleteItemMutation = useDeleteItem({
+    onSuccess: () => {
+      toast.success('Item deleted successfully');
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete item');
+    }
+  });
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
@@ -89,6 +148,7 @@ const ItemsManagement = ({
     image: true,
     name: true,
     projectItem: true,
+    price: true,
     status: true,
     actions: true,
   });
@@ -100,14 +160,6 @@ const ItemsManagement = ({
     }));
   };
 
-  // Mock project items (for backward compatibility)
-  const mockProjectItems = [
-    { id: '1', name: 'Project Item 1' },
-    { id: '2', name: 'Project Item 2' },
-  ];
-
-  const availableProjectItems = projectItems.length > 0 ? projectItems : mockProjectItems;
-
   // Debounce search to avoid too many API calls
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -118,31 +170,6 @@ const ItemsManagement = ({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Filter items
-  const filteredItems = items.filter(item => {
-    const matchesSearch = !debouncedSearch || 
-      item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      item.description?.toLowerCase().includes(debouncedSearch.toLowerCase());
-    const matchesProjectItem = projectItemFilter === 'all' || item.project_item_id === projectItemFilter;
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchesSearch && matchesProjectItem && matchesStatus;
-  });
-
-  const pagination = {
-    total: filteredItems.length,
-    page: currentPage,
-    limit: pageSize,
-    totalPages: Math.ceil(filteredItems.length / pageSize)
-  };
-
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  const refetch = () => {
-    // TODO: Implement API call
-  };
 
   // Handle filter changes
   const handleProjectItemFilterChange = useCallback((value: string) => {
@@ -191,14 +218,12 @@ const ItemsManagement = ({
         clonedData.image_url = imageUrl;
       }
 
-      setItems(prev => [...prev, {
-        id: `item-${Date.now()}`,
-        ...clonedData,
-        status: 'inactive',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }]);
-      toast.success('Item cloned successfully');
+      // Use the create mutation to clone
+      createItemMutation.mutate(clonedData, {
+        onSuccess: () => {
+          toast.success('Item cloned successfully');
+        }
+      });
     } catch (error: any) {
       console.error('Error cloning item:', error);
       toast.error(error.message || 'Failed to clone item');
@@ -206,33 +231,29 @@ const ItemsManagement = ({
   };
 
   const handleSaveItem = async (itemData: any) => {
-    if (editingItem) {
-      // Update existing item
-      setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...itemData } : i));
-      toast.success('Item updated successfully');
-      setIsFormOpen(false);
-      setEditingItem(null);
-      onUpdateItem?.(itemData);
-    } else {
-      // Create new item
-      const newItem: IItem = {
-        id: `item-${Date.now()}`,
-        ...itemData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setItems(prev => [...prev, newItem]);
-      toast.success('Item created successfully');
-      setIsFormOpen(false);
-      setEditingItem(null);
-      onCreateItem?.(newItem);
-    }
+    // This function is called from ItemForm's onSave, but ItemForm now handles mutations directly
+    // So this is just a placeholder - the actual save happens in ItemForm
   };
 
   const handleToggleStatus = useCallback((itemId: string, checked: boolean) => {
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, status: checked ? 'active' : 'inactive', is_active: checked } : i));
-    toast.success('Item status updated');
-  }, []);
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    
+    updateItemMutation.mutate({
+      id: itemId,
+      name: item.name,
+      description: item.description || '',
+      project_item_id: item.project_item_id || '',
+      quantity: (item as any).quantity,
+      unit: (item as any).unit || '',
+      sort_order: item.displayOrder || (item as any).sort_order || 1,
+      is_active: checked
+    }, {
+      onSuccess: () => {
+        toast.success('Item status updated');
+      }
+    });
+  }, [items, updateItemMutation]);
 
   const handleDeleteClick = (itemId: string) => {
     setItemToDelete(itemId);
@@ -241,11 +262,7 @@ const ItemsManagement = ({
 
   const handleConfirmDelete = () => {
     if (itemToDelete) {
-      setItems(prev => prev.filter(i => i.id !== itemToDelete));
-      toast.success('Item deleted successfully');
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
-      onDeleteItem?.(itemToDelete);
+      deleteItemMutation.mutate(itemToDelete);
     }
   };
 
@@ -265,6 +282,24 @@ const ItemsManagement = ({
       return availableProjectItems.find(p => p.id === item.project_item_id)?.name || 'Unknown';
     }
     return 'Unknown';
+  };
+
+  const formatPrice = (item: IItem) => {
+    // Check for price in item.price, meta_data.price, or meta_data?.price
+    let price = item.price;
+    if (!price && item.meta_data) {
+      if (typeof item.meta_data === 'object' && item.meta_data.price) {
+        price = typeof item.meta_data.price === 'number' ? item.meta_data.price : parseFloat(item.meta_data.price);
+      }
+    }
+    if (!price || isNaN(price)) {
+      return '₹0';
+    }
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 2,
+    }).format(price);
   };
 
   return (
@@ -331,6 +366,16 @@ const ItemsManagement = ({
                     </div>
                     <div className="flex items-center space-x-2 px-2 py-1.5">
                       <Checkbox
+                        id="col-price"
+                        checked={columnVisibility.price}
+                        onCheckedChange={() => toggleColumn('price')}
+                      />
+                      <label htmlFor="col-price" className="text-sm font-medium leading-none cursor-pointer">
+                        Price
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 px-2 py-1.5">
+                      <Checkbox
                         id="col-status"
                         checked={columnVisibility.status}
                         onCheckedChange={() => toggleColumn('status')}
@@ -362,11 +407,11 @@ const ItemsManagement = ({
 
         <div className="card-body">
           {/* Error State */}
-          {false && (
+          {isError && (
             <Alert variant="danger" className="mb-4">
               <div className="flex items-center justify-between">
                 <span>
-                  Failed to load items. Please try again.
+                  {error?.message || 'Failed to load items. Please try again.'}
                 </span>
                 <button
                   onClick={() => refetch()}
@@ -428,7 +473,7 @@ const ItemsManagement = ({
             <div className="p-8">
               <ContentLoader />
             </div>
-          ) : filteredItems.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="p-8 text-center">
               <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
               <p className="text-gray-600">No items found</p>
@@ -447,12 +492,13 @@ const ItemsManagement = ({
                       {columnVisibility.image && <TableHead className="w-[80px]">Image</TableHead>}
                       {columnVisibility.name && <TableHead>Name</TableHead>}
                       {columnVisibility.projectItem && <TableHead>Project Item</TableHead>}
+                      {columnVisibility.price && <TableHead className="w-[120px]">Price</TableHead>}
                       {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
                       {columnVisibility.actions && <TableHead className="w-[150px]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedItems.map((item, index) => {
+                    {items.map((item, index) => {
                       const displayOrder = item.displayOrder ?? (index + 1);
 
                       return (
@@ -505,6 +551,13 @@ const ItemsManagement = ({
                             <TableCell>
                               <div className="text-sm text-gray-600">
                                 {getProjectItemName(item)}
+                              </div>
+                            </TableCell>
+                          )}
+                          {columnVisibility.price && (
+                            <TableCell>
+                              <div className="text-sm font-medium text-gray-900">
+                                {formatPrice(item)}
                               </div>
                             </TableCell>
                           )}
@@ -609,6 +662,7 @@ const ItemsManagement = ({
         onClose={() => {
           setIsFormOpen(false);
           setEditingItem(null);
+          refetch();
         }}
         onSave={handleSaveItem}
         itemData={editingItem}

@@ -89,3 +89,8 @@ export * from './banner.service';
 export * from './serviceCost.service';
 export type { IBanner, IGetBannersParams, IGetBannersResponse, IGetBannerDetailResponse, ICreateBannerRequest, ICreateBannerResponse, IUpdateBannerRequest, IUpdateBannerResponse, IDeleteBannerResponse, IPaginationMeta } from './banner.types';
 export * from './banner.hooks';
+
+// MEP Services
+export * from './mep.service';
+export * from './mep.types';
+export * from './mep.hooks';

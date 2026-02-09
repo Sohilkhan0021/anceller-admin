@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
   DialogBody,
 } from '@/components/ui/dialog';
 import { getImageUrl } from '@/utils/imageUrl';
+import { useCreateProjectItem, useUpdateProjectItem } from '@/services';
 
 interface IProjectItemFormProps {
   isOpen: boolean;
@@ -43,6 +45,26 @@ const ProjectItemForm = ({ isOpen, onClose, onSave, projectItemData, availablePr
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDraggingImage, setIsDraggingImage] = useState(false);
 
+  const createProjectItemMutation = useCreateProjectItem({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Project item created successfully');
+      handleClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create project item');
+    }
+  });
+
+  const updateProjectItemMutation = useUpdateProjectItem({
+    onSuccess: (data) => {
+      toast.success(data.message || 'Project item updated successfully');
+      handleClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update project item');
+    }
+  });
+
   useEffect(() => {
     if (isOpen) {
       if (projectItemData) {
@@ -55,7 +77,7 @@ const ProjectItemForm = ({ isOpen, onClose, onSave, projectItemData, availablePr
         
         setFormData({
           name: projectItemData.name || '',
-          project_id: projectItemData.project_id || projectItemData.project_id || '',
+          project_id: projectItemData.project_id || projectItemData.project?.id || projectItemData.project?.project_id || projectItemData.project?.public_id || '',
           description: projectItemData.description || '',
           status: statusValue as 'active' | 'inactive',
           displayOrder: projectItemData.sort_order || projectItemData.displayOrder || projectItemData.display_order || 1
@@ -209,13 +231,43 @@ const ProjectItemForm = ({ isOpen, onClose, onSave, projectItemData, availablePr
       return;
     }
 
-    const submitData: any = {
-      ...formData,
-      image: imageFile || undefined,
-      image_url: !imageFile && projectItemData ? (projectItemData.image_url || projectItemData.imageUrl || projectItemData.image) : undefined
-    };
+    if (projectItemData) {
+      // Update existing project item
+      const projectItemId = projectItemData.id || projectItemData.project_item_id || projectItemData.public_id;
+      if (!projectItemId) {
+        toast.error('Project item ID is missing');
+        return;
+      }
 
-    onSave(submitData);
+      updateProjectItemMutation.mutate({
+        id: projectItemId,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        project_id: formData.project_id,
+        image: imageFile || undefined,
+        sort_order: formData.displayOrder,
+        is_active: formData.status === 'active'
+      });
+    } else {
+      // Create new project item
+      if (!formData.name.trim()) {
+        setErrors({ name: 'Project item name is required' });
+        return;
+      }
+      if (!formData.project_id) {
+        setErrors({ project_id: 'Project is required' });
+        return;
+      }
+
+      createProjectItemMutation.mutate({
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        project_id: formData.project_id,
+        image: imageFile || undefined,
+        sort_order: formData.displayOrder,
+        is_active: formData.status === 'active'
+      });
+    }
   };
 
   return (
@@ -243,11 +295,20 @@ const ProjectItemForm = ({ isOpen, onClose, onSave, projectItemData, availablePr
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableProjects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
+                  {availableProjects.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      No projects available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    availableProjects.map((project) => (
+                      <SelectItem 
+                        key={project.id || project.project_id || project.public_id} 
+                        value={project.id || project.project_id || project.public_id}
+                      >
+                        {project.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               {errors.project_id && (
@@ -392,15 +453,28 @@ const ProjectItemForm = ({ isOpen, onClose, onSave, projectItemData, availablePr
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
+                disabled={createProjectItemMutation.isLoading || updateProjectItemMutation.isLoading}
               >
                 <KeenIcon icon="cross" className="me-2" />
                 Cancel
               </Button>
               <Button 
                 type="submit"
+                disabled={createProjectItemMutation.isLoading || updateProjectItemMutation.isLoading}
               >
-                <KeenIcon icon="check" className="me-2" />
-                {projectItemData ? 'Update Project Item' : 'Create Project Item'}
+                {(createProjectItemMutation.isLoading || updateProjectItemMutation.isLoading) ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white me-2">
+                      
+                    </div>
+                    {projectItemData ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <KeenIcon icon="check" className="me-2" />
+                    {projectItemData ? 'Update Project Item' : 'Create Project Item'}
+                  </>
+                )}
               </Button>
             </div>  
           </form>
