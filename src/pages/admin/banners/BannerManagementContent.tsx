@@ -97,6 +97,7 @@ const BannerManagementContent = () => {
         title: bannerData.title || '',
         image: bannerData.image,
         is_active: bannerData.is_active ?? true,
+        category_id: bannerData.category_id || null,
       });
 
       setIsAddFormOpen(false);
@@ -120,6 +121,7 @@ const BannerManagementContent = () => {
         image: bannerData.image,
         image_url: bannerData.image ? undefined : selectedBanner.image_url,
         is_active: bannerData.is_active ?? true,
+        category_id: bannerData.category_id !== undefined ? bannerData.category_id : selectedBanner.category_id || null,
       });
 
       setIsEditFormOpen(false);

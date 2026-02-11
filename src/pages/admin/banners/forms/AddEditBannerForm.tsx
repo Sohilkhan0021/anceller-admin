@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -13,6 +20,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { IBanner } from '@/services/banner.types';
 import { getImageUrl } from '@/utils/imageUrl';
+import { useCategories } from '@/services';
 
 interface IAddEditBannerFormProps {
   isOpen: boolean;
@@ -24,18 +32,29 @@ interface IAddEditBannerFormProps {
 const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBannerFormProps) => {
   const [formData, setFormData] = useState({
     title: '',
-    is_active: true
+    is_active: true,
+    category_id: '' as string | null
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch categories for dropdown
+  const { categories, isLoading: isLoadingCategories } = useCategories({
+    page: 1,
+    limit: 100,
+    status: 'active'
+  }, {
+    enabled: isOpen // Only fetch when form is open
+  });
+
   useEffect(() => {
     if (bannerData) {
       setFormData({
         title: bannerData.title || '',
-        is_active: bannerData.is_active ?? true
+        is_active: bannerData.is_active ?? true,
+        category_id: bannerData.category_id || null
       });
       if (bannerData.image_url) {
         const imageUrl = getImageUrl(bannerData.image_url);
@@ -46,7 +65,8 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
     } else {
       setFormData({
         title: '',
-        is_active: true
+        is_active: true,
+        category_id: null
       });
       setImagePreview(null);
     }
@@ -240,13 +260,15 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
       const submitData = {
         ...formData,
         image: imageFile,
-        banner_id: bannerData?.banner_id
+        banner_id: bannerData?.banner_id,
+        category_id: formData.category_id || null
       };
       await onSave(submitData);
       // Reset form on success
       setFormData({
         title: '',
-        is_active: true
+        is_active: true,
+        category_id: null
       });
       setImageFile(null);
       setImagePreview(null);
@@ -299,6 +321,40 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
               {errors.title && (
                 <p className="text-danger text-sm mt-1">{errors.title}</p>
               )}
+            </div>
+
+            {/* Category Selection */}
+            <div>
+              <Label htmlFor="category_id">
+                Service Category (Optional)
+              </Label>
+              <Select
+                value={formData.category_id || 'none'}
+                onValueChange={(value) => handleInputChange('category_id', value === 'none' ? null : value)}
+                disabled={isLoadingCategories}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select a service category"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (No category)</SelectItem>
+                  {categories
+                    .map((category) => {
+                      // Use public_id for API, fallback to id or category_id
+                      const categoryId = category.public_id || category.id || category.category_id;
+                      return categoryId ? { id: categoryId, name: category.name } : null;
+                    })
+                    .filter((item): item is { id: string; name: string } => item !== null)
+                    .map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select a service category to redirect users when they click this banner
+              </p>
             </div>
 
             {/* Image Upload */}

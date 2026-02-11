@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { IBanner } from '@/services/banner.types';
 import { useBannerById } from '@/services/banner.hooks';
@@ -38,6 +40,10 @@ const ViewBannerModal = ({ banner, isOpen, onClose }: IViewBannerModalProps) => 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[95vh] p-0 overflow-hidden">
+        <DialogTitle className="sr-only">View Banner</DialogTitle>
+        <DialogDescription className="sr-only">
+          View banner image: {displayBanner.title || 'Banner'}
+        </DialogDescription>
         {/* Close Button - Top Right */}
         <Button
           variant="ghost"

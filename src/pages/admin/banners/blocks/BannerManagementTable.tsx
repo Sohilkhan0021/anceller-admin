@@ -69,29 +69,30 @@ const BannerManagementTable = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Banner Title</TableHead>
-                    <TableHead>Banner Image</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {banners.map((banner) => {
-                    return (
-                      <TableRow key={banner.banner_id}>
-                        <TableCell>
-                        <div className="font-medium">{banner.title || 'N/A'}</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[200px]">Banner Title</TableHead>
+                  <TableHead className="min-w-[120px]">Banner Image</TableHead>
+                  <TableHead className="min-w-[150px]">Service</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[100px] text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {banners.map((banner) => {
+                  return (
+                    <TableRow key={banner.banner_id}>
+                      <TableCell>
+                        <div className="font-medium text-gray-900">{banner.title || 'N/A'}</div>
                       </TableCell>
                       <TableCell>
                         {banner.image_url ? (
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center">
                             <img
                               src={getImageUrl(banner.image_url) || ''}
                               alt={banner.title}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                              className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                               crossOrigin="anonymous"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"%3E%3Crect fill="%23ddd" width="64" height="64"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
@@ -102,8 +103,18 @@ const BannerManagementTable = ({
                           <span className="text-gray-400 text-sm">No image</span>
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(banner.is_active)}</TableCell>
                       <TableCell>
+                        {banner.category ? (
+                          <div className="flex items-center gap-2">
+                            <KeenIcon icon="category" className="text-primary text-sm" />
+                            <span className="text-sm text-gray-700">{banner.category.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">No category</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(banner.is_active)}</TableCell>
+                      <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">

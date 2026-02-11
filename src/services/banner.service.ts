@@ -94,6 +94,11 @@ export const getBanners = async (
       title: banner.title || '',
       image_url: banner.image_url || banner.image || '',
       is_active: banner.is_active ?? true,
+      category_id: banner.category_id || null,
+      category: banner.category ? {
+        category_id: banner.category.category_id || banner.category.public_id,
+        name: banner.category.name
+      } : null,
       created_at: banner.created_at || banner.createdAt,
       updated_at: banner.updated_at || banner.updatedAt,
     }));
@@ -131,6 +136,11 @@ export const getBannerById = async (
       title: banner.title || '',
       image_url: banner.image_url || banner.image || '',
       is_active: banner.is_active ?? true,
+      category_id: banner.category_id || null,
+      category: banner.category ? {
+        category_id: banner.category.category_id || banner.category.public_id,
+        name: banner.category.name
+      } : null,
       created_at: banner.created_at || banner.createdAt,
       updated_at: banner.updated_at || banner.updatedAt,
     };
@@ -170,6 +180,10 @@ export const createBanner = async (
 
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
+    }
+
+    if (data.category_id !== undefined && data.category_id !== null && data.category_id !== '') {
+      formData.append('category_id', data.category_id);
     }
 
     // Get auth token using the auth helper
@@ -238,6 +252,11 @@ export const updateBanner = async (
 
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
+    }
+
+    if (data.category_id !== undefined) {
+      // Allow null/empty string to clear category association
+      formData.append('category_id', data.category_id || '');
     }
 
     // Get auth token using the auth helper

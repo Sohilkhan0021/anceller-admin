@@ -12,6 +12,11 @@ export interface IBanner {
   title: string;
   image_url: string;
   is_active: boolean;
+  category_id?: string | null;
+  category?: {
+    category_id: string;
+    name: string;
+  } | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -69,6 +74,7 @@ export interface ICreateBannerRequest {
   title: string;
   image: File;
   is_active?: boolean;
+  category_id?: string | null;
 }
 
 /**
@@ -90,6 +96,7 @@ export interface IUpdateBannerRequest {
   image?: File;
   image_url?: string;
   is_active?: boolean;
+  category_id?: string | null;
 }
 
 /**

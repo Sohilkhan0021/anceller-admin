@@ -100,6 +100,11 @@ export const useBanners = (
     title: banner.title || '',
     image_url: banner.image_url || banner.image || '',
     is_active: banner.is_active ?? true,
+    category_id: banner.category_id || null,
+    category: banner.category ? {
+      category_id: banner.category.category_id || banner.category.public_id,
+      name: banner.category.name
+    } : null,
     created_at: banner.created_at || banner.createdAt,
     updated_at: banner.updated_at || banner.updatedAt,
   }));
@@ -156,7 +161,20 @@ export const useBannerById = (
     }
   );
 
-  const banner = queryResult.data?.data?.banner || null;
+  const rawBanner: any = queryResult.data?.data?.banner || null;
+  const banner: IBanner | null = rawBanner ? {
+    banner_id: rawBanner.banner_id || rawBanner.id || '',
+    title: rawBanner.title || '',
+    image_url: rawBanner.image_url || rawBanner.image || '',
+    is_active: rawBanner.is_active ?? true,
+    category_id: rawBanner.category_id || null,
+    category: rawBanner.category ? {
+      category_id: rawBanner.category.category_id || rawBanner.category.public_id || '',
+      name: rawBanner.category.name || ''
+    } : null,
+    created_at: rawBanner.created_at,
+    updated_at: rawBanner.updated_at,
+  } : null;
 
   return {
     banner,
