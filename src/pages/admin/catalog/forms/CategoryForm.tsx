@@ -35,6 +35,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useUpdateCategory, useCreateCategory } from '@/services/category.hooks';
 import { getImageUrl } from '@/utils/imageUrl';
+import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
 
 interface ICategoryFormProps {
   isOpen: boolean;
@@ -63,12 +64,12 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
 
   const createCategoryMutation = useCreateCategory({
     onSuccess: (data) => {
-      toast.success(data.message || 'Service created successfully');
+      toast.success(data.message || 'Service added successfully');
       handleClose();
       // Don't call onSave here - let CategoryManagement handle the refetch
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create service');
+      toast.error(error.message || 'Failed to add service');
     }
   });
 
@@ -180,18 +181,14 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
     
     const file = files[0];
     
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
       setErrors(prev => ({
         ...prev,
-        image: 'Please select an image file'
+        image: validation.error || 'Invalid image file'
       }));
-      return;
-    }
-    
-    // Validate file size (1MB max)
-    if (file.size > 1 * 1024 * 1024) {
-      toast.error('Maximum allowed image size is 1 MB');
+      toast.error(validation.error || 'Invalid image file');
       return;
     }
     
@@ -447,13 +444,13 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                     <p className={`text-sm ${isDraggingImage ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDraggingImage ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 1MB</p>
+                    <p className="text-xs text-gray-500">{getImageValidationHint()}</p>
                   </div>
                 )}
                 <input
                   id="image-upload"
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  accept={getAllowedImageTypesString()}
                   onChange={handleImageFileInputChange}
                   className="hidden"
                 />

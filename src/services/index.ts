@@ -90,6 +90,11 @@ export * from './serviceCost.service';
 export type { IBanner, IGetBannersParams, IGetBannersResponse, IGetBannerDetailResponse, ICreateBannerRequest, ICreateBannerResponse, IUpdateBannerRequest, IUpdateBannerResponse, IDeleteBannerResponse, IPaginationMeta } from './banner.types';
 export * from './banner.hooks';
 
+// Sub-Banner Services
+export * from './subBanner.service';
+export type { ISubBanner, IGetSubBannersParams, IGetSubBannersResponse, IGetSubBannerDetailResponse, ICreateSubBannerRequest, ICreateSubBannerResponse, IUpdateSubBannerRequest, IUpdateSubBannerResponse, IDeleteSubBannerResponse, IBannerSettings, IUpdateBannerSettingsRequest, IBannerSettingsResponse } from './subBanner.types';
+export * from './subBanner.hooks';
+
 // MEP Services
 export * from './mep.service';
 export * from './mep.types';

@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useSnackbar } from 'notistack';
 import { useCreateService } from '@/services/service.hooks';
 import { ContentLoader } from '@/components/loaders';
+import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
 
 interface IAddServiceFormProps {
   isOpen: boolean;
@@ -48,7 +49,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
 
   const createServiceMutation = useCreateService({
     onSuccess: (data) => {
-      enqueueSnackbar('Sub-Service created successfully', { 
+      enqueueSnackbar('Sub-Service added successfully', { 
         variant: 'solid', 
         state: 'success',
         icon: 'check-circle'
@@ -57,7 +58,7 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
       handleClose();
     },
     onError: (error) => {
-      enqueueSnackbar(error.message || 'Failed to create sub-service', { 
+      enqueueSnackbar(error.message || 'Failed to add sub-service', { 
         variant: 'solid', 
         state: 'danger',
         icon: 'cross-circle'
@@ -78,19 +79,10 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
     
     const file = files[0];
     
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      enqueueSnackbar('Please select an image file', { 
-        variant: 'solid', 
-        state: 'warning',
-        icon: 'information-2'
-      });
-      return;
-    }
-    
-    // Validate file size (1MB max)
-    if (file.size > 1 * 1024 * 1024) {
-      enqueueSnackbar('Image size must be less than 1MB', { 
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      enqueueSnackbar(validation.error || 'Invalid image file', { 
         variant: 'solid', 
         state: 'warning',
         icon: 'information-2'
@@ -348,13 +340,13 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
                     <p className={`text-sm ${isDragging ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDragging ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">Optional: PNG, JPG, WebP up to 1MB. You can skip this and add an image later.</p>
+                    <p className="text-xs text-gray-500">Optional: {getImageValidationHint()}. You can skip this and add an image later.</p>
                   </div>
                 )}
                 <input
                   id="image-upload"
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  accept={getAllowedImageTypesString()}
                   onChange={handleFileInputChange}
                   className="hidden"
                 />

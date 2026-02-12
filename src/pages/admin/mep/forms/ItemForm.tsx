@@ -20,6 +20,7 @@ import {
   DialogBody,
 } from '@/components/ui/dialog';
 import { getImageUrl } from '@/utils/imageUrl';
+import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
 import { useCreateItem, useUpdateItem } from '@/services';
 import { toast } from 'sonner';
 
@@ -50,11 +51,11 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
 
   const createItemMutation = useCreateItem({
     onSuccess: (data) => {
-      toast.success(data.message || 'Item created successfully');
+      toast.success(data.message || 'Item added successfully');
       handleClose();
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create item');
+      toast.error(error.message || 'Failed to add item');
     }
   });
 
@@ -142,15 +143,14 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
     
     const file = files[0];
     
-    if (!file.type.startsWith('image/')) {
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
       setErrors(prev => ({
         ...prev,
-        image: 'Please select an image file'
+        image: validation.error || 'Invalid image file'
       }));
-      return;
-    }
-    
-    if (file.size > 1 * 1024 * 1024) {
+      toast.error(validation.error || 'Invalid image file');
       return;
     }
     
@@ -436,13 +436,13 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
                     <p className={`text-sm ${isDraggingImage ? 'text-primary font-medium' : 'text-gray-600'}`}>
                       {isDraggingImage ? 'Drop image here' : 'Click to upload or drag and drop'}
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 1MB</p>
+                    <p className="text-xs text-gray-500">{getImageValidationHint()}</p>
                   </div>
                 )}
                 <input
                   id="image-upload"
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  accept={getAllowedImageTypesString()}
                   onChange={handleImageFileInputChange}
                   className="hidden"
                 />

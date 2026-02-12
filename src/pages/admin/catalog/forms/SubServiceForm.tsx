@@ -20,6 +20,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useSubServiceById } from '@/services/subservice.hooks';
 import { getImageUrl } from '@/utils/imageUrl';
+import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
 
 interface ISubServiceFormProps {
   isOpen: boolean;
@@ -168,20 +169,12 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
+      // Validate image file
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
         setErrors(prev => ({
           ...prev,
-          image: 'Please select a valid image file'
-        }));
-        return;
-      }
-
-      // Validate file size (max 1MB)
-      if (file.size > 1 * 1024 * 1024) {
-        setErrors(prev => ({
-          ...prev,
-          image: 'Image size should be less than 1MB'
+          image: validation.error || 'Invalid image file'
         }));
         return;
       }
@@ -498,7 +491,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                 <Input
                   id="image-upload"
                   type="file"
-                  accept="image/*"
+                  accept={getAllowedImageTypesString()}
                   onChange={handleImageChange}
                   className={`cursor-pointer ${errors.image ? 'border-danger' : ''}`}
                 />
@@ -506,7 +499,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                   <p className="text-danger text-sm mt-1">{errors.image}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Recommended: Square image, max 1MB (JPG, PNG, GIF)
+                  Recommended: Square image. {getImageValidationHint()}
                 </p>
               </div>
 

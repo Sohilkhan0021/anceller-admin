@@ -4,6 +4,7 @@ import { BannerManagementTable } from './blocks/BannerManagementTable';
 import { AddEditBannerForm } from './forms/AddEditBannerForm';
 import { ViewBannerModal } from './blocks/ViewBannerModal';
 import { DeleteBannerModal } from './blocks/DeleteBannerModal';
+import { BannerSettings } from './blocks/BannerSettings';
 import { useBanners } from '@/services';
 import { bannerService } from '@/services/banner.service';
 import { IBanner } from '@/services/banner.types';
@@ -161,6 +162,9 @@ const BannerManagementContent = () => {
 
   return (
     <div className="grid gap-5 lg:gap-7.5">
+      {/* Banner Settings */}
+      <BannerSettings />
+
       {/* Header with search and filters */}
       <BannerManagementHeader
         onAddBanner={handleAddBanner}
