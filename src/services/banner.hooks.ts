@@ -100,6 +100,7 @@ export const useBanners = (
     title: banner.title || '',
     image_url: banner.image_url || banner.image || '',
     is_active: banner.is_active ?? true,
+    banner_type: banner.banner_type || 'offer',
     category_id: banner.category_id || null,
     category: banner.category ? {
       category_id: banner.category.category_id || banner.category.public_id,
@@ -167,6 +168,7 @@ export const useBannerById = (
     title: rawBanner.title || '',
     image_url: rawBanner.image_url || rawBanner.image || '',
     is_active: rawBanner.is_active ?? true,
+    banner_type: rawBanner.banner_type || 'offer',
     category_id: rawBanner.category_id || null,
     category: rawBanner.category ? {
       category_id: rawBanner.category.category_id || rawBanner.category.public_id || '',

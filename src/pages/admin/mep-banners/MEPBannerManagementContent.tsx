@@ -1,24 +1,24 @@
 import { useState, useCallback } from 'react';
-import { BannerManagementHeader } from './blocks/BannerManagementHeader';
-import { BannerManagementTable } from './blocks/BannerManagementTable';
-import { AddEditBannerForm } from './forms/AddEditBannerForm';
-import { ViewBannerModal } from './blocks/ViewBannerModal';
-import { DeleteBannerModal } from './blocks/DeleteBannerModal';
-import { BannerSettings } from './blocks/BannerSettings';
-import { useBanners } from '@/services';
-import { bannerService } from '@/services/banner.service';
-import { IBanner } from '@/services/banner.types';
+import { MEPBannerManagementHeader } from './blocks/MEPBannerManagementHeader';
+import { MEPBannerManagementTable } from './blocks/MEPBannerManagementTable';
+import { AddEditMEPBannerForm } from './forms/AddEditMEPBannerForm';
+import { ViewMEPBannerModal } from './blocks/ViewMEPBannerModal';
+import { DeleteMEPBannerModal } from './blocks/DeleteMEPBannerModal';
+import { MEPBannerSettings } from './blocks/MEPBannerSettings';
+import { useMEPBanners } from '@/services';
+import { mepBannerService } from '@/services/mepBanner.service';
+import { IMEPBanner } from '@/services/mepBanner.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { toast } from 'sonner';
 
-const BannerManagementContent = () => {
+const MEPBannerManagementContent = () => {
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedBanner, setSelectedBanner] = useState<IBanner | null>(null);
-  const [bannerToDelete, setBannerToDelete] = useState<IBanner | null>(null);
+  const [selectedBanner, setSelectedBanner] = useState<IMEPBanner | null>(null);
+  const [bannerToDelete, setBannerToDelete] = useState<IMEPBanner | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
@@ -29,7 +29,7 @@ const BannerManagementContent = () => {
     status: '',
   });
 
-  // Fetch banners with filters
+  // Fetch MEP banners with filters
   const {
     banners,
     pagination,
@@ -38,7 +38,7 @@ const BannerManagementContent = () => {
     error,
     refetch,
     isFetching
-  } = useBanners({
+  } = useMEPBanners({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
@@ -50,17 +50,17 @@ const BannerManagementContent = () => {
     setIsAddFormOpen(true);
   };
 
-  const handleEditBanner = (banner: IBanner) => {
+  const handleEditBanner = (banner: IMEPBanner) => {
     setSelectedBanner(banner);
     setIsEditFormOpen(true);
   };
 
-  const handleViewBanner = (banner: IBanner) => {
+  const handleViewBanner = (banner: IMEPBanner) => {
     setSelectedBanner(banner);
     setIsViewModalOpen(true);
   };
 
-  const handleDeleteBanner = (banner: IBanner) => {
+  const handleDeleteBanner = (banner: IMEPBanner) => {
     setBannerToDelete(banner);
     setIsDeleteModalOpen(true);
   };
@@ -68,15 +68,14 @@ const BannerManagementContent = () => {
   const handleConfirmDelete = async (bannerId: string) => {
     setIsDeleting(true);
     try {
-      await bannerService.deleteBanner(bannerId);
+      await mepBannerService.deleteMEPBanner(bannerId);
+      toast.success('MEP banner deleted successfully');
       setIsDeleteModalOpen(false);
       setBannerToDelete(null);
-      // Refresh banner list after successful deletion
       await refetch();
     } catch (error: any) {
-      console.error('Failed to delete banner:', error);
-      // Error handling - you might want to show a toast notification here
-      alert(error?.message || 'Failed to delete banner. Please try again.');
+      console.error('Failed to delete MEP banner:', error);
+      toast.error(error?.message || 'Failed to delete MEP banner. Please try again.');
     } finally {
       setIsDeleting(false);
     }
@@ -91,58 +90,55 @@ const BannerManagementContent = () => {
 
   const handleSaveBanner = async (bannerData: any) => {
     try {
-      if (!bannerData.image) {
-        throw new Error('Banner image is required');
+      if (!bannerData.image && !bannerData.mep_banner_id) {
+        throw new Error('MEP banner image is required');
       }
 
-      await bannerService.createBanner({
+      await mepBannerService.createMEPBanner({
         title: bannerData.title || '',
         image: bannerData.image,
         is_active: bannerData.is_active ?? true,
         banner_type: bannerData.banner_type || 'offer',
-        category_id: bannerData.category_id || null,
       });
 
+      toast.success('MEP banner created successfully');
       setIsAddFormOpen(false);
-      // Refresh banner list after successful creation
       await refetch();
     } catch (error: any) {
-      console.error('Failed to create banner:', error);
-      // Re-throw error so form can handle it
+      console.error('Failed to create MEP banner:', error);
+      toast.error(error?.message || 'Failed to create MEP banner');
       throw error;
     }
   };
 
   const handleUpdateBanner = async (bannerData: any) => {
     try {
-      if (!selectedBanner?.banner_id) {
-        throw new Error('Banner ID is required for update');
+      if (!selectedBanner?.mep_banner_id) {
+        throw new Error('MEP banner ID is required for update');
       }
 
-      await bannerService.updateBanner(selectedBanner.banner_id, {
+      await mepBannerService.updateMEPBanner(selectedBanner.mep_banner_id, {
         title: bannerData.title || '',
         image: bannerData.image,
         image_url: bannerData.image ? undefined : selectedBanner.image_url,
         is_active: bannerData.is_active ?? true,
-        banner_type: bannerData.banner_type !== undefined ? bannerData.banner_type : selectedBanner.banner_type || 'offer',
-        category_id: bannerData.category_id !== undefined ? bannerData.category_id : selectedBanner.category_id || null,
+        banner_type: bannerData.banner_type || 'offer',
       });
 
+      toast.success('MEP banner updated successfully');
       setIsEditFormOpen(false);
       setSelectedBanner(null);
-      // Refresh banner list after successful update
       await refetch();
     } catch (error: any) {
-      console.error('Failed to update banner:', error);
-      // Re-throw error so form can handle it
+      console.error('Failed to update MEP banner:', error);
+      toast.error(error?.message || 'Failed to update MEP banner');
       throw error;
     }
   };
 
-  // Handle filter changes
   const handleFiltersChange = useCallback((newFilters: { search: string; status: string }) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, []);
 
   const handlePageChange = useCallback((page: number) => {
@@ -163,45 +159,42 @@ const BannerManagementContent = () => {
     setSelectedBanner(null);
   };
 
-  const handleBannerTypeChange = async (banner: IBanner, newType: 'offer' | 'buy_banner') => {
+  const handleBannerTypeChange = async (banner: IMEPBanner, newType: 'offer' | 'buy_banner') => {
     try {
-      if (!banner.banner_id) {
-        throw new Error('Banner ID is required');
+      if (!banner.mep_banner_id) {
+        throw new Error('MEP Banner ID is required');
       }
 
-      await bannerService.updateBanner(banner.banner_id, {
+      await mepBannerService.updateMEPBanner(banner.mep_banner_id, {
         banner_type: newType,
         image_url: banner.image_url,
       });
 
-      toast.success('Banner type updated successfully');
+      toast.success('MEP banner type updated successfully');
       // Refresh banner list after successful update
       await refetch();
     } catch (error: any) {
-      console.error('Failed to update banner type:', error);
-      toast.error(error?.message || 'Failed to update banner type. Please try again.');
+      console.error('Failed to update MEP banner type:', error);
+      toast.error(error?.message || 'Failed to update MEP banner type. Please try again.');
     }
   };
 
   return (
     <div className="grid gap-5 lg:gap-7.5">
-      {/* Banner Settings */}
-      <BannerSettings />
-
-      {/* Header with search and filters */}
-      <BannerManagementHeader
-        onAddBanner={handleAddBanner}
+      <MEPBannerManagementHeader
+        onAddMEPBanner={handleAddBanner}
         onFiltersChange={handleFiltersChange}
         initialSearch={filters.search}
         initialStatus={filters.status || 'all'}
       />
 
-      {/* Error State */}
+      <MEPBannerSettings />
+
       {isError && (
         <Alert variant="danger">
           <div className="flex items-center justify-between">
             <span>
-              {error?.message || 'Failed to load banners. Please try again.'}
+              {error?.message || 'Failed to load MEP banners. Please try again.'}
             </span>
             <button
               onClick={() => refetch()}
@@ -213,7 +206,6 @@ const BannerManagementContent = () => {
         </Alert>
       )}
 
-      {/* Loading State */}
       {isLoading && !isFetching ? (
         <div className="card">
           <div className="card-body">
@@ -221,8 +213,7 @@ const BannerManagementContent = () => {
           </div>
         </div>
       ) : (
-        /* Banner Management Table */
-        <BannerManagementTable
+        <MEPBannerManagementTable
           banners={banners}
           pagination={pagination}
           isLoading={isFetching}
@@ -234,30 +225,26 @@ const BannerManagementContent = () => {
         />
       )}
 
-      {/* Add Banner Form */}
-      <AddEditBannerForm
+      <AddEditMEPBannerForm
         isOpen={isAddFormOpen}
         onClose={handleCloseAddForm}
         onSave={handleSaveBanner}
       />
 
-      {/* Edit Banner Form */}
-      <AddEditBannerForm
+      <AddEditMEPBannerForm
         isOpen={isEditFormOpen}
         onClose={handleCloseEditForm}
         onSave={handleUpdateBanner}
-        bannerData={selectedBanner}
+        mepBannerData={selectedBanner}
       />
 
-      {/* View Banner Modal */}
-      <ViewBannerModal
+      <ViewMEPBannerModal
         banner={selectedBanner}
         isOpen={isViewModalOpen}
         onClose={handleCloseViewModal}
       />
 
-      {/* Delete Confirmation Modal */}
-      <DeleteBannerModal
+      <DeleteMEPBannerModal
         banner={bannerToDelete}
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
@@ -268,4 +255,4 @@ const BannerManagementContent = () => {
   );
 };
 
-export { BannerManagementContent };
+export { MEPBannerManagementContent };

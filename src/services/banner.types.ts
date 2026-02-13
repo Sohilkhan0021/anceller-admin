@@ -7,11 +7,14 @@
 /**
  * Banner entity interface
  */
+export type BannerType = 'offer' | 'buy_banner';
+
 export interface IBanner {
   banner_id: string;
   title: string;
   image_url: string;
   is_active: boolean;
+  banner_type?: BannerType;
   category_id?: string | null;
   category?: {
     category_id: string;
@@ -74,6 +77,7 @@ export interface ICreateBannerRequest {
   title: string;
   image: File;
   is_active?: boolean;
+  banner_type?: BannerType;
   category_id?: string | null;
 }
 
@@ -96,6 +100,7 @@ export interface IUpdateBannerRequest {
   image?: File;
   image_url?: string;
   is_active?: boolean;
+  banner_type?: BannerType;
   category_id?: string | null;
 }
 

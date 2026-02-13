@@ -76,7 +76,12 @@ const SubServiceManagement = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const { services } = useServices();
+  // Fetch all services for dropdown (use high limit to get all services)
+  const { services } = useServices({
+    page: 1,
+    limit: 200, // High limit to fetch all services for dropdown
+    status: '' // Get all statuses for dropdown
+  });
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({

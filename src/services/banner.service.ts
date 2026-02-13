@@ -94,6 +94,7 @@ export const getBanners = async (
       title: banner.title || '',
       image_url: banner.image_url || banner.image || '',
       is_active: banner.is_active ?? true,
+      banner_type: banner.banner_type || 'offer',
       category_id: banner.category_id || null,
       category: banner.category ? {
         category_id: banner.category.category_id || banner.category.public_id,
@@ -136,6 +137,7 @@ export const getBannerById = async (
       title: banner.title || '',
       image_url: banner.image_url || banner.image || '',
       is_active: banner.is_active ?? true,
+      banner_type: banner.banner_type || 'offer',
       category_id: banner.category_id || null,
       category: banner.category ? {
         category_id: banner.category.category_id || banner.category.public_id,
@@ -180,6 +182,10 @@ export const createBanner = async (
 
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
+    }
+
+    if (data.banner_type !== undefined) {
+      formData.append('banner_type', data.banner_type);
     }
 
     if (data.category_id !== undefined && data.category_id !== null && data.category_id !== '') {
@@ -252,6 +258,10 @@ export const updateBanner = async (
 
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
+    }
+
+    if (data.banner_type !== undefined) {
+      formData.append('banner_type', data.banner_type);
     }
 
     if (data.category_id !== undefined) {

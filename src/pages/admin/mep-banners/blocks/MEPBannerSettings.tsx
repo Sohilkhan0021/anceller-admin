@@ -3,22 +3,22 @@ import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useBannerSettings, useUpdateBannerSettings, useBanners, useSubBanners } from '@/services';
+import { useMEPBannerSettings, useUpdateMEPBannerSettings, useMEPBanners } from '@/services';
 import { Alert } from '@/components/alert';
 
-const BannerSettings = () => {
-  const { data: settings, isLoading, isError, error, refetch } = useBannerSettings();
+const MEPBannerSettings = () => {
+  const { data: settings, isLoading, isError, error, refetch } = useMEPBannerSettings();
   // Fetch all banners (active and inactive) to get accurate counts by type
   // Don't filter by status to get all banners for counting
-  const { banners: allBanners } = useBanners({ page: 1, limit: 200, status: '' });
+  const { banners: mepBanners } = useMEPBanners({ page: 1, limit: 200, status: '' });
   
-  const updateSettings = useUpdateBannerSettings({
+  const updateSettings = useUpdateMEPBannerSettings({
     onSuccess: () => {
       refetch();
     },
     onError: (error) => {
-      console.error('Failed to update banner settings:', error);
-      alert(error.message || 'Failed to update banner settings');
+      console.error('Failed to update MEP banner settings:', error);
+      alert(error.message || 'Failed to update MEP banner settings');
     }
   });
 
@@ -28,8 +28,8 @@ const BannerSettings = () => {
   });
   
   // Get counts by banner_type: 'offer' or null/undefined = banner, 'buy_banner' = sub-banner
-  const bannerCount = allBanners.filter(b => !b.banner_type || b.banner_type === 'offer').length;
-  const subBannerCount = allBanners.filter(b => b.banner_type === 'buy_banner').length;
+  const mepBannerCount = mepBanners.filter(b => !b.banner_type || b.banner_type === 'offer').length;
+  const mepSubBannerCount = mepBanners.filter(b => b.banner_type === 'buy_banner').length;
 
   useEffect(() => {
     if (settings) {
@@ -70,7 +70,7 @@ const BannerSettings = () => {
           <Alert variant="danger">
             <div className="flex items-center justify-between">
               <span>
-                {error?.message || 'Failed to load banner settings. Please try again.'}
+                {error?.message || 'Failed to load MEP banner settings. Please try again.'}
               </span>
               <button
                 onClick={() => refetch()}
@@ -91,15 +91,15 @@ const BannerSettings = () => {
         <div className="flex items-center gap-3">
           <KeenIcon icon="setting" className="text-primary text-2xl" />
           <div>
-            <h3 className="card-title">Banner Display Settings</h3>
-            <p className="text-sm text-gray-600">Control which banners are shown on the user dashboard</p>
+            <h3 className="card-title">MEP Banner Display Settings</h3>
+            <p className="text-sm text-gray-600">Control which MEP banners are shown on the user dashboard</p>
           </div>
         </div>
       </div>
 
       <div className="card-body">
         <div className="space-y-6">
-          {/* Banner Show/Hide Toggle */}
+          {/* MEP Banner Show/Hide Toggle */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex-1 flex items-center gap-3">
               <Switch
@@ -110,18 +110,18 @@ const BannerSettings = () => {
               />
               <div className="flex-1">
                 <Label htmlFor="banner_show" className="text-base font-medium text-gray-900 cursor-pointer">
-                  Banner ({bannerCount})
+                  MEP Banner ({mepBannerCount})
                 </Label>
                 <p className="text-sm text-gray-600 mt-1">
                   {localSettings.banner_show 
-                    ? 'Banners are currently visible on the user dashboard' 
-                    : 'Banners are currently hidden from the user dashboard'}
+                    ? 'MEP banners are currently visible on the user dashboard' 
+                    : 'MEP banners are currently hidden from the user dashboard'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Sub-Banner Show/Hide Toggle */}
+          {/* MEP Sub-Banner Show/Hide Toggle */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex-1 flex items-center gap-3">
               <Switch
@@ -132,12 +132,12 @@ const BannerSettings = () => {
               />
               <div className="flex-1">
                 <Label htmlFor="sub_banner_show" className="text-base font-medium text-gray-900 cursor-pointer">
-                  Sub-Banner ({subBannerCount})
+                  MEP Sub-Banner ({mepSubBannerCount})
                 </Label>
                 <p className="text-sm text-gray-600 mt-1">
                   {localSettings.sub_banner_show 
-                    ? 'Sub-banners are currently visible on the user dashboard' 
-                    : 'Sub-banners are currently hidden from the user dashboard'}
+                    ? 'MEP sub-banners are currently visible on the user dashboard' 
+                    : 'MEP sub-banners are currently hidden from the user dashboard'}
                 </p>
               </div>
             </div>
@@ -163,4 +163,4 @@ const BannerSettings = () => {
   );
 };
 
-export { BannerSettings };
+export { MEPBannerSettings };

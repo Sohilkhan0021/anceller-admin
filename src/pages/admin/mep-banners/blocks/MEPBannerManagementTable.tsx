@@ -16,22 +16,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { IBanner, IPaginationMeta } from '@/services/banner.types';
+import { IMEPBanner } from '@/services/mepBanner.types';
 import { ContentLoader } from '@/components/loaders';
 import { getImageUrl } from '@/utils/imageUrl';
 
-interface IBannerManagementTableProps {
-  banners: IBanner[];
-  pagination: IPaginationMeta | null;
+interface IMEPBannerManagementTableProps {
+  banners: IMEPBanner[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  } | null;
   isLoading?: boolean;
-  onViewBanner: (banner: IBanner) => void;
-  onEditBanner: (banner: IBanner) => void;
-  onDeleteBanner: (banner: IBanner) => void;
-  onBannerTypeChange?: (banner: IBanner, newType: 'offer' | 'buy_banner') => void;
+  onViewBanner: (banner: IMEPBanner) => void;
+  onEditBanner: (banner: IMEPBanner) => void;
+  onDeleteBanner: (banner: IMEPBanner) => void;
+  onBannerTypeChange?: (banner: IMEPBanner, newType: 'offer' | 'buy_banner') => void;
   onPageChange?: (page: number) => void;
 }
 
-const BannerManagementTable = ({
+const MEPBannerManagementTable = ({
   banners,
   pagination,
   isLoading = false,
@@ -40,7 +45,7 @@ const BannerManagementTable = ({
   onDeleteBanner,
   onBannerTypeChange,
   onPageChange
-}: IBannerManagementTableProps) => {
+}: IMEPBannerManagementTableProps) => {
   const getStatusBadge = (isActive: boolean) => {
     if (isActive) {
       return <Badge variant="default" className="bg-success text-white">Active</Badge>;
@@ -53,7 +58,7 @@ const BannerManagementTable = ({
     <div className="card">
       <div className="card-header">
         <h3 className="card-title">
-          Banners {pagination ? `(${pagination.total})` : banners.length > 0 ? `(${banners.length})` : ''}
+          MEP Banners {pagination ? `(${pagination.total})` : banners.length > 0 ? `(${banners.length})` : ''}
         </h3>
       </div>
 
@@ -65,9 +70,9 @@ const BannerManagementTable = ({
         ) : banners.length === 0 ? (
           <div className="p-8 text-center">
             <KeenIcon icon="image" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No banners found</p>
+            <p className="text-gray-600">No MEP banners found</p>
             <p className="text-sm text-gray-500 mt-2">
-              Click "Add a Banner" to create your first banner
+              Click "Add a MEP Banner" to create your first MEP banner
             </p>
           </div>
         ) : (
@@ -75,10 +80,9 @@ const BannerManagementTable = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Banner Title</TableHead>
+                  <TableHead className="min-w-[200px]">MEP Banner Title</TableHead>
                   <TableHead className="min-w-[120px]">Banner Image</TableHead>
                   <TableHead className="min-w-[120px]">Banner Type</TableHead>
-                  <TableHead className="min-w-[150px]">Service</TableHead>
                   <TableHead className="min-w-[100px]">Status</TableHead>
                   <TableHead className="min-w-[100px] text-right">Actions</TableHead>
                 </TableRow>
@@ -86,7 +90,7 @@ const BannerManagementTable = ({
               <TableBody>
                 {banners.map((banner) => {
                   return (
-                    <TableRow key={banner.banner_id}>
+                    <TableRow key={banner.mep_banner_id}>
                       <TableCell>
                         <div className="font-medium text-gray-900">{banner.title || 'N/A'}</div>
                       </TableCell>
@@ -113,8 +117,8 @@ const BannerManagementTable = ({
                             <div className="flex items-center space-x-2">
                               <input
                                 type="radio"
-                                id={`banner_type_offer_${banner.banner_id}`}
-                                name={`banner_type_${banner.banner_id}`}
+                                id={`mep_banner_type_offer_${banner.mep_banner_id}`}
+                                name={`mep_banner_type_${banner.mep_banner_id}`}
                                 value="offer"
                                 checked={!banner.banner_type || banner.banner_type === 'offer'}
                                 onChange={() => onBannerTypeChange?.(banner, 'offer')}
@@ -122,7 +126,7 @@ const BannerManagementTable = ({
                                 disabled={isLoading}
                               />
                               <Label 
-                                htmlFor={`banner_type_offer_${banner.banner_id}`} 
+                                htmlFor={`mep_banner_type_offer_${banner.mep_banner_id}`} 
                                 className="font-normal cursor-pointer text-sm"
                               >
                                 Offer
@@ -131,8 +135,8 @@ const BannerManagementTable = ({
                             <div className="flex items-center space-x-2">
                               <input
                                 type="radio"
-                                id={`banner_type_buy_${banner.banner_id}`}
-                                name={`banner_type_${banner.banner_id}`}
+                                id={`mep_banner_type_buy_${banner.mep_banner_id}`}
+                                name={`mep_banner_type_${banner.mep_banner_id}`}
                                 value="buy_banner"
                                 checked={banner.banner_type === 'buy_banner'}
                                 onChange={() => onBannerTypeChange?.(banner, 'buy_banner')}
@@ -140,7 +144,7 @@ const BannerManagementTable = ({
                                 disabled={isLoading}
                               />
                               <Label 
-                                htmlFor={`banner_type_buy_${banner.banner_id}`} 
+                                htmlFor={`mep_banner_type_buy_${banner.mep_banner_id}`} 
                                 className="font-normal cursor-pointer text-sm"
                               >
                                 Buy Banner
@@ -148,16 +152,6 @@ const BannerManagementTable = ({
                             </div>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {banner.category ? (
-                          <div className="flex items-center gap-2">
-                            <KeenIcon icon="category" className="text-primary text-sm" />
-                            <span className="text-sm text-gray-700">{banner.category.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm italic">No category</span>
-                        )}
                       </TableCell>
                       <TableCell>{getStatusBadge(banner.is_active)}</TableCell>
                       <TableCell className="text-right">
@@ -195,22 +189,21 @@ const BannerManagementTable = ({
         )}
       </div>
 
-      {/* Pagination Controls */}
-      {pagination && (
+      {pagination && pagination.totalPages > 1 && (
         <div className="card-footer">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="text-sm text-gray-600">
               Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
               {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-              {pagination.total} banners
+              {pagination.total} MEP banners
             </div>
-            {pagination.totalPages > 1 && onPageChange && (
+            {onPageChange && (
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onPageChange(pagination.page - 1)}
-                  disabled={!pagination.hasPreviousPage || isLoading}
+                  disabled={pagination.page <= 1 || isLoading}
                 >
                   <KeenIcon icon="arrow-left" className="me-1" />
                   Previous
@@ -222,7 +215,7 @@ const BannerManagementTable = ({
                   variant="outline"
                   size="sm"
                   onClick={() => onPageChange(pagination.page + 1)}
-                  disabled={!pagination.hasNextPage || isLoading}
+                  disabled={pagination.page >= pagination.totalPages || isLoading}
                 >
                   Next
                   <KeenIcon icon="arrow-right" className="ms-1" />
@@ -236,4 +229,4 @@ const BannerManagementTable = ({
   );
 };
 
-export { BannerManagementTable };
+export { MEPBannerManagementTable };

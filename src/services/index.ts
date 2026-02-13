@@ -95,6 +95,11 @@ export * from './subBanner.service';
 export type { ISubBanner, IGetSubBannersParams, IGetSubBannersResponse, IGetSubBannerDetailResponse, ICreateSubBannerRequest, ICreateSubBannerResponse, IUpdateSubBannerRequest, IUpdateSubBannerResponse, IDeleteSubBannerResponse, IBannerSettings, IUpdateBannerSettingsRequest, IBannerSettingsResponse } from './subBanner.types';
 export * from './subBanner.hooks';
 
+// MEP Banner Services
+export * from './mepBanner.service';
+export type { IMEPBanner, IGetMEPBannersParams, IGetMEPBannersResponse, IGetMEPBannerDetailResponse, ICreateMEPBannerRequest, ICreateMEPBannerResponse, IUpdateMEPBannerRequest, IUpdateMEPBannerResponse, IDeleteMEPBannerResponse, IMEPBannerSettings, IUpdateMEPBannerSettingsRequest, MEPBannerType } from './mepBanner.types';
+export * from './mepBanner.hooks';
+
 // MEP Services
 export * from './mep.service';
 export * from './mep.types';

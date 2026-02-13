@@ -55,9 +55,9 @@ export const MENU_SIDEBAR: TMenuConfig = [
     path: '/admin/banners'
   },
   {
-    title: 'Sub-Banner Management',
+    title: 'MEP Banner Management',
     icon: 'abstract-41',
-    path: '/admin/sub-banners'
+    path: '/admin/mep-banners'
   },
   {
     title: 'System Settings',
