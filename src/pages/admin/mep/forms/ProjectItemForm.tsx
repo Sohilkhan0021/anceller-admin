@@ -161,6 +161,11 @@ const ProjectItemForm = ({ isOpen, onClose, onSave, projectItemData, availablePr
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    // Set image_url to null in formData so backend deletes the file
+    setFormData(prev => ({
+      ...prev,
+      image_url: null
+    }));
   };
 
   const handleImageDragEnter = useCallback((e: React.DragEvent) => {

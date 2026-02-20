@@ -399,6 +399,7 @@ export const useItems = (
     limit = 10,
     status = '',
     project_item_id = '',
+    sub_service_id = '',
     search = '',
   } = params;
 
@@ -413,12 +414,15 @@ export const useItems = (
   if (project_item_id && project_item_id.trim() !== '') {
     queryParams.project_item_id = project_item_id;
   }
+  if (sub_service_id && sub_service_id.trim() !== '') {
+    queryParams.sub_service_id = sub_service_id;
+  }
   if (search && search.trim() !== '') {
     queryParams.search = search;
   }
 
   const queryResult: UseQueryResult<IGetMEPItemsResponse, Error> = useQuery(
-    ['mep-items', page, limit, status, project_item_id, search],
+    ['mep-items', page, limit, status, project_item_id, sub_service_id, search],
     () => mepService.getItems(queryParams),
     {
       enabled: options?.enabled !== false,

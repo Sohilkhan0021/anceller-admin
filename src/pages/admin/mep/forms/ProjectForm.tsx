@@ -29,7 +29,8 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
     name: '',
     description: '',
     status: 'active' as 'active' | 'inactive',
-    displayOrder: 1
+    displayOrder: 1,
+    image_url: undefined as string | null | undefined
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -71,7 +72,8 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
           name: projectData.name || '',
           description: projectData.description || '',
           status: statusValue as 'active' | 'inactive',
-          displayOrder: projectData.sort_order || projectData.displayOrder || projectData.display_order || 1
+          displayOrder: projectData.sort_order || projectData.displayOrder || projectData.display_order || 1,
+          image_url: projectData.image_url || projectData.imageUrl || projectData.image || undefined
         });
         
         const imageUrl = projectData.image_url || projectData.imageUrl || projectData.image;
@@ -86,7 +88,8 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
           name: '',
           description: '',
           status: 'active',
-          displayOrder: 1
+          displayOrder: 1,
+          image_url: undefined
         });
         setImagePreview(null);
       }
@@ -150,6 +153,11 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    // Set image_url to null in formData so backend deletes the file
+    setFormData(prev => ({
+      ...prev,
+      image_url: null
+    }));
   };
 
   const handleImageDragEnter = useCallback((e: React.DragEvent) => {
@@ -199,7 +207,8 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
       name: '',
       description: '',
       status: 'active',
-      displayOrder: 1
+      displayOrder: 1,
+      image_url: undefined
     });
     setImagePreview(null);
     setImageFile(null);
@@ -223,11 +232,26 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
         return;
       }
 
+      // Handle image deletion: if image_url is null, send null to delete; if new file, don't send image_url
+      let imageUrlValue: string | null | undefined;
+      if (imageFile) {
+        // New file uploaded - don't send image_url (file takes precedence)
+        imageUrlValue = undefined;
+      } else if (formData.image_url !== undefined) {
+        // image_url was explicitly set (could be null for deletion, or a string to keep existing)
+        imageUrlValue = formData.image_url;
+      } else {
+        // No change - keep existing image_url
+        imageUrlValue = projectData?.image_url || undefined;
+      }
+      
       updateProjectMutation.mutate({
         id: projectId,
         name: formData.name.trim(),
         description: formData.description?.trim() || '',
         image: imageFile || undefined,
+        // Send null to delete image, undefined to keep existing, or string to set specific URL
+        image_url: imageUrlValue as string | undefined,
         sort_order: formData.displayOrder,
         is_active: formData.status === 'active'
       });

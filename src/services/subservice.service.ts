@@ -327,9 +327,17 @@ export const updateSubService = async (
       }
     } else if (data.image_url !== undefined) {
       // Always send image_url if provided (even if null/empty to clear it)
-      formData.append('image_url', data.image_url || '');
+      // IMPORTANT: Send the string 'null' when image_url is null, so backend can detect deletion
+      // Backend service checks: if (data.image_url === null || data.image_url === '' || data.image_url === 'null')
+      // FormData converts null to string 'null', so we explicitly send 'null' string
+      const imageUrlValue = data.image_url === null ? 'null' : (data.image_url || '');
+      formData.append('image_url', imageUrlValue);
       if (import.meta.env.DEV) {
-        console.log('Sub-service update: Sending image_url', { image_url: data.image_url });
+        console.log('Sub-service update: Sending image_url', { 
+          image_url: data.image_url, 
+          sending_value: imageUrlValue,
+          note: data.image_url === null ? 'Sending string "null" to delete image' : 'Sending image URL'
+        });
       }
     }
     

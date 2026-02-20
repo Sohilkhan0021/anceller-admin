@@ -218,6 +218,14 @@ export const updateService = async (
       formData.append('image', data.image);
     }
 
+    if (data.image_url !== undefined) {
+      // IMPORTANT: Send the string 'null' when image_url is null, so backend can detect deletion
+      // Backend service checks: if (data.image_url === null || data.image_url === '' || data.image_url === 'null')
+      // FormData converts null to string 'null', so we explicitly send 'null' string
+      const imageUrlValue = data.image_url === null ? 'null' : (data.image_url || '');
+      formData.append('image_url', imageUrlValue);
+    }
+
     if (data.is_active !== undefined) {
       formData.append('is_active', data.is_active.toString());
     }

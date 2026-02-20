@@ -39,7 +39,7 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useServices, useDeleteService, useUpdateService } from '@/services';
+import { useServices, useDeleteService, useUpdateService, useCategories } from '@/services';
 import { IService } from '@/services/service.types';
 import { toast } from 'sonner';
 import { ContentLoader } from '@/components/loaders';
@@ -53,7 +53,7 @@ interface IServiceTableProps {
 
 const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const [sortBy, setSortBy] = useState('displayOrder');
-  const [subServiceFilter, setSubServiceFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
@@ -73,6 +73,16 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Fetch all services (categories) for dropdown filter
+  const { categories: allCategories, isLoading: isLoadingCategories } = useCategories({
+    page: 1,
+    limit: 1000, // Very high limit to get all services for dropdown (no pagination)
+    status: '' // Get all statuses for dropdown
+  });
+
+  // Ensure categories (services) is always an array
+  const availableServices = Array.isArray(allCategories) ? allCategories : [];
 
   // Fetch services with filters
   const {
@@ -223,20 +233,10 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   };
 
 
-  // Extract unique sub-services from services for filter dropdown
-  const uniqueSubServices = Array.from(
-    new Map(services
-      .filter(service => service.subServiceId)
-      .map(service => [service.subServiceId, {
-        id: service.subServiceId!,
-        name: service.subServiceName || 'Unknown'
-      }])).values()
-  ).sort((a, b) => a.name.localeCompare(b.name));
-
-  // Client-side filtering for sub-service (if API doesn't support it)
+  // Client-side filtering for service (category) - filter by service/category
   let filteredServices = services.filter(service => {
-    const matchesSubService = subServiceFilter === 'all' || service.subServiceId === subServiceFilter;
-    return matchesSubService;
+    const matchesService = serviceFilter === 'all' || service.categoryId === serviceFilter || service.id === serviceFilter;
+    return matchesService;
   });
 
   // Sort services (client-side sorting)
@@ -307,17 +307,29 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               />
             </div>
 
-            <Select value={subServiceFilter} onValueChange={setSubServiceFilter}>
+            <Select value={serviceFilter} onValueChange={setServiceFilter}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="All Sub-Services" />
+                <SelectValue placeholder="All Services" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Sub-Services</SelectItem>
-                {uniqueSubServices.map((subService) => (
-                  <SelectItem key={subService.id} value={subService.id}>
-                    {subService.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">All Services</SelectItem>
+                {isLoadingCategories ? (
+                  <SelectItem value="loading" disabled>Loading services...</SelectItem>
+                ) : availableServices && Array.isArray(availableServices) && availableServices.length > 0 ? (
+                  availableServices.map((service) => {
+                    const serviceId = service.id || service.public_id || service.category_id;
+                    const serviceName = service.name;
+                    // Ensure serviceId is a string (not undefined)
+                    if (!serviceId) return null;
+                    return (
+                      <SelectItem key={serviceId} value={serviceId}>
+                        {serviceName}
+                      </SelectItem>
+                    );
+                  }).filter(Boolean)
+                ) : (
+                  <SelectItem value="no-services" disabled>No services available</SelectItem>
+                )}
               </SelectContent>
             </Select>
 

@@ -38,7 +38,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     categoryId: '',
     icon: 'category', // Keep for backward compatibility
     image: null as File | null,
-    image_url: '',
+    image_url: '' as string | null,
     status: 'active' as 'active' | 'inactive',
     displayOrder: 1,
     base_price: '' as string | number,
@@ -81,9 +81,16 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         const serviceId = apiData.service?.service_id || apiData.service_id || '';
         // Use sub-service's own image_url - handle null, undefined, and empty string
         // image_url can be null (explicitly cleared), undefined (not set), or a string (URL)
-        const imageUrl = apiData.image_url !== undefined && apiData.image_url !== null && apiData.image_url !== '' 
-          ? apiData.image_url 
-          : (apiData.image || apiData.imageUrl || apiData.image_path || '');
+        // IMPORTANT: If image_url is explicitly null, preserve it (don't fallback to other fields)
+        let imageUrl: string | null = null;
+        if (apiData.image_url !== undefined) {
+          // image_url is explicitly set (could be null, empty string, or a URL)
+          imageUrl = apiData.image_url === null ? null : (apiData.image_url || null);
+        } else {
+          // image_url is undefined, try fallback fields
+          const fallbackUrl = apiData.image || apiData.imageUrl || apiData.image_path;
+          imageUrl = fallbackUrl ? (typeof fallbackUrl === 'string' ? fallbackUrl : null) : null;
+        }
         
         setFormData({
           name: apiData.name || '',
@@ -99,13 +106,26 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           duration_minutes: apiData.duration_minutes || apiData.estimated_duration_minutes || ''
         });
         
-        // Set image preview if image exists
-        const fullImageUrl = getImageUrl(imageUrl);
-        setImagePreview(fullImageUrl);
+        // Set image preview if image exists (only if imageUrl is a non-empty string)
+        if (imageUrl && imageUrl !== '' && imageUrl !== null) {
+          const fullImageUrl = getImageUrl(imageUrl);
+          setImagePreview(fullImageUrl);
+        } else {
+          setImagePreview(null);
+        }
       } else if (subServiceData && subServiceData.name) {
         // Fallback to passed subServiceData (for backward compatibility)
         // Use sub-service's own image_url only (no fallback to icon_url)
-        const imageUrl = subServiceData.image_url || subServiceData.imageUrl || subServiceData.image || subServiceData.image_path || '';
+        // IMPORTANT: If image_url is explicitly null, preserve it (don't fallback to other fields)
+        let imageUrl: string | null = null;
+        if (subServiceData.image_url !== undefined) {
+          // image_url is explicitly set (could be null, empty string, or a URL)
+          imageUrl = subServiceData.image_url === null ? null : (subServiceData.image_url || null);
+        } else {
+          // image_url is undefined, try fallback fields
+          const fallbackUrl = subServiceData.imageUrl || subServiceData.image || subServiceData.image_path;
+          imageUrl = fallbackUrl ? (typeof fallbackUrl === 'string' ? fallbackUrl : null) : null;
+        }
         setFormData({
           name: subServiceData.name || '',
           serviceId: subServiceData.serviceId || subServiceData.service_id || '',
@@ -131,7 +151,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           categoryId: '',
           icon: 'category',
           image: null,
-          image_url: '',
+          image_url: null,
           status: 'active',
           displayOrder: 1,
           base_price: '',
@@ -207,7 +227,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     setFormData(prev => ({
       ...prev,
       image: null,
-      image_url: ''
+      image_url: null // Set to null so backend deletes the file
     }));
     // Reset file input
     const fileInput = document.getElementById('image-upload') as HTMLInputElement;
@@ -360,10 +380,10 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               )}
             </div>
 
-            {/* Sub-Service */}
+            {/* Service */}
             <div>
               <Label htmlFor="serviceId">
-                Sub-Service <span className="text-danger">*</span>
+                Service <span className="text-danger">*</span>
               </Label>
 
               <Select
@@ -378,7 +398,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
                 }}
               >
                 <SelectTrigger id="serviceId" className={`mt-2 ${errors.serviceId ? 'border-danger' : ''}`}>
-                  <SelectValue placeholder="Select sub-service" />
+                  <SelectValue placeholder="Select service" />
                 </SelectTrigger>
 
                 <SelectContent>

@@ -129,6 +129,7 @@ export const useServices = (
     return {
       ...service,
       id: service.id || service.public_id || (service as any).service_id || '',
+      name: service.name || (service as any).service_name || '',
       subServiceId: service.subServiceId ?? service.sub_service_id ?? undefined,
       subServiceName: service.subServiceName ?? service.sub_service_name ?? undefined,
       categoryId: categoryId,

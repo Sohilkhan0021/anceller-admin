@@ -75,7 +75,7 @@ export const useMEPBanners = (
     pagination,
     isLoading: queryResult.isLoading,
     isError: queryResult.isError,
-    error: queryResult.error || null,
+    error: queryResult.error ? (queryResult.error as Error) : null,
     refetch: queryResult.refetch,
     isFetching: queryResult.isFetching,
   };

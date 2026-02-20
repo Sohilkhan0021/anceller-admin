@@ -76,12 +76,26 @@ const SubServiceManagement = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  // Fetch all services for dropdown (use high limit to get all services)
-  const { services } = useServices({
+  
+  // Fetch all services (categories) for dropdown in form (no pagination)
+  const { services: allServices, isLoading: isLoadingServices } = useServices({
     page: 1,
-    limit: 200, // High limit to fetch all services for dropdown
+    limit: 1000, // Very high limit to get all services for dropdown (no pagination)
     status: '' // Get all statuses for dropdown
   });
+  
+  // Ensure services is always an array
+  const availableServices = Array.isArray(allServices) ? allServices : [];
+  
+  // Fetch all sub-services for dropdown (use high limit to get all sub-services - no pagination)
+  const { subServices: allSubServices, isLoading: isLoadingSubServices } = useSubServices({
+    page: 1,
+    limit: 1000, // Very high limit to fetch all sub-services for dropdown (no pagination)
+    status: '' // Get all statuses for dropdown
+  });
+  
+  // Ensure sub-services is always an array
+  const availableSubServices = Array.isArray(allSubServices) ? allSubServices : [];
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
@@ -89,6 +103,7 @@ const SubServiceManagement = ({
     image: true,
     name: true,
     service: true,
+    subService: true,
     status: true,
     actions: true,
   });
@@ -135,7 +150,6 @@ const SubServiceManagement = ({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
-    service_id: serviceFilter === 'all' ? '' : serviceFilter,
     search: debouncedSearch,
   });
 
@@ -347,7 +361,8 @@ const SubServiceManagement = ({
       } else if (subServiceData.image === null || subServiceData.image === undefined) {
         // No image file provided - use existing image_url if available
         if (subServiceData.image_url !== undefined) {
-          updateData.image_url = subServiceData.image_url || null;
+          // Preserve null if explicitly set (for deletion), otherwise use the value or null
+          updateData.image_url = subServiceData.image_url === null ? null : (subServiceData.image_url || null);
           console.log('Sub-service update: No new file, using image_url', { image_url: updateData.image_url });
         } else {
           console.log('Sub-service update: No image file and no image_url - backend will keep existing');
@@ -355,7 +370,8 @@ const SubServiceManagement = ({
       } else if (subServiceData.image_url !== undefined) {
         // Always send image_url if it's defined (even if null/empty) to preserve or clear it
         // This is only used when NOT uploading a new file
-        updateData.image_url = subServiceData.image_url || null;
+        // Preserve null if explicitly set (for deletion), otherwise use the value or null
+        updateData.image_url = subServiceData.image_url === null ? null : (subServiceData.image_url || null);
         console.log('Sub-service update: image_url provided (no file upload)', { image_url: updateData.image_url });
       }
 
@@ -411,13 +427,37 @@ const SubServiceManagement = ({
   };
 
   const handleToggleStatus = useCallback((subServiceId: string, checked: boolean) => {
+    // Find the sub-service to preserve all its data
+    const subService = subServices.find(s => s.id === subServiceId);
+    if (!subService) {
+      toast.error('Sub-service not found');
+      return;
+    }
+
+    // Preserve all existing data when toggling status
+    const updateData: any = {
+      is_active: checked,
+      // Preserve all other fields
+      name: subService.name,
+      description: (subService as any).description || '',
+      service_id: subService.serviceId || subService.service_id || (subService as any).service?.service_id,
+      base_price: (subService as any).base_price || (subService as any).basePrice || 0,
+      currency: (subService as any).currency || 'INR',
+      duration_minutes: (subService as any).duration_minutes || (subService as any).durationMinutes || 1,
+      sort_order: subService.displayOrder || subService.display_order || (subService as any).sort_order || 1,
+    };
+
+    // Preserve image_url if it exists
+    const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image;
+    if (imageUrl) {
+      updateData.image_url = imageUrl;
+    }
+
     updateSubService({
       subServiceId,
-      data: {
-        is_active: checked
-      }
+      data: updateData
     });
-  }, [updateSubService]);
+  }, [updateSubService, subServices]);
 
   const handleDeleteClick = (subServiceId: string) => {
     setSubServiceToDelete(subServiceId);
@@ -439,24 +479,50 @@ const SubServiceManagement = ({
   };
 
   const getServiceName = (subService: ISubService) => {
-    // First try to get categoryName from the normalized data
-    if ((subService as any).categoryName) {
-      return (subService as any).categoryName;
+    // First priority: Get service name from nested service structure (service.name = "TV / Home")
+    if ((subService as any).service?.name) {
+      return (subService as any).service.name;
     }
-    // Then try to get from nested service.category structure
-    if ((subService as any).service?.category?.name) {
-      return (subService as any).service.category.name;
+    
+    // Second priority: Look up from availableServices using serviceId
+    if (subService.serviceId) {
+      const service = availableServices.find(s => 
+        s.id === subService.serviceId || 
+        s.public_id === subService.serviceId ||
+        (s as any).service_id === subService.serviceId ||
+        (s as any).public_id === subService.serviceId
+      );
+      if (service && service.name) {
+        return service.name;
+      }
     }
-    // Then try to get from nested category structure
-    if ((subService as any).category?.name) {
-      return (subService as any).category.name;
+    
+    // Third priority: Try service_id field
+    if ((subService as any).service_id) {
+      const service = availableServices.find(s => 
+        s.id === (subService as any).service_id || 
+        s.public_id === (subService as any).service_id ||
+        (s as any).service_id === (subService as any).service_id
+      );
+      if (service && service.name) {
+        return service.name;
+      }
     }
-    // Fallback to availableCategories lookup
-    if (subService.categoryId) {
-      return availableCategories.find(c => c.id === subService.categoryId)?.name || 'Unknown';
-    }
+    
+    // Fallback: Return Unknown if service name not found
     return 'Unknown';
   };
+
+  // Client-side filtering for service (category) - filter by service/category
+  let filteredSubServices = subServices.filter(subService => {
+    const matchesService = serviceFilter === 'all' || 
+      subService.categoryId === serviceFilter || 
+      subService.serviceId === serviceFilter ||
+      subService.id === serviceFilter ||
+      (subService as any).service_id === serviceFilter ||
+      (subService as any).category_id === serviceFilter;
+    return matchesService;
+  });
 
   return (
     <>
@@ -465,7 +531,7 @@ const SubServiceManagement = ({
           <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
-                Items {pagination ? `(${pagination.total})` : `(${subServices.length})`}
+                Items {pagination ? `(${pagination.total})` : `(${filteredSubServices.length})`}
               </h3>
               <p className="text-sm text-gray-600">Manage items (name and icon only)</p>
             </div>
@@ -587,15 +653,27 @@ const SubServiceManagement = ({
             <div>
               <Select value={serviceFilter} onValueChange={handleServiceFilterChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by service" />
+                  <SelectValue placeholder="All Sub-Services" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Services</SelectItem>
-                  {availableCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Sub-Services</SelectItem>
+                  {isLoadingServices ? (
+                    <SelectItem value="loading" disabled>Loading services...</SelectItem>
+                  ) : availableServices && Array.isArray(availableServices) && availableServices.length > 0 ? (
+                    availableServices.map((service) => {
+                      const serviceId = service.id || service.public_id || service.category_id;
+                      const serviceName = service.name;
+                      // Ensure serviceId is a string (not undefined)
+                      if (!serviceId) return null;
+                      return (
+                        <SelectItem key={serviceId} value={serviceId}>
+                          {serviceName}
+                        </SelectItem>
+                      );
+                    }).filter(Boolean)
+                  ) : (
+                    <SelectItem value="no-services" disabled>No services available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -619,7 +697,7 @@ const SubServiceManagement = ({
             <div className="p-8">
               <ContentLoader />
             </div>
-          ) : subServices.length === 0 ? (
+          ) : filteredSubServices.length === 0 ? (
             <div className="p-8 text-center">
               <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
               <p className="text-gray-600">No items found</p>
@@ -637,117 +715,125 @@ const SubServiceManagement = ({
                       {columnVisibility.order && <TableHead className="w-[50px]">Order</TableHead>}
                       {columnVisibility.image && <TableHead className="w-[80px]">Image</TableHead>}
                       {columnVisibility.name && <TableHead>Name</TableHead>}
-                      {columnVisibility.service && <TableHead>Sub-Service</TableHead>}
+                      {columnVisibility.subService && <TableHead>Sub-Service</TableHead>}
                       {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
                       {columnVisibility.actions && <TableHead className="w-[150px]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {subServices.map((subService, index) => {
-                      // Handle displayOrder - might be undefined
-                      const displayOrder = subService.displayOrder ?? (index + 1);
+                    {filteredSubServices && filteredSubServices.length > 0 ? (
+                      filteredSubServices.map((subService, index) => {
+                        // Handle displayOrder - might be undefined
+                        const displayOrder = subService.displayOrder ?? (index + 1);
 
-                      return (
-                        <TableRow key={subService.id}>
-                          {columnVisibility.order && (
-                            <TableCell>
-                              <div className="text-sm font-medium text-center">{displayOrder}</div>
-                            </TableCell>
-                          )}
-                          {columnVisibility.image && (
-                            <TableCell>
-                            {(() => {
-                              // Use sub-service's own image_url only (no fallback to icon_url)
-                              const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image || (subService as any).image_path || '';
-                              const fullImageUrl = getImageUrl(imageUrl);
+                        return (
+                          <TableRow key={subService.id}>
+                            {columnVisibility.order && (
+                              <TableCell>
+                                <div className="text-sm font-medium text-center">{displayOrder}</div>
+                              </TableCell>
+                            )}
+                            {columnVisibility.image && (
+                              <TableCell>
+                              {(() => {
+                                // Use sub-service's own image_url only (no fallback to icon_url)
+                                const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image || (subService as any).image_path || '';
+                                const fullImageUrl = getImageUrl(imageUrl);
 
-                              // If image URL is invalid (local path, etc.), show placeholder
-                              if (!fullImageUrl && imageUrl) {
-                                return (
+                                // If image URL is invalid (local path, etc.), show placeholder
+                                if (!fullImageUrl && imageUrl) {
+                                  return (
+                                    <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                      <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                                    </div>
+                                  );
+                                }
+
+                                return fullImageUrl ? (
+                                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                    <img
+                                      src={fullImageUrl}
+                                      alt={subService.name || 'Sub-service'}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
                                   <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
                                     <KeenIcon icon="image" className="text-gray-400 text-lg" />
                                   </div>
                                 );
-                              }
-
-                              return fullImageUrl ? (
-                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                                  <img
-                                    src={fullImageUrl}
-                                    alt={subService.name || 'Sub-service'}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                    }}
+                              })()}
+                              </TableCell>
+                            )}
+                            {columnVisibility.name && (
+                              <TableCell>
+                                <div className="font-medium">{subService.name || 'N/A'}</div>
+                              </TableCell>
+                            )}
+                            {columnVisibility.subService && (
+                              <TableCell>
+                                <div className="text-sm text-gray-600">
+                                  {getServiceName(subService)}
+                                </div>
+                              </TableCell>
+                            )}
+                            {columnVisibility.status && (
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {getStatusBadge(subService.status || 'inactive')}
+                                  <Switch
+                                    checked={subService.status === 'active'}
+                                    onCheckedChange={(checked) => handleToggleStatus(subService.id, checked)}
+                                    className="data-[state=checked]:bg-danger"
                                   />
                                 </div>
-                              ) : (
-                                <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                  <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                              </TableCell>
+                            )}
+                            {columnVisibility.actions && (
+                              <TableCell>
+                                <div className="flex items-center justify-center">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
+                                        <KeenIcon icon="dots-vertical" className="text-base" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleEditSubService(subService)}>
+                                        <KeenIcon icon="pencil" className="me-2" />
+                                        Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleCloneSubService(subService)}>
+                                        <KeenIcon icon="copy" className="me-2" />
+                                        Clone Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleDeleteClick(subService.id)}
+                                        className="text-danger"
+                                        disabled={isDeleting}
+                                      >
+                                        <KeenIcon icon="trash" className="me-2" />
+                                        Delete Item
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
-                              );
-                            })()}
-                            </TableCell>
-                          )}
-                          {columnVisibility.name && (
-                            <TableCell>
-                              <div className="font-medium">{subService.name || 'N/A'}</div>
-                            </TableCell>
-                          )}
-                          {columnVisibility.service && (
-                            <TableCell>
-                              <div className="text-sm text-gray-600">
-                                {getServiceName(subService)}
-                              </div>
-                            </TableCell>
-                          )}
-                          {columnVisibility.status && (
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {getStatusBadge(subService.status || 'inactive')}
-                                <Switch
-                                  checked={subService.status === 'active'}
-                                  onCheckedChange={(checked) => handleToggleStatus(subService.id, checked)}
-                                  className="data-[state=checked]:bg-danger"
-                                />
-                              </div>
-                            </TableCell>
-                          )}
-                          {columnVisibility.actions && (
-                            <TableCell>
-                              <div className="flex items-center justify-center">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
-                                      <KeenIcon icon="dots-vertical" className="text-base" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleEditSubService(subService)}>
-                                      <KeenIcon icon="pencil" className="me-2" />
-                                      Edit Item
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleCloneSubService(subService)}>
-                                      <KeenIcon icon="copy" className="me-2" />
-                                      Clone Item
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => handleDeleteClick(subService.id)}
-                                      className="text-danger"
-                                      disabled={isDeleting}
-                                    >
-                                      <KeenIcon icon="trash" className="me-2" />
-                                      Delete Item
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="text-center py-8">
+                          <div className="text-gray-500">No sub-services found</div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -807,7 +893,7 @@ const SubServiceManagement = ({
         }}
         onSave={handleSaveSubService}
         subServiceData={editingSubService}
-        availableServices={services}
+        availableServices={availableServices}
         availableCategories={availableCategories}
       />
 

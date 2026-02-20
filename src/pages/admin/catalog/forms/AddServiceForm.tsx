@@ -38,7 +38,8 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
     description: '',
     categoryId: '',
     status: 'active',
-    displayOrder: 1
+    displayOrder: 1,
+    image_url: undefined as string | null | undefined // Track image URL for deletion
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -110,6 +111,11 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    // Set image_url to null in formData so backend deletes the file
+    setFormData(prev => ({
+      ...prev,
+      image_url: null
+    }));
   };
 
   // Drag and drop handlers
@@ -174,7 +180,8 @@ const AddServiceForm = ({ isOpen, onClose, onSave, availableCategories = [] }: I
       description: '',
       categoryId: '',
       status: 'active',
-      displayOrder: 1
+      displayOrder: 1,
+      image_url: undefined
     });
     setImagePreview(null);
     setImageFile(null);

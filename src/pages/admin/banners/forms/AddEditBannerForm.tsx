@@ -263,6 +263,7 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
       setFormData({
         title: '',
         is_active: true,
+        banner_type: 'offer' as 'offer' | 'buy_banner',
         category_id: null
       });
       setImageFile(null);

@@ -84,6 +84,7 @@ export interface IGetMEPItemsParams {
   limit?: number;
   search?: string;
   project_item_id?: string;
+  sub_service_id?: string;
   status?: string;
 }
 

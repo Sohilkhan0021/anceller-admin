@@ -83,14 +83,21 @@ export const getBookings = async (
       data: {
         bookings: bookings.map((booking: any) => {
           // Combine scheduled_date and scheduled_time for dateTime
+          // scheduled_date is now a date-only string (YYYY-MM-DD) from backend
           let dateTime = '';
           if (booking.scheduled_date) {
-            dateTime = booking.scheduled_date;
+            // scheduled_date is already a date-only string (YYYY-MM-DD)
+            // Format it properly for display
+            const dateStr = booking.scheduled_date;
             if (booking.scheduled_time) {
-              dateTime += ` ${booking.scheduled_time}`;
+              dateTime = `${dateStr} ${booking.scheduled_time}`;
             } else if (booking.scheduled_time_start) {
               const timeStart = new Date(booking.scheduled_time_start);
-              dateTime += ` ${timeStart.toTimeString().slice(0, 5)}`;
+              const timeStr = timeStart.toTimeString().slice(0, 5);
+              dateTime = `${dateStr} ${timeStr}`;
+            } else {
+              // Just the date, no time
+              dateTime = dateStr;
             }
           } else if (booking.created_at) {
             dateTime = booking.created_at;

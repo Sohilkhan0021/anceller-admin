@@ -38,7 +38,8 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
     description: '',
     categoryId: '',
     status: 'active',
-    displayOrder: 1
+    displayOrder: 1,
+    image_url: undefined as string | null | undefined // Track image URL for deletion
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -129,7 +130,8 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
           description: serviceData.description || '',
           categoryId: categoryId,
           status: statusValue as 'active' | 'inactive',
-          displayOrder: serviceData.sort_order || serviceData.displayOrder || serviceData.display_order || 1
+          displayOrder: serviceData.sort_order || serviceData.displayOrder || serviceData.display_order || 1,
+          image_url: serviceData.image_url || serviceData.imageUrl || serviceData.image || undefined
         });
         
         // Set image preview if existing image
@@ -148,7 +150,8 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
           description: '',
           categoryId: '',
           status: 'active',
-          displayOrder: 1
+          displayOrder: 1,
+          image_url: undefined
         });
         setImagePreview(null);
         setImageFile(null);
@@ -210,6 +213,11 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    // Set image_url to null in formData so backend deletes the file
+    setFormData(prev => ({
+      ...prev,
+      image_url: null
+    }));
   };
 
   // Drag and drop handlers
@@ -273,7 +281,8 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
       description: '',
       categoryId: '',
       status: 'active',
-      displayOrder: 1
+      displayOrder: 1,
+      image_url: undefined
     });
     setImagePreview(null);
     setImageFile(null);
@@ -304,12 +313,26 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
     }
 
     // Update service with FormData
+    // Handle image deletion: if image_url is null, send null to delete; if new file, don't send image_url
+    let imageUrlValue: string | null | undefined;
+    if (imageFile) {
+      // New file uploaded - don't send image_url (file takes precedence)
+      imageUrlValue = undefined;
+    } else if (formData.image_url !== undefined) {
+      // image_url was explicitly set (could be null for deletion, or a string to keep existing)
+      imageUrlValue = formData.image_url;
+    } else {
+      // No change - keep existing image_url
+      imageUrlValue = serviceData?.image_url || undefined;
+    }
+    
     updateServiceMutation.mutate({
       id: serviceData.id || serviceData.service_id || serviceData.public_id,
       name: formData.name,
       description: formData.description || '',
       category_id: formData.categoryId, // Required: Sub-Service must belong to a Service
       image: imageFile || undefined,
+      image_url: imageUrlValue, // Send null to delete image, undefined to keep existing, or string to set specific URL
       is_active: formData.status === 'active',
       sort_order: formData.displayOrder
     });

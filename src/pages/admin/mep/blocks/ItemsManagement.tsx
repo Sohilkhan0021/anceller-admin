@@ -83,15 +83,15 @@ const ItemsManagement = ({
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Fetch project items for the dropdown
-  const { projectItems: fetchedProjectItems } = useProjectItems({
+  // Fetch project items for the dropdown filter
+  const { projectItems: fetchedProjectItems, isLoading: isLoadingProjectItems } = useProjectItems({
     page: 1,
-    limit: 100, // Get all project items for dropdown
-    status: 'active', // Only active project items
+    limit: 1000, // Very high limit to get all project items for dropdown (no pagination)
+    status: '' // Get all statuses for dropdown
   });
 
-  // Use fetched project items or fallback to props
-  const availableProjectItems = fetchedProjectItems.length > 0 ? fetchedProjectItems : (projectItems || []);
+  // Ensure project items is always an array
+  const availableProjectItems = Array.isArray(fetchedProjectItems) ? fetchedProjectItems : [];
 
   // Fetch items from API
   const { 
@@ -106,7 +106,7 @@ const ItemsManagement = ({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
-    project_item_id: projectItemFilter !== 'all' ? projectItemFilter : '',
+    project_item_id: projectItemFilter === 'all' ? '' : projectItemFilter,
     search: debouncedSearch,
   });
 
@@ -238,17 +238,37 @@ const ItemsManagement = ({
 
   const handleToggleStatus = useCallback((itemId: string, checked: boolean) => {
     const item = items.find(i => i.id === itemId);
-    if (!item) return;
+    if (!item) {
+      toast.error('Item not found');
+      return;
+    }
     
-    updateItemMutation.mutate({
-      id: itemId,
+    // Preserve all existing data when toggling status
+    const updateData: any = {
+      is_active: checked,
+      // Preserve all other fields
       name: item.name,
       description: item.description || '',
       project_item_id: item.project_item_id || '',
       quantity: (item as any).quantity,
       unit: (item as any).unit || '',
       sort_order: item.displayOrder || (item as any).sort_order || 1,
-      is_active: checked
+    };
+
+    // Preserve image_url if it exists
+    const imageUrl = (item as any).image_url || (item as any).imageUrl || (item as any).image;
+    if (imageUrl) {
+      updateData.image_url = imageUrl;
+    }
+
+    // Preserve meta_data (including price)
+    if ((item as any).meta_data) {
+      updateData.meta_data = (item as any).meta_data;
+    }
+    
+    updateItemMutation.mutate({
+      id: itemId,
+      ...updateData
     });
   }, [items, updateItemMutation]);
 
@@ -439,15 +459,25 @@ const ItemsManagement = ({
             <div>
               <Select value={projectItemFilter} onValueChange={handleProjectItemFilterChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by project item" />
+                  <SelectValue placeholder="All Project Items" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Project Items</SelectItem>
-                  {availableProjectItems.map((projectItem) => (
-                    <SelectItem key={projectItem.id} value={projectItem.id}>
-                      {projectItem.name}
-                    </SelectItem>
-                  ))}
+                  {isLoadingProjectItems ? (
+                    <SelectItem value="loading" disabled>Loading project items...</SelectItem>
+                  ) : availableProjectItems && Array.isArray(availableProjectItems) && availableProjectItems.length > 0 ? (
+                    availableProjectItems.map((projectItem) => {
+                      const projectItemId = projectItem.id || projectItem.public_id || projectItem.project_item_id;
+                      const projectItemName = projectItem.name;
+                      return (
+                        <SelectItem key={projectItemId} value={projectItemId}>
+                          {projectItemName}
+                        </SelectItem>
+                      );
+                    })
+                  ) : (
+                    <SelectItem value="no-project-items" disabled>No project items available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -664,7 +694,7 @@ const ItemsManagement = ({
         }}
         onSave={handleSaveItem}
         itemData={editingItem}
-        availableProjectItems={availableProjectItems}
+        availableProjectItems={[]} // Not used anymore - form now uses sub-services
       />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

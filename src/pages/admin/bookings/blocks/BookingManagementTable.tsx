@@ -138,12 +138,41 @@ const BookingManagementTable = ({
   const formatDateTime = (dateTime: string) => {
     if (!dateTime) return 'N/A';
     try {
+      // Check if it's a date-only string (YYYY-MM-DD format)
+      const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+      if (dateOnlyPattern.test(dateTime)) {
+        // Format date-only string
+        const date = new Date(dateTime + 'T00:00:00'); // Add time to avoid timezone issues
+        return date.toLocaleDateString('en-IN', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      }
+      
+      // Check if it's a date+time string (YYYY-MM-DD HH:mm format)
+      const dateTimePattern = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/;
+      const dateTimeMatch = dateTime.match(dateTimePattern);
+      if (dateTimeMatch) {
+        // Format date+time string - show date and time
+        const dateStr = dateTimeMatch[1];
+        const timeStr = dateTimeMatch[2];
+        const date = new Date(dateStr + 'T' + timeStr + ':00');
+        return date.toLocaleDateString('en-IN', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
       const date = new Date(dateTime);
       if (isNaN(date.getTime())) {
         // Try parsing as date string without time
         const dateOnly = new Date(dateTime.split(' ')[0]);
         if (!isNaN(dateOnly.getTime())) {
-          return dateOnly.toLocaleDateString('en-US', {
+          return dateOnly.toLocaleDateString('en-IN', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',

@@ -131,7 +131,11 @@ export const updateProject = async (
       formData.append('image', data.image);
     }
     if (data.image_url !== undefined) {
-      formData.append('image_url', data.image_url || '');
+      // IMPORTANT: Send the string 'null' when image_url is null, so backend can detect deletion
+      // Backend service checks: if (data.image_url === null || data.image_url === '' || data.image_url === 'null')
+      // FormData converts null to string 'null', so we explicitly send 'null' string
+      const imageUrlValue = data.image_url === null ? 'null' : (data.image_url || '');
+      formData.append('image_url', imageUrlValue);
     }
     if (data.sort_order !== undefined) {
       formData.append('sort_order', data.sort_order.toString());
@@ -274,7 +278,11 @@ export const updateProjectItem = async (
       formData.append('image', data.image);
     }
     if (data.image_url !== undefined) {
-      formData.append('image_url', data.image_url || '');
+      // IMPORTANT: Send the string 'null' when image_url is null, so backend can detect deletion
+      // Backend service checks: if (data.image_url === null || data.image_url === '' || data.image_url === 'null')
+      // FormData converts null to string 'null', so we explicitly send 'null' string
+      const imageUrlValue = data.image_url === null ? 'null' : (data.image_url || '');
+      formData.append('image_url', imageUrlValue);
     }
     if (data.sort_order !== undefined) {
       formData.append('sort_order', data.sort_order.toString());
@@ -329,6 +337,9 @@ export const getItems = async (
     }
     if (params.project_item_id && params.project_item_id.trim() !== '') {
       queryParams.project_item_id = params.project_item_id;
+    }
+    if (params.sub_service_id && params.sub_service_id.trim() !== '') {
+      queryParams.sub_service_id = params.sub_service_id;
     }
     if (params.search && params.search.trim() !== '') {
       queryParams.search = params.search;
@@ -428,7 +439,11 @@ export const updateItem = async (
       formData.append('image', data.image);
     }
     if (data.image_url !== undefined) {
-      formData.append('image_url', data.image_url || '');
+      // IMPORTANT: Send the string 'null' when image_url is null, so backend can detect deletion
+      // Backend service checks: if (data.image_url === null || data.image_url === '' || data.image_url === 'null')
+      // FormData converts null to string 'null', so we explicitly send 'null' string
+      const imageUrlValue = data.image_url === null ? 'null' : (data.image_url || '');
+      formData.append('image_url', imageUrlValue);
     }
     if (data.quantity !== undefined) {
       formData.append('quantity', data.quantity ? data.quantity.toString() : '');

@@ -103,6 +103,7 @@ export interface IUpdateServiceRequest {
   name?: string;
   description?: string;
   image?: File;
+  image_url?: string | null; // Send null to delete image, string to set URL, undefined to keep existing
   is_active?: boolean;
   sort_order?: number;
   meta_data?: string;
