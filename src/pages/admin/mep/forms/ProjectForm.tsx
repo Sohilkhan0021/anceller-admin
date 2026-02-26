@@ -239,7 +239,13 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
         imageUrlValue = undefined;
       } else if (formData.image_url !== undefined) {
         // image_url was explicitly set (could be null for deletion, or a string to keep existing)
+        // CRITICAL: Preserve null value for deletion - don't convert to undefined
         imageUrlValue = formData.image_url;
+        console.log('ProjectForm: image_url value', { 
+          value: imageUrlValue, 
+          is_null: imageUrlValue === null,
+          will_delete: imageUrlValue === null 
+        });
       } else {
         // No change - keep existing image_url
         imageUrlValue = projectData?.image_url || undefined;
@@ -251,7 +257,7 @@ const ProjectForm = ({ isOpen, onClose, onSave, projectData }: IProjectFormProps
         description: formData.description?.trim() || '',
         image: imageFile || undefined,
         // Send null to delete image, undefined to keep existing, or string to set specific URL
-        image_url: imageUrlValue as string | undefined,
+        image_url: imageUrlValue,
         sort_order: formData.displayOrder,
         is_active: formData.status === 'active'
       });

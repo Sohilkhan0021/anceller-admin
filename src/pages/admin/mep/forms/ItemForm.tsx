@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { getImageUrl } from '@/utils/imageUrl';
 import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
-import { useCreateItem, useUpdateItem, useSubServices } from '@/services';
+import { useCreateItem, useUpdateItem } from '@/services';
 import { toast } from 'sonner';
 
 interface IItemFormProps {
@@ -33,17 +33,9 @@ interface IItemFormProps {
 }
 
 const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [] }: IItemFormProps) => {
-  // Fetch all sub-services for dropdown (no pagination)
-  const { subServices: availableSubServices } = useSubServices({
-    page: 1,
-    limit: 1000, // High limit to get all sub-services
-    status: '', // Get all statuses
-  });
-
   const [formData, setFormData] = useState({
     name: '',
-    project_item_id: '', // Keep for backend compatibility, but UI will show sub-services
-    sub_service_id: '', // Add sub-service selection
+    project_item_id: '', // Project item selection for MEP items
     description: '',
     quantity: undefined as number | undefined,
     unit: '',
@@ -98,8 +90,7 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         
         setFormData({
           name: itemData.name || '',
-          project_item_id: itemData.project_item_id || itemData.project_item_id || '',
-          sub_service_id: itemData.sub_service_id || '', // Add sub-service ID if available
+          project_item_id: itemData.project_item_id || itemData.project_item?.id || itemData.project_item?.project_item_id || itemData.project_item?.public_id || '',
           description: itemData.description || '',
           quantity: itemData.quantity,
           unit: itemData.unit || '',
@@ -120,7 +111,6 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         setFormData({
           name: '',
           project_item_id: '',
-          sub_service_id: '',
           description: '',
           quantity: undefined,
           unit: '',
@@ -232,11 +222,11 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
       newErrors.name = 'Item name is required';
     }
 
-    if (!formData.sub_service_id) {
-      newErrors.sub_service_id = 'Sub-service is required';
+    if (!formData.project_item_id) {
+      newErrors.project_item_id = 'Project item is required';
     }
 
-    if (newErrors.name || newErrors.sub_service_id) {
+    if (newErrors.name || newErrors.project_item_id) {
       setErrors(newErrors);
       return false;
     }
@@ -248,7 +238,6 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
     setFormData({
       name: '',
       project_item_id: '',
-      sub_service_id: '',
       description: '',
       quantity: undefined,
       unit: '',
@@ -289,10 +278,6 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         delete metaData.price;
       }
       
-      // Note: Backend still requires project_item_id, but UI shows sub-services
-      // For now, we'll need to map sub_service_id to project_item_id or keep both
-      // If sub_service_id is selected, try to find a corresponding project item
-      // Otherwise, use the existing project_item_id
       // Handle image deletion: if image_url is null, send null to delete; if new file, don't send image_url
       let imageUrlValue: string | null | undefined;
       if (imageFile) {
@@ -300,7 +285,13 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         imageUrlValue = undefined;
       } else if (formData.image_url !== undefined) {
         // image_url was explicitly set (could be null for deletion, or a string to keep existing)
+        // CRITICAL: Preserve null value for deletion - don't convert to undefined
         imageUrlValue = formData.image_url;
+        console.log('ItemForm: image_url value', { 
+          value: imageUrlValue, 
+          is_null: imageUrlValue === null,
+          will_delete: imageUrlValue === null 
+        });
       } else {
         // No change - keep existing image_url
         imageUrlValue = itemData?.image_url || undefined;
@@ -310,12 +301,12 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         id: itemId,
         name: formData.name.trim(),
         description: formData.description?.trim() || '',
-        project_item_id: formData.project_item_id || itemData?.project_item_id || '', // Keep for backend compatibility
+        project_item_id: formData.project_item_id || itemData?.project_item_id || '',
         quantity: formData.quantity,
         unit: formData.unit || undefined,
         image: imageFile || undefined,
         // Send null to delete image, undefined to keep existing, or string to set specific URL
-        image_url: imageUrlValue as string | undefined,
+        image_url: imageUrlValue,
         sort_order: formData.displayOrder,
         is_active: formData.status === 'active',
         meta_data: Object.keys(metaData).length > 0 ? metaData : undefined
@@ -326,8 +317,8 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         setErrors({ name: 'Item name is required' });
         return;
       }
-      if (!formData.sub_service_id) {
-        setErrors({ sub_service_id: 'Sub-service is required' });
+      if (!formData.project_item_id) {
+        setErrors({ project_item_id: 'Project item is required' });
         return;
       }
 
@@ -337,13 +328,10 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
         metaData.price = formData.price;
       }
       
-      // Note: Backend requires project_item_id, but UI shows sub-services
-      // For now, we'll need a default project_item_id or mapping
-      // TODO: Backend might need to support sub_service_id for MEP items
       createItemMutation.mutate({
         name: formData.name.trim(),
         description: formData.description?.trim() || '',
-        project_item_id: formData.project_item_id || '', // Will need to be set from sub-service selection
+        project_item_id: formData.project_item_id,
         quantity: formData.quantity,
         unit: formData.unit || undefined,
         image: imageFile || undefined,
@@ -366,36 +354,40 @@ const ItemForm = ({ isOpen, onClose, onSave, itemData, availableProjectItems = [
 
         <DialogBody>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Sub-Service Selection */}
+            {/* Project Item Selection */}
             <div>
-              <Label htmlFor="sub_service_id">
-                Sub-Service <span className="text-danger">*</span>
+              <Label htmlFor="project_item_id">
+                Project Item <span className="text-danger">*</span>
               </Label>
               <Select
-                value={formData.sub_service_id}
+                value={formData.project_item_id}
                 onValueChange={(value) => {
-                  handleInputChange('sub_service_id', value);
-                  // Map sub-service to project_item_id for backend compatibility (if needed)
-                  // For now, just set sub_service_id
+                  handleInputChange('project_item_id', value);
                 }}
               >
-                <SelectTrigger className={`mt-2 ${errors.sub_service_id ? 'border-danger' : ''}`}>
-                  <SelectValue placeholder="Select a sub-service" />
+                <SelectTrigger className={`mt-2 ${errors.project_item_id ? 'border-danger' : ''}`}>
+                  <SelectValue placeholder="Select a project item" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSubServices && availableSubServices.length > 0 ? (
-                    availableSubServices.map((subService) => (
-                      <SelectItem key={subService.id} value={subService.id}>
-                        {subService.name}
-                      </SelectItem>
-                    ))
+                  {availableProjectItems && availableProjectItems.length > 0 ? (
+                    availableProjectItems.map((projectItem) => {
+                      const projectItemId = projectItem.id || projectItem.project_item_id || projectItem.public_id;
+                      return (
+                        <SelectItem key={projectItemId} value={projectItemId}>
+                          {projectItem.name}
+                        </SelectItem>
+                      );
+                    })
                   ) : (
-                    <SelectItem value="no-subservices" disabled>No sub-services available</SelectItem>
+                    <SelectItem value="no-project-items" disabled>No project items available</SelectItem>
                   )}
                 </SelectContent>
               </Select>
-              {errors.sub_service_id && (
-                <p className="text-danger text-sm mt-1">{errors.sub_service_id}</p>
+              {errors.project_item_id && (
+                <p className="text-danger text-sm mt-1">{errors.project_item_id}</p>
+              )}
+              {availableProjectItems.length === 0 && (
+                <p className="text-warning text-sm mt-1">No project items available. Please create a project item first.</p>
               )}
             </div>
 

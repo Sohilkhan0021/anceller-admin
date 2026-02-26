@@ -311,6 +311,10 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         imageName: formData.image instanceof File ? formData.image.name : 'not a file',
         imageSize: formData.image instanceof File ? formData.image.size : 'not a file',
         image_url: formData.image_url,
+        image_url_type: typeof formData.image_url,
+        image_url_is_null: formData.image_url === null,
+        image_url_is_undefined: formData.image_url === undefined,
+        will_delete_image: formData.image_url === null,
         formData: {
           name: formData.name,
           serviceId: formData.serviceId,
@@ -320,14 +324,22 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
         }
       });
 
-      // Create a copy of formData to ensure File object is preserved
+      // Create a copy of formData to ensure File object and image_url are preserved
       const dataToSave = {
         ...formData,
         // Explicitly preserve the File object if it exists
-        image: formData.image instanceof File ? formData.image : (formData.image || null)
+        image: formData.image instanceof File ? formData.image : (formData.image || null),
+        // CRITICAL: Explicitly preserve image_url, especially null for deletion
+        image_url: formData.image_url !== undefined ? formData.image_url : null
       };
 
-      console.log('🔵 Calling onSave with data:', dataToSave);
+      console.log('🔵 Calling onSave with data:', {
+        ...dataToSave,
+        image_url: dataToSave.image_url,
+        image_url_type: typeof dataToSave.image_url,
+        image_url_is_null: dataToSave.image_url === null,
+        will_delete: dataToSave.image_url === null
+      });
       
       // Wait for onSave to complete (it's async)
       await onSave(dataToSave);

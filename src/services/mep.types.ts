@@ -128,7 +128,7 @@ export interface ICreateMEPProjectRequest {
   name: string;
   description?: string;
   image?: File | null;
-  image_url?: string;
+  image_url?: string | null; // Allow null for deletion
   sort_order?: number;
   is_active?: boolean;
   meta_data?: string;
@@ -139,7 +139,7 @@ export interface ICreateMEPProjectItemRequest {
   name: string;
   description?: string;
   image?: File | null;
-  image_url?: string;
+  image_url?: string | null; // Allow null for deletion
   sort_order?: number;
   is_active?: boolean;
   meta_data?: string;
@@ -150,7 +150,7 @@ export interface ICreateMEPItemRequest {
   name: string;
   description?: string;
   image?: File | null;
-  image_url?: string;
+  image_url?: string | null; // Allow null for deletion
   quantity?: number | string;
   unit?: string;
   sort_order?: number;

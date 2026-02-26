@@ -87,7 +87,7 @@ export interface IUpdateSubServiceRequest {
   name?: string;
   description?: string;
   image?: File;
-  image_url?: string;
+  image_url?: string | null; // Allow null for deletion
   base_price?: number;
   currency?: string;
   duration_minutes?: number;

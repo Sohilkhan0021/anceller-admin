@@ -57,6 +57,7 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
   });
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Fetch full booking details if bookingData has an ID
   const bookingId = bookingData?.id || bookingData?.booking_id || null;
@@ -65,14 +66,41 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
     { enabled: isOpen && !!bookingId }
   );
 
-  const paymentMethods = [
-    'Credit Card',
-    'Debit Card',
-    'UPI',
-    'Net Banking',
-    'Wallet',
-    'COD'
+  // Note: ProviderSearchSelect doesn't pre-populate the name, but the provider ID will be set correctly
+
+  // Check if booking is editable (not canceled or completed)
+  const bookingStatus = (fullBookingDetails?.status || bookingData?.status || 'pending').toLowerCase();
+  const isEditable = bookingStatus !== 'cancelled' && bookingStatus !== 'canceled' && bookingStatus !== 'completed';
+
+  // Payment methods mapping - backend gateway values to display names
+  const paymentMethodOptions = [
+    { value: 'razorpay', label: 'Razorpay' },
+    { value: 'stripe', label: 'Stripe' },
+    { value: 'upi', label: 'UPI' },
+    { value: 'netbanking', label: 'Net Banking' },
+    { value: 'wallet', label: 'Wallet' },
+    { value: 'cash_on_delivery', label: 'Cash on Delivery (COD)' },
+    { value: 'credit_card', label: 'Credit Card' },
+    { value: 'debit_card', label: 'Debit Card' },
   ];
+
+  // Helper function to normalize payment method value
+  const normalizePaymentMethod = (value: string | undefined | null): string => {
+    if (!value) return '';
+    const normalized = value.toLowerCase().trim();
+    
+    // Map common variations to standard values
+    const mapping: Record<string, string> = {
+      'credit card': 'credit_card',
+      'debit card': 'debit_card',
+      'cod': 'cash_on_delivery',
+      'cash on delivery': 'cash_on_delivery',
+      'net banking': 'netbanking',
+      'netbanking': 'netbanking',
+    };
+    
+    return mapping[normalized] || normalized;
+  };
 
   const statusOptions = [
     'pending',
@@ -82,7 +110,30 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
     'cancelled'
   ];
 
+  // Map backend status to frontend status format for display
+  const mapStatusFromBackend = (status: string | undefined | null): string => {
+    if (!status) return 'pending';
+    const normalized = status.toUpperCase().trim();
+    const statusMap: Record<string, string> = {
+      'ACTIVE': 'accepted',
+      'UPCOMING': 'pending',
+      'IN_PROGRESS': 'in-progress',
+      'COMPLETED': 'completed',
+      'CANCELED': 'cancelled',
+      'CANCELLED': 'cancelled',
+      'RESCHEDULED': 'pending',
+      'FAILED': 'pending'
+    };
+    
+    return statusMap[normalized] || 'pending';
+  };
+
   useEffect(() => {
+    // Only populate form when dialog is open and we have data
+    if (!isOpen) {
+      return;
+    }
+
     // Use full booking details if available, otherwise use bookingData prop
     const dataToUse = fullBookingDetails || bookingData;
 
@@ -160,9 +211,29 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
         || booking.serviceId
         || '';
 
+      // Extract provider ID - try multiple possible fields
+      // ProviderSearchSelect might need public_id, so try that first
+      const providerId = booking.provider?.public_id
+        || booking.provider?.provider_id 
+        || booking.provider?.id
+        || booking.providerId
+        || booking.provider_id
+        || (booking as any).jobAssignments?.[0]?.provider?.public_id
+        || (booking as any).jobAssignments?.[0]?.provider?.provider_id
+        || '';
+
+      // Map backend status to frontend format
+      const backendStatus = booking.status || '';
+      let normalizedStatus = mapStatusFromBackend(backendStatus);
+      
+      // Ensure status matches one of the valid options
+      if (!statusOptions.includes(normalizedStatus)) {
+        normalizedStatus = 'pending'; // Default to pending if status doesn't match
+      }
+
       setFormData({
         userId: booking.user?.user_id || booking.userId || booking.user_id || '',
-        providerId: booking.provider?.provider_id || booking.providerId || '',
+        providerId: providerId,
         serviceId: serviceId,
         serviceName: serviceName,
         bookingDate: bookingDate,
@@ -175,11 +246,14 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
           || booking.amount?.toString()
           || booking.final_amount?.toString()
           || '',
-        paymentMethod: booking.payment?.gateway
+        paymentMethod: normalizePaymentMethod(
+          booking.payment?.gateway
           || booking.payment_method
           || booking.paymentMethod
-          || '',
-        status: (booking.status || 'pending').toLowerCase(),
+          || booking.payment_gateway
+          || ''
+        ),
+        status: normalizedStatus,
         specialInstructions: booking.special_instructions
           || booking.specialInstructions
           || '',
@@ -192,7 +266,31 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
       } else {
         setSelectedDate(undefined);
       }
+    } else {
+      // Reset form when dialog closes or no data
+      if (!isOpen) {
+        setFormData({
+          userId: '',
+          providerId: '',
+          serviceId: '',
+          serviceName: '',
+          bookingDate: new Date(),
+          bookingTime: '',
+          address: '',
+          city: '',
+          state: '',
+          pincode: '',
+          amount: '',
+          paymentMethod: '',
+          status: 'pending',
+          specialInstructions: '',
+          notes: ''
+        });
+        setSelectedDate(undefined);
+        setErrors({});
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingData, fullBookingDetails, isOpen]);
 
   const handleInputChange = (field: string, value: any) => {
@@ -202,10 +300,94 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
     }));
   };
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.userId || formData.userId.trim() === '') {
+      newErrors.userId = 'User ID is required';
+    }
+
+    // Provider is optional - removed required validation
+
+    if (!formData.serviceId || formData.serviceId.trim() === '') {
+      newErrors.serviceId = 'Service ID is required';
+    }
+
+    if (!formData.serviceName || formData.serviceName.trim() === '') {
+      newErrors.serviceName = 'Service name is required';
+    }
+
+    if (!selectedDate || isNaN(selectedDate.getTime())) {
+      newErrors.bookingDate = 'Booking date is required';
+    }
+
+    if (!formData.bookingTime || formData.bookingTime.trim() === '') {
+      newErrors.bookingTime = 'Booking time is required';
+    }
+
+    if (!formData.address || formData.address.trim() === '') {
+      newErrors.address = 'Address is required';
+    }
+
+    if (!formData.city || formData.city.trim() === '') {
+      newErrors.city = 'City is required';
+    }
+
+    if (!formData.state || formData.state.trim() === '') {
+      newErrors.state = 'State is required';
+    }
+
+    if (!formData.pincode || formData.pincode.trim() === '') {
+      newErrors.pincode = 'Pincode is required';
+    } else if (!/^\d{6}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Pincode must be 6 digits';
+    }
+
+    if (!formData.amount || formData.amount.trim() === '') {
+      newErrors.amount = 'Amount is required';
+    } else if (isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) < 0) {
+      newErrors.amount = 'Amount must be a valid positive number';
+    }
+
+    if (!formData.paymentMethod || formData.paymentMethod.trim() === '') {
+      newErrors.paymentMethod = 'Payment method is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('EditBookingForm - Submit button clicked', {
+      isEditable,
+      formData,
+      selectedDate
+    });
+    
+    if (!isEditable) {
+      console.warn('EditBookingForm - Booking is not editable');
+      return;
+    }
+
+    if (!validateForm()) {
+      console.warn('EditBookingForm - Form validation failed', errors);
+      return;
+    }
+
+    console.log('EditBookingForm - Calling onSave with data:', {
+      ...formData,
+      bookingDate: selectedDate
+    });
+    
     onSave({ ...formData, bookingDate: selectedDate });
-    onClose();
+  };
+  
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('EditBookingForm - Update button clicked');
+    // Let the form's onSubmit handle it - don't prevent default
   };
 
   return (
@@ -223,6 +405,21 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
             <div className="flex items-center justify-center py-8">
               <ContentLoader />
             </div>
+          ) : !isEditable ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="text-warning text-4xl mb-4">
+                <KeenIcon icon="information" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Booking Cannot Be Edited
+              </h3>
+              <p className="text-sm text-gray-600 text-center mb-4">
+                This booking is {bookingStatus} and cannot be edited. Only pending, accepted, or in-progress bookings can be edited.
+              </p>
+              <Button type="button" onClick={onClose}>
+                Close
+              </Button>
+            </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Booking Information */}
@@ -235,22 +432,37 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
                     <Input
                       id="userId"
                       value={formData.userId}
-                      onChange={(e) => handleInputChange('userId', e.target.value)}
+                      onChange={(e) => {
+                        handleInputChange('userId', e.target.value);
+                        if (errors.userId) {
+                          setErrors(prev => ({ ...prev, userId: '' }));
+                        }
+                      }}
                       required
                       maxLength={16}
-                      className="mt-2"
+                      className={`mt-2 ${errors.userId ? 'border-danger' : ''}`}
                       placeholder="Enter user ID"
                     />
+                    {errors.userId && (
+                      <p className="text-danger text-sm mt-1">{errors.userId}</p>
+                    )}
                   </div>
 
                   <div>
                     <ProviderSearchSelect
                       value={formData.providerId}
-                      onChange={(providerId) => handleInputChange('providerId', providerId)}
+                      onChange={(providerId) => {
+                        handleInputChange('providerId', providerId);
+                        if (errors.providerId) {
+                          setErrors(prev => ({ ...prev, providerId: '' }));
+                        }
+                      }}
                       label="Provider"
                       placeholder="Search provider by name, phone, or ID..."
-                      required
                     />
+                    {errors.providerId && (
+                      <p className="text-danger text-sm mt-1">{errors.providerId}</p>
+                    )}
                   </div>
                 </div>
 
@@ -407,18 +619,29 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
 
                   <div>
                     <Label htmlFor="paymentMethod">Payment Method *</Label>
-                    <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
-                      <SelectTrigger className="mt-2">
+                    <Select 
+                      value={formData.paymentMethod} 
+                      onValueChange={(value) => {
+                        handleInputChange('paymentMethod', value);
+                        if (errors.paymentMethod) {
+                          setErrors(prev => ({ ...prev, paymentMethod: '' }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className={`mt-2 ${errors.paymentMethod ? 'border-danger' : ''}`}>
                         <SelectValue placeholder="Select payment method" />
                       </SelectTrigger>
                       <SelectContent>
-                        {paymentMethods.map((method) => (
-                          <SelectItem key={method} value={method.toLowerCase()}>
-                            {method}
+                        {paymentMethodOptions.map((method) => (
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {errors.paymentMethod && (
+                      <p className="text-danger text-sm mt-1">{errors.paymentMethod}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -473,7 +696,15 @@ const EditBookingForm = ({ isOpen, onClose, onSave, bookingData }: IEditBookingF
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit" 
+                  onClick={(e) => {
+                    console.log('Button clicked - event:', e);
+                    handleButtonClick(e);
+                  }}
+                  className="cursor-pointer"
+                  style={{ position: 'relative', zIndex: 10 }}
+                >
                   <KeenIcon icon="check" className="me-2" />
                   Update Booking
                 </Button>

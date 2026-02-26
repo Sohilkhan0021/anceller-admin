@@ -399,6 +399,63 @@ export const assignProvider = async (
 };
 
 /**
+ * Update booking details
+ * 
+ * @param bookingId - ID of the booking to update
+ * @param updateData - Data to update (address, amount, payment method, scheduled date/time, notes, etc.)
+ * @returns Promise resolving to update result
+ * @throws Error if API request fails
+ */
+export const updateBooking = async (
+  bookingId: string,
+  updateData: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    scheduled_date?: string;
+    scheduled_time?: string;
+    total_amount?: number;
+    service_cost?: number;
+    tax_amount?: number;
+    discount_amount?: number;
+    final_amount?: number;
+    payment_gateway?: string;
+    notes?: string;
+    special_instructions?: string;
+    status?: string;
+  }
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  try {
+    const response = await axios.put<{ status: number; message: string; data?: any }>(
+      `${BOOKING_BASE_URL}/${bookingId}`,
+      updateData
+    );
+    
+    if (response.data.status === 0) {
+      throw new Error(response.data.message || 'Failed to update booking');
+    }
+    
+    return {
+      success: true,
+      message: response.data.message || 'Booking updated successfully',
+      data: response.data.data
+    };
+  } catch (error) {
+    // Handle network errors first
+    if (isNetworkError(error)) {
+      throw new Error(getErrorMessage(error, 'No internet connection. Please check your network settings and try again.'));
+    }
+
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || 'Failed to update booking';
+      throw new Error(errorMessage);
+    }
+    throw new Error(getErrorMessage(error, 'Failed to update booking'));
+  }
+};
+
+/**
  * Booking Service Object
  * 
  * Centralized service object for all booking-related operations
@@ -410,6 +467,7 @@ export const bookingService = {
   cancelBooking,
   deleteBooking,
   updateBookingStatus,
+  updateBooking,
   assignProvider,
 };
 

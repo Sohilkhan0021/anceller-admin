@@ -694,7 +694,7 @@ const ItemsManagement = ({
         }}
         onSave={handleSaveItem}
         itemData={editingItem}
-        availableProjectItems={[]} // Not used anymore - form now uses sub-services
+        availableProjectItems={availableProjectItems}
       />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

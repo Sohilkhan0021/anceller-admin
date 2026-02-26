@@ -325,19 +325,33 @@ export const updateSubService = async (
           fileObject: data.image
         });
       }
-    } else if (data.image_url !== undefined) {
-      // Always send image_url if provided (even if null/empty to clear it)
-      // IMPORTANT: Send the string 'null' when image_url is null, so backend can detect deletion
-      // Backend service checks: if (data.image_url === null || data.image_url === '' || data.image_url === 'null')
-      // FormData converts null to string 'null', so we explicitly send 'null' string
-      const imageUrlValue = data.image_url === null ? 'null' : (data.image_url || '');
-      formData.append('image_url', imageUrlValue);
-      if (import.meta.env.DEV) {
-        console.log('Sub-service update: Sending image_url', { 
-          image_url: data.image_url, 
-          sending_value: imageUrlValue,
-          note: data.image_url === null ? 'Sending string "null" to delete image' : 'Sending image URL'
-        });
+    } else {
+      // CRITICAL: Always send image_url when it exists in data, even if null
+      // This ensures the backend receives the field for processing
+      // If image_url is null, send special marker '__DELETE__' to signal deletion
+      // Empty strings get stripped by multipart parsers, so we use a non-empty marker
+      // If image_url is undefined, don't send it (backend keeps existing)
+      if (data.image_url !== undefined) {
+        // Always send image_url if provided (even if null/empty to clear it)
+        // IMPORTANT: Send '__DELETE__' marker when image_url is null, as empty strings get stripped
+        // Backend will check for '__DELETE__', '', 'null', or null and convert to null
+        const imageUrlValue = data.image_url === null ? '__DELETE__' : (data.image_url || '');
+        formData.append('image_url', imageUrlValue);
+        if (import.meta.env.DEV) {
+          console.log('Sub-service update: Sending image_url', { 
+            image_url: data.image_url, 
+            sending_value: imageUrlValue,
+            sending_type: typeof imageUrlValue,
+            note: data.image_url === null ? 'Sending "__DELETE__" marker to delete image' : 'Sending image URL',
+            formDataHasImageUrl: formData.has('image_url'),
+            formDataImageUrlValue: formData.get('image_url'),
+            formDataImageUrlType: typeof formData.get('image_url')
+          });
+        }
+      } else {
+        if (import.meta.env.DEV) {
+          console.log('Sub-service update: image_url is undefined - not sending, backend will keep existing');
+        }
       }
     }
     

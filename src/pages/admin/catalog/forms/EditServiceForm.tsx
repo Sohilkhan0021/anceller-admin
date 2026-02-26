@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { useSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import { useUpdateService } from '@/services/service.hooks';
 import { getImageUrl } from '@/utils/imageUrl';
 import { ContentLoader } from '@/components/loaders';
@@ -32,7 +32,6 @@ interface IEditServiceFormProps {
 }
 
 const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCategories = [] }: IEditServiceFormProps) => {
-  const { enqueueSnackbar } = useSnackbar();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -49,20 +48,12 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
 
   const updateServiceMutation = useUpdateService({
     onSuccess: (data) => {
-      enqueueSnackbar('Sub-Service updated successfully', { 
-        variant: 'solid', 
-        state: 'success',
-        icon: 'check-circle'
-      });
+      toast.success(data.message || 'Service updated successfully');
       onSave(data);
       handleClose();
     },
     onError: (error) => {
-      enqueueSnackbar(error.message || 'Failed to update service', { 
-        variant: 'solid', 
-        state: 'danger',
-        icon: 'cross-circle'
-      });
+      toast.error(error.message || 'Failed to update service');
     }
   });
 
@@ -175,21 +166,13 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
     
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      enqueueSnackbar('Please select an image file', { 
-        variant: 'solid', 
-        state: 'warning',
-        icon: 'information-2'
-      });
+      toast.warning('Please select an image file');
       return;
     }
     
     // Validate file size (1MB max)
     if (file.size > 1 * 1024 * 1024) {
-      enqueueSnackbar('Image size must be less than 1MB', { 
-        variant: 'solid', 
-        state: 'warning',
-        icon: 'information-2'
-      });
+      toast.warning('Image size must be less than 1MB');
       return;
     }
     
@@ -200,7 +183,7 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
       setImagePreview(result);
     };
     reader.readAsDataURL(file);
-  }, [enqueueSnackbar]);
+  }, []);
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     handleImageUpload(event.target.files);
@@ -295,20 +278,12 @@ const EditServiceForm = ({ isOpen, onClose, onSave, serviceData, availableCatego
     e.preventDefault();
     
     if (!validateForm()) {
-      enqueueSnackbar('Please fill all required fields', { 
-        variant: 'solid', 
-        state: 'warning',
-        icon: 'information-2'
-      });
+      toast.warning('Please fill all required fields');
       return;
     }
 
     if (!serviceData?.id && !serviceData?.service_id) {
-      enqueueSnackbar('Sub-Service ID is missing', { 
-        variant: 'solid', 
-        state: 'danger',
-        icon: 'cross-circle'
-      });
+      toast.error('Service ID is missing');
       return;
     }
 

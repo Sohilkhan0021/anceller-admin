@@ -150,6 +150,7 @@ const SubServiceManagement = ({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
+    service_id: serviceFilter === 'all' ? '' : serviceFilter,
     search: debouncedSearch,
   });
 
@@ -327,7 +328,10 @@ const SubServiceManagement = ({
         isFile: subServiceData.image instanceof File,
         imageValue: subServiceData.image,
         imageKeys: subServiceData.image && typeof subServiceData.image === 'object' ? Object.keys(subServiceData.image) : 'not an object',
-        image_url: subServiceData.image_url
+        image_url: subServiceData.image_url,
+        image_url_type: typeof subServiceData.image_url,
+        image_url_is_null: subServiceData.image_url === null,
+        image_url_is_undefined: subServiceData.image_url === undefined
       });
 
       // Format data for API
@@ -346,7 +350,7 @@ const SubServiceManagement = ({
       // CRITICAL: Check if image is a File object (not an empty object or null)
       if (subServiceData.image && subServiceData.image instanceof File) {
         updateData.image = subServiceData.image;
-        console.log(' Sub-service update: New image file provided', {
+        console.log('🟢 Sub-service update: New image file provided', {
           fileName: subServiceData.image.name,
           fileSize: subServiceData.image.size,
           fileType: subServiceData.image.type,
@@ -354,28 +358,54 @@ const SubServiceManagement = ({
           note: 'File will be uploaded - backend will set image_url after processing'
         });
         // Explicitly do NOT set image_url when sending a file - backend will handle it
-      } else if (subServiceData.image && typeof subServiceData.image === 'object' && Object.keys(subServiceData.image).length === 0) {
-        // Image is an empty object {} - this means no new file was selected, keep existing image_url
-        console.log('Sub-service update: Empty image object detected - keeping existing image_url');
-        // Don't include image or image_url - backend will keep the existing one
-      } else if (subServiceData.image === null || subServiceData.image === undefined) {
-        // No image file provided - use existing image_url if available
-        if (subServiceData.image_url !== undefined) {
-          // Preserve null if explicitly set (for deletion), otherwise use the value or null
-          updateData.image_url = subServiceData.image_url === null ? null : (subServiceData.image_url || null);
-          console.log('Sub-service update: No new file, using image_url', { image_url: updateData.image_url });
+      } else {
+        // No new file uploaded - handle image_url
+        // CRITICAL: ALWAYS include image_url in updateData, even if undefined
+        // This ensures the backend receives the field and can process deletion
+        // If image_url is null, backend will delete the image
+        // If image_url is undefined, we'll set it to a special value to signal "keep existing"
+        // If image_url is a string, backend will update to that URL
+        
+        // IMPORTANT: We MUST always include image_url when editing, even if undefined
+        // Use a sentinel value to distinguish between "delete" (null) and "keep existing" (undefined)
+        // But since backend receives undefined as missing, we'll always send something
+        if (subServiceData.image_url === null) {
+          // Explicit deletion - send null
+          updateData.image_url = null;
+          console.log('🟢 Sub-service update: image_url is null - will delete image', { 
+            image_url: updateData.image_url,
+            image_url_type: typeof updateData.image_url,
+            is_null: updateData.image_url === null,
+            will_delete: true
+          });
+        } else if (subServiceData.image_url !== undefined) {
+          // Explicit URL provided - send it
+          updateData.image_url = subServiceData.image_url;
+          console.log('🟢 Sub-service update: image_url provided', { 
+            image_url: updateData.image_url,
+            image_url_type: typeof updateData.image_url,
+            will_delete: false
+          });
         } else {
-          console.log('Sub-service update: No image file and no image_url - backend will keep existing');
+          // image_url is undefined - don't include it, backend keeps existing
+          console.log('⚠️ Sub-service update: image_url is undefined - backend will keep existing');
         }
-      } else if (subServiceData.image_url !== undefined) {
-        // Always send image_url if it's defined (even if null/empty) to preserve or clear it
-        // This is only used when NOT uploading a new file
-        // Preserve null if explicitly set (for deletion), otherwise use the value or null
-        updateData.image_url = subServiceData.image_url === null ? null : (subServiceData.image_url || null);
-        console.log('Sub-service update: image_url provided (no file upload)', { image_url: updateData.image_url });
       }
 
       // base_price, currency, and duration_minutes are now always included (required fields)
+
+      // CRITICAL DEBUG: Log the final updateData to verify image_url is included
+      console.log('🔵 Sub-service update: Final updateData before API call', {
+        hasImage: 'image' in updateData,
+        hasImageUrl: 'image_url' in updateData,
+        imageUrlValue: updateData.image_url,
+        imageUrlType: typeof updateData.image_url,
+        allKeys: Object.keys(updateData),
+        updateDataStringified: JSON.stringify(updateData, (key, value) => {
+          if (value instanceof File) return `[File: ${value.name}]`;
+          return value;
+        }, 2)
+      });
 
       updateSubService({
         subServiceId,
@@ -513,15 +543,22 @@ const SubServiceManagement = ({
     return 'Unknown';
   };
 
-  // Client-side filtering for service (category) - filter by service/category
+  // Client-side filtering for search and status (service filter is handled server-side)
+  // Note: service filter is now handled server-side via API, but we keep client-side filtering
+  // for search and status to ensure immediate UI updates
   let filteredSubServices = subServices.filter(subService => {
-    const matchesService = serviceFilter === 'all' || 
-      subService.categoryId === serviceFilter || 
-      subService.serviceId === serviceFilter ||
-      subService.id === serviceFilter ||
-      (subService as any).service_id === serviceFilter ||
-      (subService as any).category_id === serviceFilter;
-    return matchesService;
+    // Filter by search term (server-side also handles this, but client-side provides immediate feedback)
+    const matchesSearch = !debouncedSearch || 
+      subService.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (subService as any).name?.toLowerCase().includes(debouncedSearch.toLowerCase());
+    
+    // Filter by status (server-side also handles this, but client-side provides immediate feedback)
+    // Use status property which is normalized to 'active'/'inactive' by the hook
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && (subService.status === 'active' || (subService as any).is_active === true)) ||
+      (statusFilter === 'inactive' && (subService.status === 'inactive' || (subService as any).is_active === false));
+    
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -653,10 +690,10 @@ const SubServiceManagement = ({
             <div>
               <Select value={serviceFilter} onValueChange={handleServiceFilterChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Sub-Services" />
+                  <SelectValue placeholder="All Services" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Sub-Services</SelectItem>
+                  <SelectItem value="all">All Services</SelectItem>
                   {isLoadingServices ? (
                     <SelectItem value="loading" disabled>Loading services...</SelectItem>
                   ) : availableServices && Array.isArray(availableServices) && availableServices.length > 0 ? (
