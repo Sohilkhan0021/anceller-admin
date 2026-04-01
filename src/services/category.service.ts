@@ -150,6 +150,13 @@ export const createCategory = async (
       formData.append('meta_data', data.meta_data);
     }
 
+    if (data.warranty_days !== undefined && data.warranty_days !== null) {
+      formData.append('warranty_days', String(data.warranty_days));
+    }
+    if (data.warranty_description !== undefined && data.warranty_description !== null) {
+      formData.append('warranty_description', data.warranty_description);
+    }
+
     const response = await axios.post<ICreateCategoryResponse>(
       CATEGORY_BASE_URL,
       formData,
@@ -224,6 +231,17 @@ export const updateCategory = async (
 
     if (data.meta_data && data.meta_data.trim()) {
       formData.append('meta_data', data.meta_data);
+    }
+
+    // Warranty: send so backend can set or clear (empty string clears per adminCatalogService)
+    if (data.warranty_days !== undefined) {
+      formData.append(
+        'warranty_days',
+        data.warranty_days === null ? '' : String(data.warranty_days)
+      );
+    }
+    if (data.warranty_description !== undefined) {
+      formData.append('warranty_description', data.warranty_description ?? '');
     }
 
     const response = await axios.put<IUpdateCategoryResponse>(

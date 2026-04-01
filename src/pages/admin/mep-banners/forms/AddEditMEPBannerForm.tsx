@@ -13,7 +13,12 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { IMEPBanner } from '@/services/mepBanner.types';
 import { getImageUrl } from '@/utils/imageUrl';
-import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
+import {
+  validateImageFile,
+  validateImageDimensions,
+  getAllowedImageTypesString,
+  getImageDimensionHint
+} from '@/utils/imageValidation';
 import { toast } from 'sonner';
 
 interface IAddEditMEPBannerFormProps {
@@ -133,6 +138,18 @@ const AddEditMEPBannerForm = ({ isOpen, onClose, onSave, mepBannerData }: IAddEd
           image: validation.error || 'Invalid image file'
         }));
         toast.error(validation.error || 'Invalid image file');
+        return;
+      }
+
+      // Enforce exact MEP banner dimensions: 1920x900
+      const dimensionValidation = await validateImageDimensions(file, 1920, 900);
+      if (!dimensionValidation.isValid) {
+        const message = dimensionValidation.error || 'MEP banner image must be exactly 1920x900 pixels';
+        setErrors(prev => ({
+          ...prev,
+          image: message
+        }));
+        toast.error(message);
         return;
       }
 
@@ -361,7 +378,9 @@ const AddEditMEPBannerForm = ({ isOpen, onClose, onSave, mepBannerData }: IAddEd
                   >
                     <KeenIcon icon="image" className="text-gray-400 text-2xl mb-2" />
                     <p className="text-sm text-gray-600">Click to upload MEP banner image</p>
-                    <p className="text-xs text-gray-500">{getImageValidationHint()}</p>
+                    <p className="text-xs text-gray-500">
+                      {getImageDimensionHint(1920, 900)}
+                    </p>
                   </div>
                 )}
                 <input

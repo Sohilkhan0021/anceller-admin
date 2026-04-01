@@ -1,7 +1,28 @@
 import { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { DefaultPage, Demo1DarkSidebarPage, AdminDashboardPage } from '@/pages/dashboards';
-import { UserManagementPage, ProviderManagementPage, BookingManagementPage, BookingDetailsPage, PaymentsManagementPage, CatalogManagementPage, CouponsManagementPage, PoliciesManagementPage, SystemSettingsPage, RolesPermissionsPage, BannerManagementPage, SubBannerManagementPage, MEPBannerManagementPage, ServiceCostManagementPage, MEPManagementPage /*, NotificationsSupportPage */ } from '@/pages/admin';
+import {
+  UserManagementPage,
+  ProviderManagementPage,
+  BookingManagementPage,
+  BookingDetailsPage,
+  PaymentsManagementPage,
+  CatalogManagementPage,
+  CouponsManagementPage,
+  PoliciesManagementPage,
+  SystemSettingsPage,
+  RolesPermissionsPage,
+  BannerManagementPage,
+  SubBannerManagementPage,
+  MEPBannerManagementPage,
+  ServiceCostManagementPage,
+  MEPManagementPage,
+  ServiceAreaManagementPage,
+  OnboardingKitManagementPage,
+  OnboardingOperationsPage,
+  OnboardingFeeDefaultsPage,
+  BillingManagementPage /*, NotificationsSupportPage */
+} from '@/pages/admin';
 import {
   ProfileActivityPage,
   ProfileBloggerPage,
@@ -108,6 +129,11 @@ const AppRoutingSetup = (): ReactElement => {
           <Route path="/admin/mep-banners" element={<MEPBannerManagementPage />} />
           <Route path="/admin/system" element={<SystemSettingsPage />} />
           <Route path="/admin/roles" element={<RolesPermissionsPage />} />
+          <Route path="/admin/service-areas" element={<ServiceAreaManagementPage />} />
+          <Route path="/admin/onboarding-kit" element={<OnboardingKitManagementPage />} />
+          <Route path="/admin/onboarding-operations" element={<OnboardingOperationsPage />} />
+          <Route path="/admin/onboarding-fee-defaults" element={<OnboardingFeeDefaultsPage />} />
+          <Route path="/admin/billing-models" element={<BillingManagementPage />} />
           <Route path="/admin/service-cost" element={<ServiceCostManagementPage />} />
           <Route path="/admin/mep" element={<MEPManagementPage />} />
           {/* Commented out - Notifications & Support tab

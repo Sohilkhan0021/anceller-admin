@@ -88,7 +88,10 @@ const UserManagementTable = ({
   };
 
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, isDeleted?: boolean) => {
+    if (isDeleted) {
+      return <Badge variant="destructive" className="bg-gray-500 text-white">Deleted</Badge>;
+    }
     const s = status?.toUpperCase();
     if (s === 'ACTIVE') {
       return <Badge variant="default" className="bg-success text-white">Active</Badge>;
@@ -200,11 +203,13 @@ const UserManagementTable = ({
                           return phone;
                         })()}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{getStatusBadge(user.status)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {getStatusBadge(user.status, (user as any).is_deleted)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="md:hidden">
-                            {getStatusBadge(user.status)}
+                            {getStatusBadge(user.status, (user as any).is_deleted)}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

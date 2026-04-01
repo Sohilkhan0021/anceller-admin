@@ -70,10 +70,35 @@ export const MENU_SIDEBAR: TMenuConfig = [
     path: '/admin/roles'
   },
   {
+    title: 'Service Areas',
+    icon: 'map',
+    path: '/admin/service-areas'
+  },
+  {
+    title: 'Training & Service Kit',
+    icon: 'box',
+    path: '/admin/onboarding-kit'
+  },
+  {
+    title: 'Onboarding fee defaults',
+    icon: 'financial-schedule',
+    path: '/admin/onboarding-fee-defaults'
+  },
+  {
+    title: 'Onboarding Operations',
+    icon: 'dollar',
+    path: '/admin/onboarding-operations'
+  },
+  {
+    title: 'Billing Models',
+    icon: 'wallet',
+    path: '/admin/billing-models'
+  },
+  {
     title: 'Service Cost Config',
     icon: 'calculator',
     path: '/admin/service-cost'
-  },
+  }
   // {
   //   title: 'MEP Management',
   //   icon: 'category',

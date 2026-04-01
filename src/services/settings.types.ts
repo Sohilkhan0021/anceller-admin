@@ -28,6 +28,15 @@ export interface IBusinessSettings {
   min_order_amount: number;
   max_order_amount: number;
   cancellation_policy: 'flexible' | 'moderate' | 'strict';
+  /** Default registration fee for new providers (see onboardingService) */
+  onboarding_registration_fee?: number;
+  onboarding_training_fee?: number;
+  onboarding_kit_fee?: number;
+  provider_minimum_wallet_balance?: number;
+  /** Alternate keys supported by backend */
+  provider_registration_fee?: number;
+  provider_training_fee?: number;
+  provider_kit_fee?: number;
 }
 
 export interface INotificationSettings {

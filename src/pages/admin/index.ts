@@ -13,3 +13,8 @@ export * from './sub-banners';
 export * from './mep-banners';
 export * from './service-cost';
 export * from './mep';
+export * from './service-areas';
+export * from './onboarding-kit';
+export * from './onboarding-operations';
+export * from './onboarding-fee-defaults';
+export * from './billing';

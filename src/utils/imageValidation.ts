@@ -42,6 +42,45 @@ export const validateImageFile = (
 };
 
 /**
+ * Validates that an image file matches exact width and height.
+ * Used for strict banner dimension enforcement (e.g. 1920x900).
+ */
+export const validateImageDimensions = (
+  file: File,
+  requiredWidth: number,
+  requiredHeight: number
+): Promise<ImageValidationResult> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        if (img.width === requiredWidth && img.height === requiredHeight) {
+          resolve({ isValid: true });
+        } else {
+          resolve({
+            isValid: false,
+            error: `Image dimensions must be exactly ${requiredWidth}x${requiredHeight}px. Current: ${img.width}x${img.height}px`
+          });
+        }
+      };
+      img.onerror = () =>
+        resolve({
+          isValid: false,
+          error: 'Failed to read image dimensions. Please try another file.'
+        });
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () =>
+      resolve({
+        isValid: false,
+        error: 'Failed to read image file. Please try another file.'
+      });
+    reader.readAsDataURL(file);
+  });
+};
+
+/**
  * Gets the allowed image types as a string for accept attribute
  */
 export const getAllowedImageTypesString = (): string => {
@@ -54,3 +93,16 @@ export const getAllowedImageTypesString = (): string => {
 export const getImageValidationHint = (maxSizeMB: number = 1): string => {
   return `JPG, PNG, and WebP formats only. Maximum size: ${maxSizeMB}MB`;
 };
+
+/**
+ * Gets a user-friendly description including required dimensions and size.
+ * Useful for banner uploads where exact dimensions are required.
+ */
+export const getImageDimensionHint = (
+  width: number,
+  height: number,
+  maxSizeMB: number = 1
+): string => {
+  return `Required size: ${width}x${height}px. JPG, PNG, and WebP formats only. Maximum size: ${maxSizeMB}MB`;
+};
+

@@ -32,6 +32,8 @@ export interface ICategory {
   created_at?: string;
   updated_at?: string;
   is_deleted?: boolean;
+  warranty_days?: number | null;
+  warranty_description?: string | null;
 }
 
 /**
@@ -80,6 +82,9 @@ export interface ICreateCategoryRequest {
   sort_order?: number;
   is_active?: boolean;
   meta_data?: string; // JSON string
+  /** Optional warranty (category-level); sent as multipart fields */
+  warranty_days?: number | null;
+  warranty_description?: string | null;
 }
 
 /**

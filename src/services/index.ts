@@ -79,6 +79,11 @@ export * from './payout.service';
 export type { IPayout, IGetPayoutsParams, IGetPayoutsResponse, IPayoutStats } from './payout.types';
 export * from './payout.hooks';
 
+// Service Area Services
+export * from './serviceArea.service';
+export * from './serviceArea.types';
+export * from './serviceArea.hooks';
+
 // Profile Services
 export * from './profile.service';
 export type { IAdminProfile, IGetAdminProfileResponse, IUpdateAdminProfileRequest, IUpdateAdminProfileResponse } from './profile.types';
@@ -104,3 +109,6 @@ export * from './mepBanner.hooks';
 export * from './mep.service';
 export * from './mep.types';
 export * from './mep.hooks';
+// Billing Models
+export * from './billingModels.service';
+export * from './billingModels.hooks';

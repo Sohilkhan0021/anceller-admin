@@ -7,7 +7,7 @@
 /**
  * User status enum
  */
-export type UserStatus = 'active' | 'blocked' | 'inactive';
+export type UserStatus = 'active' | 'blocked' | 'inactive' | 'deleted';
 
 /**
  * User entity interface
@@ -42,6 +42,8 @@ export interface IUser {
   country?: string;
   createdAt?: string;
   updatedAt?: string;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 }
 
 export interface IUserStats {

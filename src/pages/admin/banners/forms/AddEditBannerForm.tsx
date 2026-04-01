@@ -20,7 +20,12 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { IBanner } from '@/services/banner.types';
 import { getImageUrl } from '@/utils/imageUrl';
-import { validateImageFile, getAllowedImageTypesString, getImageValidationHint } from '@/utils/imageValidation';
+import {
+  validateImageFile,
+  validateImageDimensions,
+  getAllowedImageTypesString,
+  getImageDimensionHint
+} from '@/utils/imageValidation';
 import { useCategories } from '@/services';
 
 interface IAddEditBannerFormProps {
@@ -153,6 +158,16 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
         setErrors(prev => ({
           ...prev,
           image: validation.error || 'Invalid image file'
+        }));
+        return;
+      }
+
+      // Enforce exact banner dimensions: 1920x900
+      const dimensionValidation = await validateImageDimensions(file, 1920, 900);
+      if (!dimensionValidation.isValid) {
+        setErrors(prev => ({
+          ...prev,
+          image: dimensionValidation.error || 'Banner image must be exactly 1920x900 pixels'
         }));
         return;
       }
@@ -437,7 +452,9 @@ const AddEditBannerForm = ({ isOpen, onClose, onSave, bannerData }: IAddEditBann
                   >
                     <KeenIcon icon="image" className="text-gray-400 text-2xl mb-2" />
                     <p className="text-sm text-gray-600">Click to upload banner image</p>
-                    <p className="text-xs text-gray-500">{getImageValidationHint()}</p>
+                    <p className="text-xs text-gray-500">
+                      {getImageDimensionHint(1920, 900)}
+                    </p>
                   </div>
                 )}
                 <input

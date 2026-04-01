@@ -21,7 +21,19 @@ import type {
   ICreateProviderResponse,
   IVerifyKycDocumentRequest,
   IVerifyKycDocumentResponse,
+  IGetProviderOnboardingResponse,
+  IProviderOnboarding,
+  IProviderBillingModel,
+  IProviderWalletSummary,
   IApiError,
+  IAssignTrainingRequest,
+  IMarkTrainingCompleteRequest,
+  IScheduleKitDeliveryRequest,
+  IMarkKitDeliveredRequest,
+  IUpdateOnboardingRequest,
+  IProviderOnboardingPaymentsResponse,
+  ICreateAdminOnboardingPaymentRequest,
+  IMarkAdminOnboardingPaymentPaidRequest,
 } from './provider.types';
 
 /**
@@ -101,6 +113,76 @@ export const getProviderById = async (
     }
     throw new Error('An unexpected error occurred while fetching provider details');
   }
+};
+
+/**
+ * Get provider onboarding status (admin side)
+ *
+ * @param providerId - Provider ID (public_id or UUID)
+ * @returns Promise resolving to onboarding details
+ */
+export const getProviderOnboarding = async (
+  providerId: string
+): Promise<IProviderOnboarding> => {
+  try {
+    const response = await axios.get<IGetProviderOnboardingResponse>(`${PROVIDER_BASE_URL}/${providerId}/onboarding`);
+    return response.data.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch provider onboarding status');
+    }
+    throw new Error('An unexpected error occurred while fetching provider onboarding status');
+  }
+};
+
+/**
+ * Update provider onboarding (payment status, training assigned) - admin only
+ */
+export const updateProviderOnboarding = async (
+  providerId: string,
+  data: IUpdateOnboardingRequest
+): Promise<IProviderOnboarding> => {
+  const response = await axios.patch<IGetProviderOnboardingResponse>(
+    `${PROVIDER_BASE_URL}/${providerId}/onboarding`,
+    data
+  );
+  return response.data.data;
+};
+
+export const getProviderOnboardingPayments = async (
+  providerId: string,
+  params: { page?: number; limit?: number } = {}
+): Promise<IProviderOnboardingPaymentsResponse> => {
+  const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/onboarding/payments`, { params });
+  return response.data.data;
+};
+
+export const createProviderOnboardingPayment = async (
+  providerId: string,
+  data: ICreateAdminOnboardingPaymentRequest
+): Promise<any> => {
+  const response = await axios.post(`${PROVIDER_BASE_URL}/${providerId}/onboarding/payments`, data);
+  return response.data.data;
+};
+
+export const markProviderOnboardingPaymentPaid = async (
+  providerId: string,
+  paymentId: string,
+  data: IMarkAdminOnboardingPaymentPaidRequest
+): Promise<any> => {
+  const response = await axios.patch(
+    `${PROVIDER_BASE_URL}/${providerId}/onboarding/payments/${paymentId}/mark-paid`,
+    data
+  );
+  return response.data.data;
+};
+
+/**
+ * Get provider packages (billing packages) - admin
+ */
+export const getProviderPackages = async (params: { is_active?: boolean; page?: number; limit?: number } = {}) => {
+  const response = await axios.get(`${API_URL}/admin/provider-packages`, { params });
+  return response.data.data;
 };
 
 /**
@@ -477,5 +559,88 @@ export const providerService = {
   verifyKycDocument,
   updateProvider,
   deleteProvider,
+  // Provider onboarding (training & kit)
+  getProviderOnboarding,
+  updateProviderOnboarding,
+  getProviderOnboardingPayments,
+  createProviderOnboardingPayment,
+  markProviderOnboardingPaymentPaid,
+  assignTraining: async (providerId: string, data: IAssignTrainingRequest) => {
+    const response = await axios.post(`${PROVIDER_BASE_URL}/${providerId}/training`, data);
+    return response.data.data;
+  },
+  markTrainingCompleted: async (providerId: string, data: IMarkTrainingCompleteRequest) => {
+    const response = await axios.post(`${PROVIDER_BASE_URL}/${providerId}/training/complete`, data);
+    return response.data.data;
+  },
+  scheduleKitDelivery: async (providerId: string, data: IScheduleKitDeliveryRequest) => {
+    const response = await axios.post(`${PROVIDER_BASE_URL}/${providerId}/kit-delivery`, data);
+    return response.data.data;
+  },
+  markKitDelivered: async (providerId: string, data: IMarkKitDeliveredRequest) => {
+    const response = await axios.post(`${PROVIDER_BASE_URL}/${providerId}/kit-delivery/complete`, data);
+    return response.data.data;
+  },
+  // Provider Earnings
+  getProviderEarningsDashboard: async (providerId: string) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/earnings/dashboard`);
+    return response.data.data;
+  },
+  getProviderEarningsHistory: async (providerId: string, params: { page?: number; limit?: number } = {}) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/earnings/history`, { params });
+    return response.data.data;
+  },
+  getProviderEarningsSummary: async (providerId: string, params: { start_date?: string; end_date?: string } = {}) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/earnings/summary`, { params });
+    return response.data.data;
+  },
+  getProviderPendingPayouts: async (providerId: string) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/earnings/pending`);
+    return response.data.data;
+  },
+  getProviderPayoutHistory: async (providerId: string, params: { page?: number; limit?: number } = {}) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/earnings/payouts`, { params });
+    return response.data.data;
+  },
+  // Provider Jobs
+  getProviderJobs: async (providerId: string, params: { page?: number; limit?: number; status?: string; start_date?: string; end_date?: string } = {}) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/jobs`, { params });
+    return response.data.data;
+  },
+  getProviderJobStats: async (providerId: string) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/jobs/stats`);
+    return response.data.data;
+  },
+  // Provider Availability
+  getProviderAvailability: async (providerId: string) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/availability`);
+    return response.data.data;
+  },
+  updateProviderAvailability: async (providerId: string, data: { is_available?: boolean; availability_start?: string; availability_end?: string }) => {
+    const response = await axios.put(`${PROVIDER_BASE_URL}/${providerId}/availability`, data);
+    return response.data.data;
+  },
+  // Provider Wallet
+  getProviderWallet: async (providerId: string) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/wallet`);
+    return response.data.data;
+  },
+  getProviderWalletTransactions: async (providerId: string, params: { page?: number; limit?: number } = {}) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/wallet/transactions`, { params });
+    return response.data.data;
+  },
+  adjustProviderWallet: async (providerId: string, data: { amount: number; type: 'ADD' | 'DEDUCT'; description?: string }) => {
+    const response = await axios.post(`${PROVIDER_BASE_URL}/${providerId}/wallet/adjust`, data);
+    return response.data.data;
+  },
+  // Provider Billing Model
+  getProviderBillingModel: async (providerId: string) => {
+    const response = await axios.get(`${PROVIDER_BASE_URL}/${providerId}/billing-model`);
+    return response.data.data;
+  },
+  updateProviderBillingModel: async (providerId: string, data: { plan_id: string; wallet_topup_amount?: number }) => {
+    const response = await axios.put(`${PROVIDER_BASE_URL}/${providerId}/billing-model`, data);
+    return response.data.data;
+  },
 };
 

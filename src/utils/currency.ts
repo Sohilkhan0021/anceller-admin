@@ -4,6 +4,36 @@
  */
 
 /**
+ * Format amount for display: whole number when decimal is .00, otherwise 2 decimal places.
+ * Use this for all currency/amount display (fixes unnecessary decimals like 149.00 -> 149).
+ */
+export const formatAmount = (
+  amount: number | string | null | undefined,
+  options: { showSymbol?: boolean } = {}
+): string => {
+  const { showSymbol = true } = options;
+  if (amount === null || amount === undefined || amount === '') {
+    return showSymbol ? '₹0' : '0';
+  }
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(numAmount)) {
+    return showSymbol ? '₹0' : '0';
+  }
+  const isWhole = Number.isInteger(numAmount) || Math.abs(numAmount - Math.round(numAmount * 100) / 100) < 1e-9;
+  const formatted = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: isWhole ? 0 : 2,
+    maximumFractionDigits: 2,
+    currencyDisplay: 'symbol',
+  }).format(numAmount);
+  return formatted
+    .replace(/\bINR\s*/gi, '₹')
+    .replace(/\bRs\.?\s*/gi, '₹')
+    .replace(/\bRs\s+/gi, '₹');
+};
+
+/**
  * Format a number as Indian Rupee currency with ₹ symbol
  * @param amount - The amount to format
  * @param options - Formatting options

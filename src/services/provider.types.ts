@@ -47,6 +47,8 @@ export interface IProvider {
   createdAt?: string;
   updatedAt?: string;
   quality_score?: number;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 }
 
 /**
@@ -156,6 +158,160 @@ export interface IProviderDetail extends IProvider {
     created_at: string;
   }>;
   is_available?: boolean;
+  onboarding_status?: string;
+  onboarding?: IProviderOnboarding;
+  billing_model?: IProviderBillingModel;
+  wallet?: IProviderWalletSummary;
+}
+
+export interface IProviderOnboardingChecklistItem {
+  required: boolean;
+  completed?: boolean;
+  amount?: number;
+  paid_at?: string | null;
+  scheduled_date?: string | null;
+  status?: string | null;
+  delivered?: boolean;
+  completed_at?: string | null;
+}
+
+export interface IProviderOnboardingChecklist {
+  registration_fee: IProviderOnboardingChecklistItem;
+  training: IProviderOnboardingChecklistItem;
+  kit: IProviderOnboardingChecklistItem;
+  verification: IProviderOnboardingChecklistItem;
+}
+
+export interface IProviderOnboarding {
+  onboarding_id: string;
+  public_id: string;
+  onboarding_status: string;
+  provider: {
+    provider_id: string;
+    public_id: string;
+    contact_name?: string | null;
+    phone_number?: string | null;
+  };
+  city_coordinator?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  checklist: IProviderOnboardingChecklist;
+  notes?: string | null;
+}
+
+export interface IProviderBillingModel {
+  billing_model_id: string;
+  public_id: string;
+  model_type: 'COMMISSION' | 'PACKAGE';
+  is_active: boolean;
+  minimum_wallet_balance?: number | null;
+  current_wallet_balance?: number | null;
+  commissionTier?: {
+    tier_id: string;
+    public_id: string;
+    tier_name: string;
+    commission_rate: number;
+  } | null;
+  package?: {
+    package_id: string;
+    public_id: string;
+    package_name: string;
+    monthly_fee: number;
+    lead_quota: number;
+  } | null;
+}
+
+export interface IProviderWalletSummary {
+  wallet_id: string;
+  public_id: string;
+  earnings_balance: number;
+  commission_balance: number;
+  package_balance: number;
+  total_balance: number;
+  last_updated_at: string;
+}
+
+export interface IGetProviderOnboardingResponse {
+  status: number;
+  message: string;
+  data: IProviderOnboarding;
+}
+
+export interface IAssignTrainingRequest {
+  scheduled_date: string;
+  scheduled_time?: string | null;
+  location?: string | null;
+  trainer_name?: string | null;
+  trainer_contact?: string | null;
+}
+
+export interface IMarkTrainingCompleteRequest {
+  completion_notes?: string | null;
+}
+
+export interface IScheduleKitDeliveryRequest {
+  scheduled_date: string;
+  scheduled_time?: string | null;
+  hub_location?: string | null;
+  hub_address?: string | null;
+}
+
+export interface IMarkKitDeliveredRequest {
+  received_by?: string | null;
+  delivery_notes?: string | null;
+  digital_signature?: string | null;
+}
+
+export interface IUpdateOnboardingRequest {
+  registration_fee_paid?: boolean;
+  training_fee_paid?: boolean;
+  kit_fee_paid?: boolean;
+  training_assigned?: boolean;
+  registration_fee_amount?: number;
+  training_fee_amount?: number;
+  kit_fee_amount?: number;
+}
+
+export interface IAdminOnboardingPayment {
+  payment_id: string;
+  public_id: string;
+  fee_type: 'REGISTRATION' | 'TRAINING' | 'KIT';
+  amount: string | number;
+  payment_status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  payment_gateway?: string | null;
+  gateway_transaction_id?: string | null;
+  paid_at?: string | null;
+  created_at: string;
+}
+
+export interface IProviderOnboardingPaymentsResponse {
+  payments: IAdminOnboardingPayment[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface ICreateAdminOnboardingPaymentRequest {
+  fee_type: 'REGISTRATION' | 'TRAINING' | 'KIT';
+  amount?: number;
+  mark_as_paid?: boolean;
+  payment_method?: string;
+  transaction_reference?: string;
+  remarks?: string;
+  paid_at?: string;
+}
+
+export interface IMarkAdminOnboardingPaymentPaidRequest {
+  payment_method?: string;
+  transaction_reference?: string;
+  remarks?: string;
+  paid_at?: string;
 }
 
 /**

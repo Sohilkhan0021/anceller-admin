@@ -23,6 +23,14 @@ import type {
   ICreateProviderResponse,
   IVerifyKycDocumentRequest,
   IVerifyKycDocumentResponse,
+  IProviderOnboarding,
+  IAssignTrainingRequest,
+  IMarkTrainingCompleteRequest,
+  IScheduleKitDeliveryRequest,
+  IMarkKitDeliveredRequest,
+  IUpdateOnboardingRequest,
+  ICreateAdminOnboardingPaymentRequest,
+  IMarkAdminOnboardingPaymentPaidRequest,
 } from './provider.types';
 
 /**
@@ -158,6 +166,186 @@ export const useProvider = (
 };
 
 /**
+ * Hook to fetch provider onboarding status (admin side)
+ */
+export const useProviderOnboarding = (
+  providerId: string | null,
+  options?: {
+    enabled?: boolean;
+  }
+): {
+  onboarding: IProviderOnboarding | null;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  refetch: () => void;
+} => {
+  const queryResult: UseQueryResult<IProviderOnboarding, Error> = useQuery(
+    ['provider-onboarding', providerId],
+    () => providerService.getProviderOnboarding(providerId!),
+    {
+      enabled: options?.enabled !== false && !!providerId,
+      staleTime: 60000,
+    }
+  );
+
+  return {
+    onboarding: queryResult.data || null,
+    isLoading: queryResult.isLoading,
+    isError: queryResult.isError,
+    error: queryResult.error || null,
+    refetch: queryResult.refetch,
+  };
+};
+
+export const useAssignTraining = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: IAssignTrainingRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }) => providerService.assignTraining(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+export const useMarkTrainingCompleted = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: IMarkTrainingCompleteRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }) => providerService.markTrainingCompleted(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+export const useScheduleKitDelivery = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: IScheduleKitDeliveryRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }) => providerService.scheduleKitDelivery(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+export const useMarkKitDelivered = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: IMarkKitDeliveredRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }) => providerService.markKitDelivered(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+export const useUpdateOnboardingPayment = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: IUpdateOnboardingRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }) => providerService.updateProviderOnboarding(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+export const useProviderOnboardingPayments = (
+  providerId: string | null,
+  params: { page?: number; limit?: number } = {},
+  options?: { enabled?: boolean }
+) => {
+  return useQuery(
+    ['provider-onboarding-payments', providerId, params.page || 1, params.limit || 10],
+    () => providerService.getProviderOnboardingPayments(providerId!, params),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useCreateProviderOnboardingPayment = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; data: ICreateAdminOnboardingPaymentRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }) => providerService.createProviderOnboardingPayment(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        queryClient.invalidateQueries(['provider-onboarding-payments', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+export const useMarkProviderOnboardingPaymentPaid = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}): UseMutationResult<any, Error, { providerId: string; paymentId: string; data: IMarkAdminOnboardingPaymentPaidRequest }> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, paymentId, data }) => providerService.markProviderOnboardingPaymentPaid(providerId, paymentId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-onboarding', variables.providerId]);
+        queryClient.invalidateQueries(['provider-onboarding-payments', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+/**
  * Hook to approve provider
  */
 export const useApproveProvider = (options?: {
@@ -234,7 +422,7 @@ export const useUpdateProviderStatus = (options?: {
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
-        if (options?.onError) options.onError(error);
+        if (options?.onError) options.onError(error as Error);
       },
     }
   );
@@ -259,7 +447,7 @@ export const useUpdateProvider = (options?: {
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
-        if (options?.onError) options.onError(error);
+        if (options?.onError) options.onError(error as Error);
       },
     }
   );
@@ -298,7 +486,7 @@ export const useDeleteProvider = (options?: {
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
-        if (options?.onError) options.onError(error);
+        if (options?.onError) options.onError(error as Error);
       },
     }
   );
@@ -321,7 +509,7 @@ export const useCreateProvider = (options?: {
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
-        if (options?.onError) options.onError(error);
+        if (options?.onError) options.onError(error as Error);
       },
     }
   );
@@ -347,9 +535,141 @@ export const useVerifyKycDocument = (options?: {
         if (options?.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
-        if (options?.onError) options.onError(error);
+        if (options?.onError) options.onError(error as Error);
       },
     }
   );
 };
 
+// Provider Earnings Hooks
+export const useProviderEarningsDashboard = (providerId: string | null, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-earnings-dashboard', providerId],
+    () => providerService.getProviderEarningsDashboard(providerId!),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useProviderEarningsHistory = (providerId: string | null, params: { page?: number; limit?: number } = {}, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-earnings-history', providerId, params.page, params.limit],
+    () => providerService.getProviderEarningsHistory(providerId!, params),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+// Provider Jobs Hooks
+export const useProviderJobs = (providerId: string | null, params: { page?: number; limit?: number; status?: string } = {}, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-jobs', providerId, params.page, params.limit, params.status],
+    () => providerService.getProviderJobs(providerId!, params),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useProviderJobStats = (providerId: string | null, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-job-stats', providerId],
+    () => providerService.getProviderJobStats(providerId!),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+// Provider Availability Hooks
+export const useProviderAvailability = (providerId: string | null, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-availability', providerId],
+    () => providerService.getProviderAvailability(providerId!),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useUpdateProviderAvailability = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }: { providerId: string; data: { is_available?: boolean; availability_start?: string; availability_end?: string } }) =>
+      providerService.updateProviderAvailability(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-availability', variables.providerId]);
+        queryClient.invalidateQueries(['provider', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+// Provider Wallet Hooks
+export const useProviderWallet = (providerId: string | null, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-wallet', providerId],
+    () => providerService.getProviderWallet(providerId!),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useProviderWalletTransactions = (providerId: string | null, params: { page?: number; limit?: number } = {}, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-wallet-transactions', providerId, params.page, params.limit],
+    () => providerService.getProviderWalletTransactions(providerId!, params),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useAdjustProviderWallet = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }: { providerId: string; data: { amount: number; type: 'ADD' | 'DEDUCT'; description?: string } }) =>
+      providerService.adjustProviderWallet(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-wallet', variables.providerId]);
+        queryClient.invalidateQueries(['provider-wallet-transactions', variables.providerId]);
+        queryClient.invalidateQueries(['provider-earnings-dashboard', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};
+
+// Provider Billing Model Hooks
+export const useProviderBillingModel = (providerId: string | null, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['provider-billing-model', providerId],
+    () => providerService.getProviderBillingModel(providerId!),
+    { enabled: options?.enabled !== false && !!providerId }
+  );
+};
+
+export const useUpdateProviderBillingModel = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ providerId, data }: { providerId: string; data: { plan_id: string; wallet_topup_amount?: number } }) =>
+      providerService.updateProviderBillingModel(providerId, data),
+    {
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries(['provider-billing-model', variables.providerId]);
+        queryClient.invalidateQueries(['provider', variables.providerId]);
+        if (options?.onSuccess) options.onSuccess(data);
+      },
+      onError: (error) => {
+        if (options?.onError) options.onError(error as Error);
+      },
+    }
+  );
+};

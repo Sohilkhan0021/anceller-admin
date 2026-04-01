@@ -49,6 +49,8 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
     name: '',
     icon: 'category',
     description: '',
+    warrantyDays: '' as string,
+    warrantyDescription: '' as string,
     status: 'active' as 'active' | 'inactive',
     displayOrder: 1
   });
@@ -120,6 +122,11 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
           name: categoryData.name || '',
           icon: categoryData.icon || 'category',
           description: categoryData.description || '',
+          warrantyDays:
+            categoryData.warranty_days != null
+              ? String(categoryData.warranty_days)
+              : '',
+          warrantyDescription: categoryData.warranty_description || '',
           status: statusValue as 'active' | 'inactive',
           displayOrder: categoryData.sort_order || categoryData.displayOrder || categoryData.display_order || 1
         });
@@ -143,6 +150,8 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
           name: '',
           icon: 'category',
           description: '',
+          warrantyDays: '',
+          warrantyDescription: '',
           status: 'active',
           displayOrder: 1
         });
@@ -277,6 +286,8 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
       name: '',
       icon: 'category',
       description: '',
+      warrantyDays: '',
+      warrantyDescription: '',
       status: 'active',
       displayOrder: 1
     });
@@ -311,6 +322,8 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         description: formData.description?.trim() || '',
         // icon: iconFile || undefined, // Commented out - icon not working
         image: imageFile || undefined,
+        warranty_days: formData.warrantyDays.trim() ? Number(formData.warrantyDays) : undefined,
+        warranty_description: formData.warrantyDescription.trim() || undefined,
         sort_order: formData.displayOrder,
         is_active: formData.status === 'active' // Explicitly set is_active
       });
@@ -326,6 +339,8 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
         description: formData.description?.trim() || '',
         // icon: iconFile || undefined, // Commented out - icon not working
         image: imageFile || undefined,
+        warranty_days: formData.warrantyDays.trim() ? Number(formData.warrantyDays) : undefined,
+        warranty_description: formData.warrantyDescription.trim() || undefined,
         sort_order: formData.displayOrder,
         is_active: formData.status === 'active' // Explicitly set is_active
       });
@@ -373,6 +388,34 @@ const CategoryForm = ({ isOpen, onClose, onSave, categoryData }: ICategoryFormPr
                 placeholder="Short tagline or description for this service..."
                 maxLength={600}
               />
+            </div>
+
+            {/* Warranty (Optional) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="warrantyDays">Warranty days (Optional)</Label>
+                <Input
+                  id="warrantyDays"
+                  type="number"
+                  min={0}
+                  value={formData.warrantyDays}
+                  onChange={(e) => handleInputChange('warrantyDays', e.target.value)}
+                  className="mt-2"
+                  placeholder="e.g. 30"
+                />
+              </div>
+              <div>
+                <Label htmlFor="warrantyDescription">Warranty description (Optional)</Label>
+                <Textarea
+                  id="warrantyDescription"
+                  value={formData.warrantyDescription}
+                  onChange={(e) => handleInputChange('warrantyDescription', e.target.value)}
+                  rows={3}
+                  className="mt-2"
+                  placeholder="Explain what is covered under this category's warranty..."
+                  maxLength={600}
+                />
+              </div>
             </div>
 
             {/* Icon Selection - COMMENTED OUT - Icon not working */}

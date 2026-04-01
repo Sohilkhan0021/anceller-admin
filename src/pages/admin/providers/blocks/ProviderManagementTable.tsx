@@ -161,7 +161,10 @@ const ProviderManagementTable = ({
     return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, isDeleted?: boolean) => {
+    if (isDeleted) {
+      return <Badge variant="destructive" className="bg-gray-500 text-white">Deleted</Badge>;
+    }
     // Normalize status to lowercase for comparison
     const normalizedStatus = (status || '').toLowerCase();
     const statusConfig: { [key: string]: { variant: string; className: string; text: string } } = {
@@ -330,7 +333,9 @@ const ProviderManagementTable = ({
                           <div className="text-sm text-gray-500">total</div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{getStatusBadge(provider.status)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {getStatusBadge(provider.status, (provider as any).is_deleted)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end">
                           <div className="flex flex-col gap-1 sm:hidden mr-2">
@@ -338,7 +343,7 @@ const ProviderManagementTable = ({
                               {getKYCStatusBadge(provider.kycStatus)}
                             </div>
                             <div className="lg:hidden">
-                              {getStatusBadge(provider.status)}
+                              {getStatusBadge(provider.status, (provider as any).is_deleted)}
                             </div>
                           </div>
                           <DropdownMenu>
