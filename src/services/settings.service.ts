@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_URL } from '@/config/api.config';
 import type {
   IGetSettingsResponse,
   IUpdateSettingsRequest,
@@ -9,7 +10,8 @@ import type {
   IApiError
 } from './settings.types';
 
-const SETTINGS_BASE_URL = '/api/v1/admin/settings';
+/** Must use API_URL in production — relative `/api/...` hits the SPA host and returns 405 (not the Node API). */
+const SETTINGS_BASE_URL = `${API_URL}/admin/settings`;
 
 /**
  * Get system settings
