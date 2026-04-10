@@ -21,6 +21,7 @@ import {
   OnboardingKitManagementPage,
   OnboardingOperationsPage,
   OnboardingFeeDefaultsPage,
+  ConsultationFeePage,
   BillingManagementPage /*, NotificationsSupportPage */
 } from '@/pages/admin';
 import {
@@ -135,6 +136,7 @@ const AppRoutingSetup = (): ReactElement => {
           <Route path="/admin/onboarding-fee-defaults" element={<OnboardingFeeDefaultsPage />} />
           <Route path="/admin/billing-models" element={<BillingManagementPage />} />
           <Route path="/admin/service-cost" element={<ServiceCostManagementPage />} />
+          <Route path="/admin/consultation-fee" element={<ConsultationFeePage />} />
           <Route path="/admin/mep" element={<MEPManagementPage />} />
           {/* Commented out - Notifications & Support tab
           <Route path="/admin/support" element={<NotificationsSupportPage />} />

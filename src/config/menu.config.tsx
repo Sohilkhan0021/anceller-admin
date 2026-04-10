@@ -98,6 +98,11 @@ export const MENU_SIDEBAR: TMenuConfig = [
     title: 'Service Cost Config',
     icon: 'calculator',
     path: '/admin/service-cost'
+  },
+  {
+    title: 'Consultation Fee',
+    icon: 'dollar',
+    path: '/admin/consultation-fee'
   }
   // {
   //   title: 'MEP Management',

@@ -37,6 +37,7 @@ export interface IBusinessSettings {
   provider_registration_fee?: number;
   provider_training_fee?: number;
   provider_kit_fee?: number;
+  consultation_booking_fee?: number;
 }
 
 export interface INotificationSettings {
