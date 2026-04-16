@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogBody,
+  DialogBody
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -19,17 +19,14 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface IAddBookingFormProps {
   isOpen: boolean;
   onClose: () => void;
+  // eslint-disable-next-line no-unused-vars
   onSave: (bookingData: any) => void;
 }
 
@@ -54,23 +51,16 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
-  const paymentMethods = [
-    'Credit Card',
-    'Debit Card',
-    'UPI',
-    'Net Banking',
-    'Wallet',
-    'COD'
-  ];
+  const paymentMethods = ['Credit Card', 'Debit Card', 'UPI', 'Net Banking', 'Wallet', 'COD'];
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSave({ ...formData, bookingDate: selectedDate });
     onClose();
@@ -109,7 +99,7 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Booking Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Booking Information</h3>
+              <h3 className="text-lg font-semibold text-foreground">Booking Information</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -122,7 +112,6 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
                     maxLength={16}
                     className="mt-2"
                     placeholder="Enter user ID"
-
                   />
                 </div>
 
@@ -171,7 +160,7 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 
             {/* Date & Time */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Date & Time</h3>
+              <h3 className="text-lg font-semibold text-foreground">Date & Time</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -181,12 +170,12 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal mt-2",
-                          !selectedDate && "text-muted-foreground"
+                          'mt-2 w-full justify-start text-left font-normal',
+                          !selectedDate && 'text-muted-foreground'
                         )}
                       >
                         <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                        {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -216,7 +205,7 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 
             {/* Address Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Service Address</h3>
+              <h3 className="text-lg font-semibold text-foreground">Service Address</h3>
 
               <div>
                 <Label htmlFor="address">Address *</Label>
@@ -277,7 +266,7 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 
             {/* Payment Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Payment Information</h3>
+              <h3 className="text-lg font-semibold text-foreground">Payment Information</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -296,7 +285,10 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 
                 <div>
                   <Label htmlFor="paymentMethod">Payment Method *</Label>
-                  <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(value) => handleInputChange('paymentMethod', value)}
+                  >
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
@@ -314,11 +306,14 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 
             {/* Booking Settings */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Booking Settings</h3>
+              <h3 className="text-lg font-semibold text-foreground">Booking Settings</h3>
 
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleInputChange('status', value)}
+                >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -358,7 +353,7 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 border-t pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
@@ -375,4 +370,3 @@ const AddBookingForm = ({ isOpen, onClose, onSave }: IAddBookingFormProps) => {
 };
 
 export { AddBookingForm };
-

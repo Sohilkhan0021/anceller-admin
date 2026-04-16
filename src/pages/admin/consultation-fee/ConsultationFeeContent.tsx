@@ -40,8 +40,9 @@ const ConsultationFeeContent = () => {
     <div className="space-y-6 px-4 pt-4 md:px-6 md:pt-6">
       <div className="max-w-3xl space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Consultation fee</h1>
-        <p className="text-sm text-gray-600">
-          Set the amount charged from users when they book a consultation. Booking is confirmed only after successful payment.
+        <p className="text-sm text-muted-foreground">
+          Set the amount charged from users when they book a consultation. Booking is confirmed only
+          after successful payment.
         </p>
       </div>
 
@@ -68,7 +69,7 @@ const ConsultationFeeContent = () => {
                   value={fee}
                   onChange={(e) => setFee(e.target.value)}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   This amount is used by user-side Razorpay consultation booking flow.
                 </p>
               </div>

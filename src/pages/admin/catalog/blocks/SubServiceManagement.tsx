@@ -1,16 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Select,
@@ -25,7 +26,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { SubServiceForm } from '../forms/SubServiceForm';
 import {
@@ -34,9 +35,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogBody,
-  DialogFooter,
+  DialogFooter
 } from '@/components/ui/dialog';
-import { useSubServices, useDeleteSubService, useUpdateSubService, useCreateSubService, useSubServiceById } from '@/services';
+import {
+  useSubServices,
+  useDeleteSubService,
+  useUpdateSubService,
+  useCreateSubService
+} from '@/services';
 import { ISubService } from '@/services/subservice.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
@@ -48,23 +54,24 @@ import { getImageUrl } from '@/utils/imageUrl';
 //   name: string;
 //   categoryId: string;
 //   icon: string;
-//   image?: string; 
+//   image?: string;
 //   status: 'active' | 'inactive';
 //   displayOrder: number;
 // }
 
 interface ISubServiceManagementProps {
   categories?: any[];
+  // eslint-disable-next-line no-unused-vars
   onCreateSubService?: (subService: any) => void;
+  // eslint-disable-next-line no-unused-vars
   onUpdateSubService?: (subService: any) => void;
+  // eslint-disable-next-line no-unused-vars
   onDeleteSubService?: (subServiceId: string) => void;
 }
 
 const SubServiceManagement = ({
   categories = [],
-  onCreateSubService,
-  onUpdateSubService,
-  onDeleteSubService
+  onCreateSubService
 }: ISubServiceManagementProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceFilter, setServiceFilter] = useState('all');
@@ -76,26 +83,24 @@ const SubServiceManagement = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  
+  const [isDoesNotIncludeOpen, setIsDoesNotIncludeOpen] = useState(false);
+  const [doesNotIncludeSubService, setDoesNotIncludeSubService] = useState<
+    ISubService | null
+  >(null);
+  const [doesNotIncludeHtml, setDoesNotIncludeHtml] = useState<string>('');
+  const [isDoesNotIncludeSubmitting, setIsDoesNotIncludeSubmitting] = useState(false);
+  const doesNotIncludeUpdateFlagRef = useRef(false);
+  const doesNotIncludeEditorRef = useRef<HTMLTextAreaElement | null>(null);
+
   // Fetch all services (categories) for dropdown in form (no pagination)
   const { services: allServices, isLoading: isLoadingServices } = useServices({
     page: 1,
     limit: 1000, // Very high limit to get all services for dropdown (no pagination)
     status: '' // Get all statuses for dropdown
   });
-  
+
   // Ensure services is always an array
   const availableServices = Array.isArray(allServices) ? allServices : [];
-  
-  // Fetch all sub-services for dropdown (use high limit to get all sub-services - no pagination)
-  const { subServices: allSubServices, isLoading: isLoadingSubServices } = useSubServices({
-    page: 1,
-    limit: 1000, // Very high limit to fetch all sub-services for dropdown (no pagination)
-    status: '' // Get all statuses for dropdown
-  });
-  
-  // Ensure sub-services is always an array
-  const availableSubServices = Array.isArray(allSubServices) ? allSubServices : [];
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
@@ -105,11 +110,11 @@ const SubServiceManagement = ({
     service: true,
     subService: true,
     status: true,
-    actions: true,
+    actions: true
   });
 
   const toggleColumn = (column: keyof typeof columnVisibility) => {
-    setColumnVisibility(prev => ({
+    setColumnVisibility((prev) => ({
       ...prev,
       [column]: !prev[column]
     }));
@@ -138,24 +143,17 @@ const SubServiceManagement = ({
   }, [searchTerm]);
 
   // Fetch sub-services with filters
-  const {
-    subServices,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useSubServices({
-    page: currentPage,
-    limit: pageSize,
-    status: statusFilter === 'all' ? '' : statusFilter,
-    service_id: serviceFilter === 'all' ? '' : serviceFilter,
-    search: debouncedSearch,
-  });
+  const { subServices, pagination, isLoading, isError, error, refetch, isFetching } =
+    useSubServices({
+      page: currentPage,
+      limit: pageSize,
+      status: statusFilter === 'all' ? '' : statusFilter,
+      service_id: serviceFilter === 'all' ? '' : serviceFilter,
+      search: debouncedSearch
+    });
 
   // Update sub-service mutation
-  const { mutate: updateSubService, isLoading: isUpdating } = useUpdateSubService({
+  const { mutate: updateSubService } = useUpdateSubService({
     onSuccess: async (data) => {
       console.log('Sub-service update success - Full response:', JSON.stringify(data, null, 2));
       console.log('Sub-service update success - Image URL:', data?.data?.image_url);
@@ -167,6 +165,9 @@ const SubServiceManagement = ({
         image_url: data?.data?.image_url,
         sub_service_id: data?.data?.sub_service_id
       });
+
+      const isDoesNotIncludeUpdate = doesNotIncludeUpdateFlagRef.current;
+      doesNotIncludeUpdateFlagRef.current = false;
 
       // VERIFY: Check if response has all expected fields
       const responseData = data?.data;
@@ -192,8 +193,15 @@ const SubServiceManagement = ({
         // The refetch will get the updated sub-service with the image_url from the database
         toast.success('Item updated successfully');
         refetch(); // Refresh the list to show updated data including image
-        setIsFormOpen(false);
-        setEditingSubService(null);
+        if (isDoesNotIncludeUpdate) {
+          setIsDoesNotIncludeOpen(false);
+          setDoesNotIncludeSubService(null);
+          setDoesNotIncludeHtml('');
+          setIsDoesNotIncludeSubmitting(false);
+        } else {
+          setIsFormOpen(false);
+          setEditingSubService(null);
+        }
 
         return;
       }
@@ -213,17 +221,28 @@ const SubServiceManagement = ({
       }
 
       refetch(); // Refresh the list to show updated data including image
-      setIsFormOpen(false);
-      setEditingSubService(null);
+      if (isDoesNotIncludeUpdate) {
+        setIsDoesNotIncludeOpen(false);
+        setDoesNotIncludeSubService(null);
+        setDoesNotIncludeHtml('');
+        setIsDoesNotIncludeSubmitting(false);
+      } else {
+        setIsFormOpen(false);
+        setEditingSubService(null);
+      }
     },
     onError: (error: Error) => {
+      if (doesNotIncludeUpdateFlagRef.current) {
+        setIsDoesNotIncludeSubmitting(false);
+        doesNotIncludeUpdateFlagRef.current = false;
+      }
       console.error('Sub-service update error', { error: error.message, stack: error.stack });
       toast.error(error.message || 'Failed to update item');
     }
   });
 
   // Create sub-service mutation
-  const { mutate: createSubService, isLoading: isCreating } = useCreateSubService({
+  const { mutate: createSubService } = useCreateSubService({
     onSuccess: (data) => {
       toast.success('Item created successfully');
       refetch(); // This will be called automatically via query invalidation, but keeping for immediate feedback
@@ -239,7 +258,7 @@ const SubServiceManagement = ({
 
   // Delete sub-service mutation
   const { mutate: deleteSubService, isLoading: isDeleting } = useDeleteSubService({
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Item deleted successfully');
       setDeleteDialogOpen(false);
       setSubServiceToDelete(null);
@@ -270,36 +289,111 @@ const SubServiceManagement = ({
     // Ensure all fields are properly mapped for editing
     const subServiceWithData: any = {
       ...subService,
-      id: subService.id || subService.public_id || (subService as any).sub_service_id || (subService as any).public_id,
+      id:
+        subService.id ||
+        subService.public_id ||
+        (subService as any).sub_service_id ||
+        (subService as any).public_id,
       // Map all fields properly
       name: subService.name,
-      serviceId: subService.serviceId || subService.service_id || (subService as any).service?.service_id,
-      categoryId: subService.categoryId || (subService as any).category?.category_id || (subService as any).category_id,
-      image_url: (subService as any).image_url || (subService as any).imageUrl || (subService as any).image,
-      status: subService.status || ((subService as any).is_active === false ? 'inactive' : 'active'),
-      displayOrder: subService.displayOrder || subService.display_order || (subService as any).sort_order || 1,
-      is_active: subService.status === 'active' || ((subService as any).is_active !== false && subService.status !== 'inactive')
+      serviceId:
+        subService.serviceId || subService.service_id || (subService as any).service?.service_id,
+      categoryId:
+        subService.categoryId ||
+        (subService as any).category?.category_id ||
+        (subService as any).category_id,
+      image_url:
+        (subService as any).image_url || (subService as any).imageUrl || (subService as any).image,
+      info: (subService as any).info || (subService as any).meta_data?.info || '',
+      status:
+        subService.status || ((subService as any).is_active === false ? 'inactive' : 'active'),
+      displayOrder:
+        subService.displayOrder || subService.display_order || (subService as any).sort_order || 1,
+      is_active:
+        subService.status === 'active' ||
+        ((subService as any).is_active !== false && subService.status !== 'inactive')
     };
     setEditingSubService(subServiceWithData);
     setIsFormOpen(true);
+  };
+
+  const openDoesNotIncludeEditor = (subService: ISubService) => {
+    setDoesNotIncludeSubService(subService);
+    setDoesNotIncludeHtml(
+      (subService as any).doesNotIncludeHtml ||
+        (subService as any).meta_data?.doesNotInclude_html ||
+        ''
+    );
+    setIsDoesNotIncludeSubmitting(false);
+    doesNotIncludeUpdateFlagRef.current = false;
+    setIsDoesNotIncludeOpen(true);
+  };
+
+  const insertDoesNotIncludeTag = (tag: 'p' | 'ul' | 'li' | 'strong') => {
+    const editor = doesNotIncludeEditorRef.current;
+    if (!editor) return;
+    const start = editor.selectionStart || 0;
+    const end = editor.selectionEnd || 0;
+    const selected = doesNotIncludeHtml.slice(start, end);
+    let replacement = selected;
+
+    if (tag === 'p') replacement = `<p>${selected || 'Details'}</p>`;
+    if (tag === 'ul') replacement = `<ul>\n  <li>${selected || 'Point'}</li>\n</ul>`;
+    if (tag === 'li') replacement = `<li>${selected || 'Point'}</li>`;
+    if (tag === 'strong') replacement = `<strong>${selected || 'Important'}</strong>`;
+
+    const next = `${doesNotIncludeHtml.slice(0, start)}${replacement}${doesNotIncludeHtml.slice(end)}`;
+    setDoesNotIncludeHtml(next);
+  };
+
+  const handleSaveDoesNotInclude = () => {
+    if (!doesNotIncludeSubService) return;
+
+    const subServiceId =
+      doesNotIncludeSubService.id ||
+      (doesNotIncludeSubService as any).public_id ||
+      (doesNotIncludeSubService as any).sub_service_id;
+
+    if (!subServiceId) {
+      toast.error('Sub-service ID is missing');
+      return;
+    }
+
+    setIsDoesNotIncludeSubmitting(true);
+    doesNotIncludeUpdateFlagRef.current = true;
+
+    updateSubService({
+      subServiceId,
+      data: { doesNotIncludeHtml },
+    });
   };
 
   const handleCloneSubService = async (subService: ISubService) => {
     try {
       // Prepare cloned data with "Copy" appended to name
       const clonedData: any = {
-        service_id: subService.serviceId || subService.service_id || (subService as any).service?.service_id,
+        service_id:
+          subService.serviceId || subService.service_id || (subService as any).service?.service_id,
         name: `${subService.name} (Copy)`,
         description: (subService as any).description || '',
         is_active: false, // Clone as inactive by default
-        sort_order: (subService.displayOrder || subService.display_order || (subService as any).sort_order || 1) + 1,
+        sort_order:
+          (subService.displayOrder ||
+            subService.display_order ||
+            (subService as any).sort_order ||
+            1) + 1,
         base_price: (subService as any).base_price || 0,
         currency: (subService as any).currency || 'INR',
-        duration_minutes: (subService as any).duration_minutes || (subService as any).estimated_duration_minutes || 1,
+        duration_minutes:
+          (subService as any).duration_minutes ||
+          (subService as any).estimated_duration_minutes ||
+          1,
+        info: (subService as any).info || (subService as any).meta_data?.info || ''
       };
 
       // Include image_url if available (but not the file itself)
-      const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image;
+      const imageUrl =
+        (subService as any).image_url || (subService as any).imageUrl || (subService as any).image;
       if (imageUrl && typeof imageUrl === 'string') {
         clonedData.image_url = imageUrl;
       }
@@ -315,7 +409,10 @@ const SubServiceManagement = ({
   const handleSaveSubService = async (subServiceData: any) => {
     if (editingSubService) {
       // Update existing sub-service
-      const subServiceId = editingSubService.id || editingSubService.public_id || (editingSubService as any).sub_service_id;
+      const subServiceId =
+        editingSubService.id ||
+        editingSubService.public_id ||
+        (editingSubService as any).sub_service_id;
       if (!subServiceId) {
         toast.error('Sub-service ID is missing');
         return;
@@ -327,7 +424,10 @@ const SubServiceManagement = ({
         imageType: typeof subServiceData.image,
         isFile: subServiceData.image instanceof File,
         imageValue: subServiceData.image,
-        imageKeys: subServiceData.image && typeof subServiceData.image === 'object' ? Object.keys(subServiceData.image) : 'not an object',
+        imageKeys:
+          subServiceData.image && typeof subServiceData.image === 'object'
+            ? Object.keys(subServiceData.image)
+            : 'not an object',
         image_url: subServiceData.image_url,
         image_url_type: typeof subServiceData.image_url,
         image_url_is_null: subServiceData.image_url === null,
@@ -341,9 +441,14 @@ const SubServiceManagement = ({
         description: subServiceData.description || '',
         is_active: subServiceData.status === 'active',
         sort_order: subServiceData.displayOrder || 1,
-        base_price: subServiceData.base_price ? parseFloat(subServiceData.base_price.toString()) : 0,
+        base_price: subServiceData.base_price
+          ? parseFloat(subServiceData.base_price.toString())
+          : 0,
         currency: 'INR', // Currency is always INR
-        duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
+        duration_minutes: subServiceData.duration_minutes
+          ? parseInt(subServiceData.duration_minutes.toString(), 10)
+          : 1,
+        info: subServiceData.info || ''
       };
 
       // Include image if a new file was uploaded
@@ -365,14 +470,14 @@ const SubServiceManagement = ({
         // If image_url is null, backend will delete the image
         // If image_url is undefined, we'll set it to a special value to signal "keep existing"
         // If image_url is a string, backend will update to that URL
-        
+
         // IMPORTANT: We MUST always include image_url when editing, even if undefined
         // Use a sentinel value to distinguish between "delete" (null) and "keep existing" (undefined)
         // But since backend receives undefined as missing, we'll always send something
         if (subServiceData.image_url === null) {
           // Explicit deletion - send null
           updateData.image_url = null;
-          console.log('🟢 Sub-service update: image_url is null - will delete image', { 
+          console.log('🟢 Sub-service update: image_url is null - will delete image', {
             image_url: updateData.image_url,
             image_url_type: typeof updateData.image_url,
             is_null: updateData.image_url === null,
@@ -381,7 +486,7 @@ const SubServiceManagement = ({
         } else if (subServiceData.image_url !== undefined) {
           // Explicit URL provided - send it
           updateData.image_url = subServiceData.image_url;
-          console.log('🟢 Sub-service update: image_url provided', { 
+          console.log('🟢 Sub-service update: image_url provided', {
             image_url: updateData.image_url,
             image_url_type: typeof updateData.image_url,
             will_delete: false
@@ -401,10 +506,14 @@ const SubServiceManagement = ({
         imageUrlValue: updateData.image_url,
         imageUrlType: typeof updateData.image_url,
         allKeys: Object.keys(updateData),
-        updateDataStringified: JSON.stringify(updateData, (key, value) => {
-          if (value instanceof File) return `[File: ${value.name}]`;
-          return value;
-        }, 2)
+        updateDataStringified: JSON.stringify(
+          updateData,
+          (key, value) => {
+            if (value instanceof File) return `[File: ${value.name}]`;
+            return value;
+          },
+          2
+        )
       });
 
       updateSubService({
@@ -414,16 +523,21 @@ const SubServiceManagement = ({
     } else {
       // Create new sub-service
       console.log('handleSaveSubService - Creating new item', { subServiceData });
-      
+
       const createData: any = {
         service_id: subServiceData.serviceId,
         name: subServiceData.name,
         description: subServiceData.description || '',
         is_active: subServiceData.status === 'active',
         sort_order: subServiceData.displayOrder || 1,
-        base_price: subServiceData.base_price ? parseFloat(subServiceData.base_price.toString()) : 0,
+        base_price: subServiceData.base_price
+          ? parseFloat(subServiceData.base_price.toString())
+          : 0,
         currency: subServiceData.currency || 'INR',
-        duration_minutes: subServiceData.duration_minutes ? parseInt(subServiceData.duration_minutes.toString(), 10) : 1,
+        duration_minutes: subServiceData.duration_minutes
+          ? parseInt(subServiceData.duration_minutes.toString(), 10)
+          : 1,
+        info: subServiceData.info || ''
       };
 
       console.log('🟢 Create data prepared:', createData);
@@ -439,7 +553,9 @@ const SubServiceManagement = ({
         });
       } else if (subServiceData.image_url) {
         createData.image_url = subServiceData.image_url;
-        console.log('🟢 Sub-service create: image_url provided', { image_url: subServiceData.image_url });
+        console.log('🟢 Sub-service create: image_url provided', {
+          image_url: subServiceData.image_url
+        });
       } else {
         console.log('🟢 Sub-service create: No image provided');
       }
@@ -456,38 +572,45 @@ const SubServiceManagement = ({
     }
   };
 
-  const handleToggleStatus = useCallback((subServiceId: string, checked: boolean) => {
-    // Find the sub-service to preserve all its data
-    const subService = subServices.find(s => s.id === subServiceId);
-    if (!subService) {
-      toast.error('Sub-service not found');
-      return;
-    }
+  const handleToggleStatus = useCallback(
+    (subServiceId: string, checked: boolean) => {
+      // Find the sub-service to preserve all its data
+      const subService = subServices.find((s) => s.id === subServiceId);
+      if (!subService) {
+        toast.error('Sub-service not found');
+        return;
+      }
 
-    // Preserve all existing data when toggling status
-    const updateData: any = {
-      is_active: checked,
-      // Preserve all other fields
-      name: subService.name,
-      description: (subService as any).description || '',
-      service_id: subService.serviceId || subService.service_id || (subService as any).service?.service_id,
-      base_price: (subService as any).base_price || (subService as any).basePrice || 0,
-      currency: (subService as any).currency || 'INR',
-      duration_minutes: (subService as any).duration_minutes || (subService as any).durationMinutes || 1,
-      sort_order: subService.displayOrder || subService.display_order || (subService as any).sort_order || 1,
-    };
+      // Preserve all existing data when toggling status
+      const updateData: any = {
+        is_active: checked,
+        // Preserve all other fields
+        name: subService.name,
+        description: (subService as any).description || '',
+        service_id:
+          subService.serviceId || subService.service_id || (subService as any).service?.service_id,
+        base_price: (subService as any).base_price || (subService as any).basePrice || 0,
+        currency: (subService as any).currency || 'INR',
+        duration_minutes:
+          (subService as any).duration_minutes || (subService as any).durationMinutes || 1,
+        sort_order:
+          subService.displayOrder || subService.display_order || (subService as any).sort_order || 1
+      };
 
-    // Preserve image_url if it exists
-    const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image;
-    if (imageUrl) {
-      updateData.image_url = imageUrl;
-    }
+      // Preserve image_url if it exists
+      const imageUrl =
+        (subService as any).image_url || (subService as any).imageUrl || (subService as any).image;
+      if (imageUrl) {
+        updateData.image_url = imageUrl;
+      }
 
-    updateSubService({
-      subServiceId,
-      data: updateData
-    });
-  }, [updateSubService, subServices]);
+      updateSubService({
+        subServiceId,
+        data: updateData
+      });
+    },
+    [updateSubService, subServices]
+  );
 
   const handleDeleteClick = (subServiceId: string) => {
     setSubServiceToDelete(subServiceId);
@@ -502,7 +625,9 @@ const SubServiceManagement = ({
 
   const getStatusBadge = (status: string) => {
     return status === 'active' ? (
-      <Badge variant="default" className="bg-success text-white">Active</Badge>
+      <Badge variant="default" className="bg-success text-white">
+        Active
+      </Badge>
     ) : (
       <Badge variant="outline">Inactive</Badge>
     );
@@ -513,32 +638,34 @@ const SubServiceManagement = ({
     if ((subService as any).service?.name) {
       return (subService as any).service.name;
     }
-    
+
     // Second priority: Look up from availableServices using serviceId
     if (subService.serviceId) {
-      const service = availableServices.find(s => 
-        s.id === subService.serviceId || 
-        s.public_id === subService.serviceId ||
-        (s as any).service_id === subService.serviceId ||
-        (s as any).public_id === subService.serviceId
+      const service = availableServices.find(
+        (s) =>
+          s.id === subService.serviceId ||
+          s.public_id === subService.serviceId ||
+          (s as any).service_id === subService.serviceId ||
+          (s as any).public_id === subService.serviceId
       );
       if (service && service.name) {
         return service.name;
       }
     }
-    
+
     // Third priority: Try service_id field
     if ((subService as any).service_id) {
-      const service = availableServices.find(s => 
-        s.id === (subService as any).service_id || 
-        s.public_id === (subService as any).service_id ||
-        (s as any).service_id === (subService as any).service_id
+      const service = availableServices.find(
+        (s) =>
+          s.id === (subService as any).service_id ||
+          s.public_id === (subService as any).service_id ||
+          (s as any).service_id === (subService as any).service_id
       );
       if (service && service.name) {
         return service.name;
       }
     }
-    
+
     // Fallback: Return Unknown if service name not found
     return 'Unknown';
   };
@@ -546,18 +673,22 @@ const SubServiceManagement = ({
   // Client-side filtering for search and status (service filter is handled server-side)
   // Note: service filter is now handled server-side via API, but we keep client-side filtering
   // for search and status to ensure immediate UI updates
-  let filteredSubServices = subServices.filter(subService => {
+  let filteredSubServices = subServices.filter((subService) => {
     // Filter by search term (server-side also handles this, but client-side provides immediate feedback)
-    const matchesSearch = !debouncedSearch || 
+    const matchesSearch =
+      !debouncedSearch ||
       subService.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       (subService as any).name?.toLowerCase().includes(debouncedSearch.toLowerCase());
-    
+
     // Filter by status (server-side also handles this, but client-side provides immediate feedback)
     // Use status property which is normalized to 'active'/'inactive' by the hook
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && (subService.status === 'active' || (subService as any).is_active === true)) ||
-      (statusFilter === 'inactive' && (subService.status === 'inactive' || (subService as any).is_active === false));
-    
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' &&
+        (subService.status === 'active' || (subService as any).is_active === true)) ||
+      (statusFilter === 'inactive' &&
+        (subService.status === 'inactive' || (subService as any).is_active === false));
+
     return matchesSearch && matchesStatus;
   });
 
@@ -570,7 +701,7 @@ const SubServiceManagement = ({
               <h3 className="card-title">
                 Items {pagination ? `(${pagination.total})` : `(${filteredSubServices.length})`}
               </h3>
-              <p className="text-sm text-gray-600">Manage items (name and icon only)</p>
+              <p className="text-sm text-muted-foreground">Manage items (name and icon only)</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -589,7 +720,10 @@ const SubServiceManagement = ({
                         checked={columnVisibility.order}
                         onCheckedChange={() => toggleColumn('order')}
                       />
-                      <label htmlFor="col-order" className="text-sm font-medium leading-none cursor-pointer">
+                      <label
+                        htmlFor="col-order"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Order
                       </label>
                     </div>
@@ -599,7 +733,10 @@ const SubServiceManagement = ({
                         checked={columnVisibility.image}
                         onCheckedChange={() => toggleColumn('image')}
                       />
-                      <label htmlFor="col-image" className="text-sm font-medium leading-none cursor-pointer">
+                      <label
+                        htmlFor="col-image"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Image
                       </label>
                     </div>
@@ -609,7 +746,10 @@ const SubServiceManagement = ({
                         checked={columnVisibility.name}
                         onCheckedChange={() => toggleColumn('name')}
                       />
-                      <label htmlFor="col-name" className="text-sm font-medium leading-none cursor-pointer">
+                      <label
+                        htmlFor="col-name"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Name
                       </label>
                     </div>
@@ -619,7 +759,10 @@ const SubServiceManagement = ({
                         checked={columnVisibility.service}
                         onCheckedChange={() => toggleColumn('service')}
                       />
-                      <label htmlFor="col-service" className="text-sm font-medium leading-none cursor-pointer">
+                      <label
+                        htmlFor="col-service"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Sub-Service
                       </label>
                     </div>
@@ -629,7 +772,10 @@ const SubServiceManagement = ({
                         checked={columnVisibility.status}
                         onCheckedChange={() => toggleColumn('status')}
                       />
-                      <label htmlFor="col-status" className="text-sm font-medium leading-none cursor-pointer">
+                      <label
+                        htmlFor="col-status"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Status
                       </label>
                     </div>
@@ -639,7 +785,10 @@ const SubServiceManagement = ({
                         checked={columnVisibility.actions}
                         onCheckedChange={() => toggleColumn('actions')}
                       />
-                      <label htmlFor="col-actions" className="text-sm font-medium leading-none cursor-pointer">
+                      <label
+                        htmlFor="col-actions"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
                         Actions
                       </label>
                     </div>
@@ -659,13 +808,8 @@ const SubServiceManagement = ({
           {isError && (
             <Alert variant="danger" className="mb-4">
               <div className="flex items-center justify-between">
-                <span>
-                  {error?.message || 'Failed to load items. Please try again.'}
-                </span>
-                <button
-                  onClick={() => refetch()}
-                  className="text-sm underline hover:no-underline"
-                >
+                <span>{error?.message || 'Failed to load items. Please try again.'}</span>
+                <button onClick={() => refetch()} className="text-sm underline hover:no-underline">
                   Retry
                 </button>
               </div>
@@ -676,7 +820,10 @@ const SubServiceManagement = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <div className="relative">
-                <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <KeenIcon
+                  icon="magnifier"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/70"
+                />
                 <Input
                   type="text"
                   placeholder="Search items..."
@@ -695,21 +842,29 @@ const SubServiceManagement = ({
                 <SelectContent>
                   <SelectItem value="all">All Services</SelectItem>
                   {isLoadingServices ? (
-                    <SelectItem value="loading" disabled>Loading services...</SelectItem>
-                  ) : availableServices && Array.isArray(availableServices) && availableServices.length > 0 ? (
-                    availableServices.map((service) => {
-                      const serviceId = service.id || service.public_id || service.category_id;
-                      const serviceName = service.name;
-                      // Ensure serviceId is a string (not undefined)
-                      if (!serviceId) return null;
-                      return (
-                        <SelectItem key={serviceId} value={serviceId}>
-                          {serviceName}
-                        </SelectItem>
-                      );
-                    }).filter(Boolean)
+                    <SelectItem value="loading" disabled>
+                      Loading services...
+                    </SelectItem>
+                  ) : availableServices &&
+                    Array.isArray(availableServices) &&
+                    availableServices.length > 0 ? (
+                    availableServices
+                      .map((service) => {
+                        const serviceId = service.id || service.public_id || service.category_id;
+                        const serviceName = service.name;
+                        // Ensure serviceId is a string (not undefined)
+                        if (!serviceId) return null;
+                        return (
+                          <SelectItem key={serviceId} value={serviceId}>
+                            {serviceName}
+                          </SelectItem>
+                        );
+                      })
+                      .filter(Boolean)
                   ) : (
-                    <SelectItem value="no-services" disabled>No services available</SelectItem>
+                    <SelectItem value="no-services" disabled>
+                      No services available
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -736,9 +891,12 @@ const SubServiceManagement = ({
             </div>
           ) : filteredSubServices.length === 0 ? (
             <div className="p-8 text-center">
-              <KeenIcon icon="category" className="text-gray-400 text-4xl mx-auto mb-4" />
-              <p className="text-gray-600">No items found</p>
-              <p className="text-sm text-gray-500 mt-2">
+              <KeenIcon
+                icon="category"
+                className="text-muted-foreground/70 text-4xl mx-auto mb-4"
+              />
+              <p className="text-muted-foreground">No items found</p>
+              <p className="text-sm text-muted-foreground mt-2">
                 Try adjusting your search or filter criteria
               </p>
             </div>
@@ -753,57 +911,74 @@ const SubServiceManagement = ({
                       {columnVisibility.image && <TableHead className="w-[80px]">Image</TableHead>}
                       {columnVisibility.name && <TableHead>Name</TableHead>}
                       {columnVisibility.subService && <TableHead>Sub-Service</TableHead>}
-                      {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
-                      {columnVisibility.actions && <TableHead className="w-[150px]">Actions</TableHead>}
+                      {columnVisibility.status && (
+                        <TableHead className="w-[100px]">Status</TableHead>
+                      )}
+                      {columnVisibility.actions && (
+                        <TableHead className="w-[150px]">Actions</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredSubServices && filteredSubServices.length > 0 ? (
                       filteredSubServices.map((subService, index) => {
                         // Handle displayOrder - might be undefined
-                        const displayOrder = subService.displayOrder ?? (index + 1);
+                        const displayOrder = subService.displayOrder ?? index + 1;
 
                         return (
                           <TableRow key={subService.id}>
                             {columnVisibility.order && (
                               <TableCell>
-                                <div className="text-sm font-medium text-center">{displayOrder}</div>
+                                <div className="text-sm font-medium text-center">
+                                  {displayOrder}
+                                </div>
                               </TableCell>
                             )}
                             {columnVisibility.image && (
                               <TableCell>
-                              {(() => {
-                                // Use sub-service's own image_url only (no fallback to icon_url)
-                                const imageUrl = (subService as any).image_url || (subService as any).imageUrl || (subService as any).image || (subService as any).image_path || '';
-                                const fullImageUrl = getImageUrl(imageUrl);
+                                {(() => {
+                                  // Use sub-service's own image_url only (no fallback to icon_url)
+                                  const imageUrl =
+                                    (subService as any).image_url ||
+                                    (subService as any).imageUrl ||
+                                    (subService as any).image ||
+                                    (subService as any).image_path ||
+                                    '';
+                                  const fullImageUrl = getImageUrl(imageUrl);
 
-                                // If image URL is invalid (local path, etc.), show placeholder
-                                if (!fullImageUrl && imageUrl) {
-                                  return (
-                                    <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                      <KeenIcon icon="image" className="text-gray-400 text-lg" />
+                                  // If image URL is invalid (local path, etc.), show placeholder
+                                  if (!fullImageUrl && imageUrl) {
+                                    return (
+                                      <div className="w-12 h-12 rounded-lg bg-surface-2/50 border-border flex items-center justify-center">
+                                        <KeenIcon
+                                          icon="image"
+                                          className="text-muted-foreground/70 text-lg"
+                                        />
+                                      </div>
+                                    );
+                                  }
+
+                                  return fullImageUrl ? (
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-2/50 border-border">
+                                      <img
+                                        src={fullImageUrl}
+                                        alt={subService.name || 'Sub-service'}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-surface-2/50 border-border flex items-center justify-center">
+                                      <KeenIcon
+                                        icon="image"
+                                        className="text-muted-foreground/70 text-lg"
+                                      />
                                     </div>
                                   );
-                                }
-
-                                return fullImageUrl ? (
-                                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                                    <img
-                                      src={fullImageUrl}
-                                      alt={subService.name || 'Sub-service'}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                    <KeenIcon icon="image" className="text-gray-400 text-lg" />
-                                  </div>
-                                );
-                              })()}
+                                })()}
                               </TableCell>
                             )}
                             {columnVisibility.name && (
@@ -813,7 +988,7 @@ const SubServiceManagement = ({
                             )}
                             {columnVisibility.subService && (
                               <TableCell>
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-muted-foreground">
                                   {getServiceName(subService)}
                                 </div>
                               </TableCell>
@@ -824,7 +999,9 @@ const SubServiceManagement = ({
                                   {getStatusBadge(subService.status || 'inactive')}
                                   <Switch
                                     checked={subService.status === 'active'}
-                                    onCheckedChange={(checked) => handleToggleStatus(subService.id, checked)}
+                                    onCheckedChange={(checked) =>
+                                      handleToggleStatus(subService.id, checked)
+                                    }
                                     className="data-[state=checked]:bg-danger"
                                   />
                                 </div>
@@ -835,18 +1012,35 @@ const SubServiceManagement = ({
                                 <div className="flex items-center justify-center">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="flex-shrink-0 p-1 h-8 w-8"
+                                      >
                                         <KeenIcon icon="dots-vertical" className="text-base" />
                                       </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => handleEditSubService(subService)}>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="max-h-64 overflow-y-auto"
+                                    >
+                                      <DropdownMenuItem
+                                        onClick={() => handleEditSubService(subService)}
+                                      >
                                         <KeenIcon icon="pencil" className="me-2" />
                                         Edit Item
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleCloneSubService(subService)}>
+                                      <DropdownMenuItem
+                                        onClick={() => handleCloneSubService(subService)}
+                                      >
                                         <KeenIcon icon="copy" className="me-2" />
                                         Clone Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => openDoesNotIncludeEditor(subService)}
+                                      >
+                                        <KeenIcon icon="pencil" className="me-2" />
+                                        Edit Does Not Include
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={() => handleDeleteClick(subService.id)}
@@ -866,8 +1060,11 @@ const SubServiceManagement = ({
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="text-center py-8">
-                          <div className="text-gray-500">No sub-services found</div>
+                        <TableCell
+                          colSpan={Object.values(columnVisibility).filter(Boolean).length}
+                          className="text-center py-8"
+                        >
+                          <div className="text-muted-foreground">No sub-services found</div>
                         </TableCell>
                       </TableRow>
                     )}
@@ -878,8 +1075,8 @@ const SubServiceManagement = ({
               {/* Pagination Controls */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                  <div className="text-sm text-muted-foreground">
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
                     {pagination.total} items
                   </div>
@@ -897,7 +1094,7 @@ const SubServiceManagement = ({
                       <KeenIcon icon="arrow-left" className="me-1" />
                       Previous
                     </Button>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       Page {pagination.page} of {pagination.totalPages}
                     </div>
                     <Button
@@ -934,7 +1131,101 @@ const SubServiceManagement = ({
         availableCategories={availableCategories}
       />
 
-    
+      <Dialog
+        open={isDoesNotIncludeOpen}
+        onOpenChange={(open) => {
+          setIsDoesNotIncludeOpen(open);
+          if (!open) {
+            setDoesNotIncludeSubService(null);
+            setDoesNotIncludeHtml('');
+            setIsDoesNotIncludeSubmitting(false);
+            doesNotIncludeUpdateFlagRef.current = false;
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <KeenIcon icon="pencil" className="text-primary" />
+              Edit Does Not Include
+            </DialogTitle>
+          </DialogHeader>
+
+          <DialogBody>
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => insertDoesNotIncludeTag('ul')}
+                >
+                  Bullet List
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => insertDoesNotIncludeTag('li')}
+                >
+                  List Item
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => insertDoesNotIncludeTag('strong')}
+                >
+                  Bold
+                </Button>
+              </div>
+
+              <Textarea
+                ref={doesNotIncludeEditorRef}
+                value={doesNotIncludeHtml}
+                onChange={(e) => setDoesNotIncludeHtml(e.target.value)}
+                className="min-h-[140px] font-mono text-xs"
+                placeholder="<ul><li>Point 1</li><li>Point 2</li></ul>"
+              />
+
+              <p className="text-xs text-muted-foreground">
+                This content is parsed into a `doesNotInclude` array and returned in
+                `services/categories/:category_id`.
+              </p>
+            </div>
+          </DialogBody>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDoesNotIncludeOpen(false);
+              }}
+              disabled={isDoesNotIncludeSubmitting}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              onClick={handleSaveDoesNotInclude}
+              disabled={!doesNotIncludeSubService || isDoesNotIncludeSubmitting}
+            >
+              {isDoesNotIncludeSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  Saving...
+                </span>
+              ) : (
+                <>
+                  <KeenIcon icon="check" className="me-2" />
+                  Save
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -944,9 +1235,16 @@ const SubServiceManagement = ({
             </DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <p className="text-sm text-gray-600">
-              Are you sure you want to delete the item <strong className="text-black">"{subServiceToDelete ? subServices.find(s => s.id === subServiceToDelete)?.name || 'this item' : 'this item'}"</strong>?
-              This action cannot be undone.
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete the item{' '}
+              <strong className="text-black">
+                "
+                {subServiceToDelete
+                  ? subServices.find((s) => s.id === subServiceToDelete)?.name || 'this item'
+                  : 'this item'}
+                "
+              </strong>
+              ? This action cannot be undone.
             </p>
           </DialogBody>
           <DialogFooter className="gap-2">
@@ -957,11 +1255,7 @@ const SubServiceManagement = ({
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
               {isDeleting ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
@@ -977,10 +1271,8 @@ const SubServiceManagement = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </>
   );
 };
 
 export { SubServiceManagement };
-

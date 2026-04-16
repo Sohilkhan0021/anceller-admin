@@ -1,40 +1,29 @@
 import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { IUser, IPaginationMeta } from '@/services/user.types';
 import { ContentLoader } from '@/components/loaders';
 import { useUserManage } from '@/providers/userManageProvider';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
 
 interface IUserManagementTableProps {
   users: IUser[];
   pagination: IPaginationMeta | null;
   isLoading?: boolean;
-  onUserSelect: (user: IUser) => void;
-  onEditUser?: (user: IUser) => void;
-  onPageChange?: (page: number) => void;
+  onUserSelect: Function;
+  onEditUser?: Function;
+  onPageChange?: Function;
 }
 
 const truncateText = (text: string, maxLength: number) => {
@@ -42,7 +31,6 @@ const truncateText = (text: string, maxLength: number) => {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
 };
-
 
 const UserManagementTable = ({
   users,
@@ -87,21 +75,6 @@ const UserManagementTable = ({
     }
   };
 
-
-  const getStatusBadge = (status: string, isDeleted?: boolean) => {
-    if (isDeleted) {
-      return <Badge variant="destructive" className="bg-gray-500 text-white">Deleted</Badge>;
-    }
-    const s = status?.toUpperCase();
-    if (s === 'ACTIVE') {
-      return <Badge variant="default" className="bg-success text-white">Active</Badge>;
-    } else if (s === 'BLOCKED') {
-      return <Badge variant="destructive" className="badge-danger">Blocked</Badge>;
-    } else {
-      return <Badge variant="outline">Inactive</Badge>;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
@@ -114,15 +87,6 @@ const UserManagementTable = ({
     } catch {
       return dateString;
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
-    }).format(amount);
   };
 
   return (
@@ -139,21 +103,19 @@ const UserManagementTable = ({
             <ContentLoader />
           </div>
         ) : users.length === 0 ? (
-          <div className="p-8 text-center">
-            <KeenIcon icon="user" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No users found</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Try adjusting your search or filter criteria
-            </p>
-          </div>
+          <EmptyState
+            title="No users found"
+            description="Try adjusting your search or filter criteria."
+            icon="user"
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table>
+              <AdminDataTable>
                 <TableHeader>
                   <TableRow>
                     {/* <TableHead className="hidden sm:table-cell">User ID</TableHead> */}
-                    <TableHead className='pl-8'>Name</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden lg:table-cell">Phone</TableHead>
                     <TableHead className="hidden md:table-cell">Status</TableHead>
@@ -175,10 +137,12 @@ const UserManagementTable = ({
                               {truncateText(user.name || 'N/A', 30)}
                             </div>
 
-                            <div className="text-sm text-gray-500 hidden sm:block">
+                            <div className="hidden text-sm text-muted-foreground sm:block">
                               Joined {formatDate(user.joined_at || user.joinDate)}
                             </div>
-                            <div className="text-xs text-gray-500 sm:hidden">{user.email || 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              {user.email || 'N/A'}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -192,7 +156,10 @@ const UserManagementTable = ({
                           let phone = user.phone || 'N/A';
                           if (phone && phone !== 'N/A' && typeof phone === 'string') {
                             // Remove duplicate +91 prefixes
-                            phone = phone.replace(/^\+91\s*/g, '').replace(/\s*\+91\s*/g, '').trim();
+                            phone = phone
+                              .replace(/^\+91\s*/g, '')
+                              .replace(/\s*\+91\s*/g, '')
+                              .trim();
                             // If it still starts with +91, remove it one more time
                             if (phone.startsWith('+91')) {
                               phone = phone.substring(3).trim();
@@ -204,16 +171,23 @@ const UserManagementTable = ({
                         })()}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {getStatusBadge(user.status, (user as any).is_deleted)}
+                        <StatusBadge
+                          status={(user as any).is_deleted ? 'inactive' : user.status}
+                          label={(user as any).is_deleted ? 'Deleted' : undefined}
+                        />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-end gap-2">
                           <div className="md:hidden">
-                            {getStatusBadge(user.status, (user as any).is_deleted)}
+                            <StatusBadge
+                              status={(user as any).is_deleted ? 'inactive' : user.status}
+                              label={(user as any).is_deleted ? 'Deleted' : undefined}
+                            />
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
+                                <span className="sr-only">Open user actions</span>
                                 <KeenIcon icon="dots-vertical" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -253,7 +227,6 @@ const UserManagementTable = ({
                                 <KeenIcon icon="trash" className="me-2" />
                                 Delete User
                               </DropdownMenuItem>
-
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -261,95 +234,37 @@ const UserManagementTable = ({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </AdminDataTable>
             </div>
 
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && onPageChange && (
-              <div className="card-footer">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
-                  <div className="text-sm text-gray-600">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                    {pagination.total} users
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (pagination.page > 1 && !isLoading) {
-                          onPageChange(pagination.page - 1);
-                        }
-                      }}
-                      disabled={pagination.page <= 1 || isLoading}
-                    >
-                      <KeenIcon icon="arrow-left" className="me-1" />
-                      Previous
-                    </Button>
-                    <div className="text-sm text-gray-600">
-                      Page {pagination.page} of {pagination.totalPages}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (pagination.page < pagination.totalPages && !isLoading) {
-                          onPageChange(pagination.page + 1);
-                        }
-                      }}
-                      disabled={pagination.page >= pagination.totalPages || isLoading}
-                    >
-                      Next
-                      <KeenIcon icon="arrow-right" className="ms-1" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <AdminPagination
+                page={pagination.page}
+                total={pagination.total}
+                totalPages={pagination.totalPages}
+                limit={pagination.limit}
+                onPageChange={onPageChange}
+                isLoading={isLoading}
+                itemLabel="users"
+              />
             )}
           </>
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <KeenIcon icon="trash" className="text-danger" />
-              Delete User
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-gray-600">
-              Are you sure you want to delete the user <strong className="text-black">"{userToDelete ? users.find(u => (u.user_id || u.id) === userToDelete)?.name || 'this user' : 'this user'}"</strong>?
-              This action cannot be undone.
-            </p>
-          </DialogBody>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeletingUser}
-            >
-              <KeenIcon icon="trash" className="me-2" />
-              {isDeletingUser ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmActionDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open: boolean) => setDeleteDialogOpen(open)}
+        title="Delete user"
+        description={`Are you sure you want to delete "${userToDelete ? users.find((u) => (u.user_id || u.id) === userToDelete)?.name || 'this user' : 'this user'}"? This action cannot be undone.`}
+        confirmText={isDeletingUser ? 'Deleting...' : 'Delete'}
+        danger
+        loading={isDeletingUser}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };
 
 export { UserManagementTable };
-
-
-
-

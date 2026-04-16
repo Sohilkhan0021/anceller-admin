@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +9,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
@@ -26,12 +22,12 @@ import { useCategories } from '@/services';
  */
 const mapStatusToBackend = (frontendStatus: string): string => {
   const statusMap: { [key: string]: string } = {
-    'accepted': 'ACTIVE',
-    'completed': 'COMPLETED',
-    'cancelled': 'CANCELED',
-    'in-progress': 'IN_PROGRESS',
+    accepted: 'ACTIVE',
+    completed: 'COMPLETED',
+    cancelled: 'CANCELED',
+    'in-progress': 'IN_PROGRESS'
   };
-  
+
   return statusMap[frontendStatus] || frontendStatus;
 };
 
@@ -41,12 +37,12 @@ const mapStatusToBackend = (frontendStatus: string): string => {
  */
 const mapStatusToFrontend = (backendStatus: string): string => {
   const reverseStatusMap: { [key: string]: string } = {
-    'ACTIVE': 'accepted',
-    'COMPLETED': 'completed',
-    'CANCELED': 'cancelled',
-    'IN_PROGRESS': 'in-progress',
+    ACTIVE: 'accepted',
+    COMPLETED: 'completed',
+    CANCELED: 'cancelled',
+    IN_PROGRESS: 'in-progress'
   };
-  
+
   return reverseStatusMap[backendStatus] || backendStatus;
 };
 
@@ -56,13 +52,13 @@ const mapStatusToFrontend = (backendStatus: string): string => {
  */
 const mapPaymentStatusToBackend = (frontendPaymentStatus: string): string => {
   const paymentStatusMap: { [key: string]: string } = {
-    'pending': 'PENDING',
-    'paid': 'SUCCESS',
-    'failed': 'FAILED',
-    'refunded': 'REFUNDED',
-    'partially-paid': 'PARTIALLY_REFUNDED',
+    pending: 'PENDING',
+    paid: 'SUCCESS',
+    failed: 'FAILED',
+    refunded: 'REFUNDED',
+    'partially-paid': 'PARTIALLY_REFUNDED'
   };
-  
+
   return paymentStatusMap[frontendPaymentStatus] || frontendPaymentStatus;
 };
 
@@ -72,19 +68,20 @@ const mapPaymentStatusToBackend = (frontendPaymentStatus: string): string => {
  */
 const mapPaymentStatusToFrontend = (backendPaymentStatus: string): string => {
   const reversePaymentStatusMap: { [key: string]: string } = {
-    'PENDING': 'pending',
-    'SUCCESS': 'paid',
-    'FAILED': 'failed',
-    'REFUNDED': 'refunded',
-    'PARTIALLY_REFUNDED': 'partially-paid',
-    'CANCELLED': 'cancelled', // Backend has CANCELLED but frontend doesn't have this option
+    PENDING: 'pending',
+    SUCCESS: 'paid',
+    FAILED: 'failed',
+    REFUNDED: 'refunded',
+    PARTIALLY_REFUNDED: 'partially-paid',
+    CANCELLED: 'cancelled' // Backend has CANCELLED but frontend doesn't have this option
   };
-  
+
   return reversePaymentStatusMap[backendPaymentStatus] || backendPaymentStatus;
 };
 
 interface IBookingManagementHeaderProps {
   onAddBooking?: () => void;
+  // eslint-disable-next-line no-unused-vars
   onFiltersChange?: (filters: {
     search: string;
     status: string;
@@ -109,17 +106,17 @@ const BookingManagementHeader = ({
   initialFilters
 }: IBookingManagementHeaderProps) => {
   // Map backend status value to frontend value if initialFilters contains backend value
-  const initialStatus = initialFilters?.status 
-    ? (initialFilters.status === 'all' || initialFilters.status === '' 
-        ? 'all' 
-        : mapStatusToFrontend(initialFilters.status))
+  const initialStatus = initialFilters?.status
+    ? initialFilters.status === 'all' || initialFilters.status === ''
+      ? 'all'
+      : mapStatusToFrontend(initialFilters.status)
     : 'all';
 
   // Map backend payment status value to frontend value if initialFilters contains backend value
-  const initialPaymentStatus = initialFilters?.payment_status 
-    ? (initialFilters.payment_status === 'all' || initialFilters.payment_status === '' 
-        ? 'all' 
-        : mapPaymentStatusToFrontend(initialFilters.payment_status))
+  const initialPaymentStatus = initialFilters?.payment_status
+    ? initialFilters.payment_status === 'all' || initialFilters.payment_status === ''
+      ? 'all'
+      : mapPaymentStatusToFrontend(initialFilters.payment_status)
     : 'all';
 
   const [searchTerm, setSearchTerm] = useState(initialFilters?.search || '');
@@ -156,7 +153,8 @@ const BookingManagementHeader = ({
         const backendStatus = statusFilter === 'all' ? '' : mapStatusToBackend(statusFilter);
 
         // Map frontend payment status value to backend API accepted value
-        const backendPaymentStatus = paymentStatusFilter === 'all' ? '' : mapPaymentStatusToBackend(paymentStatusFilter);
+        const backendPaymentStatus =
+          paymentStatusFilter === 'all' ? '' : mapPaymentStatusToBackend(paymentStatusFilter);
 
         onFiltersChange({
           search: searchTerm,
@@ -164,7 +162,7 @@ const BookingManagementHeader = ({
           payment_status: backendPaymentStatus,
           start_date: startDate,
           end_date: endDate,
-          category_id: categoryFilter === 'all' ? '' : categoryFilter,
+          category_id: categoryFilter === 'all' ? '' : categoryFilter
         });
       }
     }, 500); // 500ms debounce
@@ -188,35 +186,25 @@ const BookingManagementHeader = ({
     setDateRange(range);
   };
 
-  const handleClearDateRange = (e: React.MouseEvent) => {
+  const handleClearDateRange = (e: MouseEvent) => {
     e.stopPropagation(); // Prevent popover from opening when clicking clear button
     setDateRange(undefined);
-  };
-
-  const handleBulkAction = (action: string) => {
-    // TODO: Implement bulk actions
-    console.log('Bulk action:', action);
   };
 
   return (
     <div className="card">
       <div className="card-header">
-        <div className="flex flex-row items-center justify-between w-full gap-4">
+        <div className="flex w-full flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <KeenIcon icon="calendar-8" className="text-primary text-2xl" />
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Booking Management</h1>
-              <p className="text-sm text-gray-600">Monitor and manage all bookings</p>
+              <h1 className="text-xl font-bold text-foreground lg:text-2xl">Booking Management</h1>
+              <p className="text-sm text-muted-foreground">Monitor and manage all bookings</p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onAddBooking}
-              className="w-full sm:w-auto"
-            >
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button variant="default" size="sm" onClick={onAddBooking} className="w-full sm:w-auto">
               <KeenIcon icon="plus" className="me-2" />
               Add Booking
             </Button>
@@ -243,11 +231,14 @@ const BookingManagementHeader = ({
       </div>
 
       <div className="card-body">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
           {/* Search Bar */}
           <div className="lg:col-span-2">
             <div className="relative">
-              <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <KeenIcon
+                icon="magnifier"
+                className="absolute left-3 top-1/2 -translate-y-1/2 transform text-muted-foreground/70"
+              />
               <Input
                 type="text"
                 placeholder="Search by booking ID, user, or provider..."
@@ -300,12 +291,17 @@ const BookingManagementHeader = ({
               disabled={isLoadingCategories}
             >
               <SelectTrigger>
-                <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Filter by category"} />
+                <SelectValue
+                  placeholder={isLoadingCategories ? 'Loading...' : 'Filter by category'}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
-                  <SelectItem key={category.id || category.public_id || category.category_id || ''} value={category.id || category.public_id || category.category_id || ''}>
+                  <SelectItem
+                    key={category.id || category.public_id || category.category_id || ''}
+                    value={category.id || category.public_id || category.category_id || ''}
+                  >
                     {category.name}
                   </SelectItem>
                 ))}
@@ -317,27 +313,27 @@ const BookingManagementHeader = ({
         {/* Date Range Filter */}
         <div className="mt-4">
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700">Date Range:</span>
+            <span className="text-sm font-medium text-muted-foreground">Date Range:</span>
             <div className="relative">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[300px] justify-start text-left font-normal",
-                      !dateRange && "text-muted-foreground",
-                      dateRange && "pr-8" // Add padding on right when date is selected to make room for clear button
+                      'w-[300px] justify-start text-left font-normal',
+                      !dateRange && 'text-muted-foreground',
+                      dateRange && 'pr-8'
                     )}
                   >
                     <KeenIcon icon="calendar" className="mr-2 h-4 w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
                         <>
-                          {format(dateRange.from, "LLL dd, y")} -{" "}
-                          {format(dateRange.to, "LLL dd, y")}
+                          {format(dateRange.from, 'LLL dd, y')} -{' '}
+                          {format(dateRange.to, 'LLL dd, y')}
                         </>
                       ) : (
-                        format(dateRange.from, "LLL dd, y")
+                        format(dateRange.from, 'LLL dd, y')
                       )
                     ) : (
                       <span>Pick a date range</span>
@@ -359,7 +355,7 @@ const BookingManagementHeader = ({
                 <button
                   type="button"
                   onClick={handleClearDateRange}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 rounded-full p-1 hover:bg-gray-100 transition-colors"
+                  className="absolute right-2 top-1/2 rounded-full p-1 text-muted-foreground/70 transition-colors hover:bg-surface-1 hover:text-foreground focus:outline-none focus:text-foreground"
                   aria-label="Clear date range"
                 >
                   <KeenIcon icon="cross" className="h-4 w-4" />
@@ -374,5 +370,3 @@ const BookingManagementHeader = ({
 };
 
 export { BookingManagementHeader };
-
-

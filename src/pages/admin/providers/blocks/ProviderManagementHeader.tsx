@@ -13,6 +13,7 @@ import { useCategories } from '@/services';
 
 interface IProviderManagementHeaderProps {
   onAddProvider?: () => void;
+  // eslint-disable-next-line no-unused-vars
   onFiltersChange?: (filters: { search: string; status: string; category_id?: string }) => void;
   initialSearch?: string;
   initialStatus?: string;
@@ -44,7 +45,7 @@ const ProviderManagementHeader = ({
         onFiltersChange({
           search: searchTerm,
           status: statusFilter === 'all' ? '' : statusFilter,
-          category_id: categoryFilter === 'all' ? '' : categoryFilter,
+          category_id: categoryFilter === 'all' ? '' : categoryFilter
         });
       }
     }, 500); // 500ms debounce
@@ -63,17 +64,24 @@ const ProviderManagementHeader = ({
   return (
     <div className="card">
       <div className="card-header">
-        <div className="flex flex-row items-center justify-between w-full gap-4">
+        <div className="flex w-full flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <KeenIcon icon="shop" className="text-primary text-2xl" />
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Provider Management</h1>
-              <p className="text-sm text-gray-600">Approve, verify, and monitor service providers</p>
+              <h1 className="text-xl font-bold text-foreground lg:text-2xl">Provider Management</h1>
+              <p className="text-sm text-muted-foreground">
+                Approve, verify, and monitor service providers
+              </p>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <Button onClick={onAddProvider} variant="default" size="sm" className="w-full sm:w-auto">
+            <Button
+              onClick={onAddProvider}
+              variant="default"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               <KeenIcon icon="plus" className="me-2" />
               Add Provider
             </Button>
@@ -82,11 +90,14 @@ const ProviderManagementHeader = ({
       </div>
 
       <div className="card-body">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Search Bar */}
           <div className="lg:col-span-2">
             <div className="relative">
-              <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <KeenIcon
+                icon="magnifier"
+                className="absolute left-3 top-1/2 -translate-y-1/2 transform text-muted-foreground/70"
+              />
               <Input
                 type="text"
                 placeholder="Search by name, ID, or service category..."
@@ -121,12 +132,17 @@ const ProviderManagementHeader = ({
               disabled={isLoadingCategories}
             >
               <SelectTrigger>
-                <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Filter by category"} />
+                <SelectValue
+                  placeholder={isLoadingCategories ? 'Loading...' : 'Filter by category'}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
-                  <SelectItem key={category.id || category.public_id || category.category_id || ''} value={category.id || category.public_id || category.category_id || ''}>
+                  <SelectItem
+                    key={category.id || category.public_id || category.category_id || ''}
+                    value={category.id || category.public_id || category.category_id || ''}
+                  >
                     {category.name}
                   </SelectItem>
                 ))}

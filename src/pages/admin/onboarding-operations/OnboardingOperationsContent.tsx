@@ -63,21 +63,25 @@ const OnboardingOperationsContent = () => {
 
   const selectedProviderId = providerId || '';
   const planOptions = [
-    ...((commissionTiers || []).filter((tier: any) => tier.is_active).map((tier: any) => ({
-      value: tier.public_id,
-      label: `${tier.tier_name} (Commission) - ${tier.public_id}`
-    })) || []),
-    ...((packagesData?.packages || []).filter((pkg: any) => pkg.is_active).map((pkg: any) => ({
-      value: pkg.public_id,
-      label: `${pkg.package_name} (Package) - ${pkg.public_id}`
-    })) || [])
+    ...((commissionTiers || [])
+      .filter((tier: any) => tier.is_active)
+      .map((tier: any) => ({
+        value: tier.public_id,
+        label: `${tier.tier_name} (Commission) - ${tier.public_id}`
+      })) || []),
+    ...((packagesData?.packages || [])
+      .filter((pkg: any) => pkg.is_active)
+      .map((pkg: any) => ({
+        value: pkg.public_id,
+        label: `${pkg.package_name} (Package) - ${pkg.public_id}`
+      })) || [])
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Provider Onboarding Operations</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Manage onboarding amounts, payment statuses, payment ledger, and billing plan assignment
           from one screen.
         </p>
@@ -292,7 +296,7 @@ const OnboardingOperationsContent = () => {
 
               <div className="overflow-x-auto border rounded">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-surface-1">
                     <tr>
                       <th className="px-3 py-2 text-left">Fee Type</th>
                       <th className="px-3 py-2 text-left">Amount</th>
@@ -335,7 +339,7 @@ const OnboardingOperationsContent = () => {
                     ))}
                     {(paymentsData?.payments || []).length === 0 && (
                       <tr>
-                        <td className="px-3 py-3 text-gray-500" colSpan={5}>
+                        <td className="px-3 py-3 text-muted-foreground" colSpan={5}>
                           No payments found.
                         </td>
                       </tr>
@@ -351,7 +355,7 @@ const OnboardingOperationsContent = () => {
               <CardTitle>Assign Billing Plan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Current: {billingData?.selected_model?.name || 'No plan selected'}
               </p>
               <div className="flex flex-col md:flex-row gap-2">

@@ -21,7 +21,7 @@ import { useMenus } from '@/providers';
 const SidebarMenu = () => {
   const linkPl = 'ps-[10px]';
   const linkPr = 'pe-[10px]';
-  const linkPy = 'py-[6px]';
+  const linkPy = 'py-2';
   const itemsGap = 'gap-0.5';
   const subLinkPy = 'py-[8px]';
   const rightOffset = 'me-[-10px]';
@@ -107,7 +107,7 @@ const SidebarMenu = () => {
           <MenuLink
             path={item.path}
             className={clsx(
-              'border border-transparent menu-item-active:bg-secondary-active dark:menu-item-active:bg-coal-300 dark:menu-item-active:border-gray-100 menu-item-active:rounded-lg hover:bg-secondary-active dark:hover:bg-coal-300 dark:hover:border-gray-100 hover:rounded-lg',
+              'rounded-lg border border-transparent menu-item-active:border-primary/20 menu-item-active:bg-primary/10 hover:bg-surface-2',
               accordionLinkGap[0],
               linkPy,
               linkPl,
@@ -116,13 +116,13 @@ const SidebarMenu = () => {
           >
             <MenuIcon
               className={clsx(
-                'items-start text-gray-600 dark:text-gray-500 menu-item-active:text-primary menu-link-hover:!text-primary',
+                'items-start text-muted-foreground menu-item-active:text-primary menu-link-hover:!text-primary',
                 iconWidth
               )}
             >
               {item.icon && <KeenIcon icon={item.icon} className={iconSize} />}
             </MenuIcon>
-            <MenuTitle className="text-sm font-medium text-gray-800 menu-item-active:text-primary menu-link-hover:!text-primary">
+            <MenuTitle className="text-sm font-medium text-foreground menu-item-active:text-primary menu-link-hover:!text-primary">
               {item.title}
             </MenuTitle>
           </MenuLink>
@@ -211,7 +211,7 @@ const SidebarMenu = () => {
           <MenuLink
             path={item.path}
             className={clsx(
-              'border border-transparent items-center grow menu-item-active:bg-secondary-active dark:menu-item-active:bg-coal-300 dark:menu-item-active:border-gray-100 menu-item-active:rounded-lg hover:bg-secondary-active dark:hover:bg-coal-300 dark:hover:border-gray-100 hover:rounded-lg',
+              'items-center grow rounded-lg border border-transparent menu-item-active:border-primary/20 menu-item-active:bg-primary/10 hover:bg-surface-2',
               accordionLinkGap[level],
               accordionLinkPl,
               linkPr,

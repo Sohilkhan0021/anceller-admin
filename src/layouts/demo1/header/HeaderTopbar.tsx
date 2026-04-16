@@ -26,9 +26,14 @@ const ProfileAvatar = () => {
 const HeaderTopbar = () => {
   const { isRTL } = useLanguage();
   const itemUserRef = useRef<any>(null);
+  const { profile } = useAdminProfile();
 
   return (
-    <div className="flex items-center gap-2 lg:gap-3.5 ml-auto">
+    <div className="ml-auto flex items-center gap-3 lg:gap-4">
+      <div className="hidden text-end lg:block">
+        <p className="text-sm font-semibold text-foreground">{profile?.name || 'Admin User'}</p>
+        <p className="text-xs text-muted-foreground">{profile?.email || 'Administrator'}</p>
+      </div>
 
       {/* Notifications - Commented out as per user request */}
       {/* <Menu>
@@ -72,7 +77,7 @@ const HeaderTopbar = () => {
             ]
           }}
         >
-          <MenuToggle className="btn btn-icon rounded-full">
+          <MenuToggle className="btn btn-icon rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring))] focus-visible:ring-offset-2">
             <ProfileAvatar />
           </MenuToggle>
           {DropdownUser({ menuItemRef: itemUserRef })}

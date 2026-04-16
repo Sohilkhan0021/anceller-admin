@@ -1,16 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
+import { useState, useEffect, type FormEvent } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { IServiceCostConfig, ICreateServiceCostConfig, IUpdateServiceCostConfig } from '@/services/serviceCost.service';
+import { toast } from 'sonner';
+import {
+  IServiceCostConfig,
+  ICreateServiceCostConfig,
+  IUpdateServiceCostConfig
+} from '@/services/serviceCost.service';
 
 interface IAddEditServiceCostFormProps {
   config: IServiceCostConfig | null;
   isOpen: boolean;
   onClose: () => void;
+  // eslint-disable-next-line no-unused-vars
   onSubmit: (data: ICreateServiceCostConfig | IUpdateServiceCostConfig) => void;
   isLoading?: boolean;
 }
@@ -42,7 +55,9 @@ const AddEditServiceCostForm = ({
         order_tax_rate: config.order_tax_rate,
         is_active: config.is_active,
         valid_from: config.valid_from ? new Date(config.valid_from).toISOString().slice(0, 16) : '',
-        valid_until: config.valid_until ? new Date(config.valid_until).toISOString().slice(0, 16) : '',
+        valid_until: config.valid_until
+          ? new Date(config.valid_until).toISOString().slice(0, 16)
+          : '',
         description: config.description || ''
       });
     } else {
@@ -60,27 +75,27 @@ const AddEditServiceCostForm = ({
     }
   }, [config, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.service_cost_amount || formData.service_cost_amount < 0) {
-      alert('Please enter a valid service cost amount');
+      toast.error('Please enter a valid service cost amount');
       return;
     }
     if (!formData.free_service_threshold || formData.free_service_threshold < 0) {
-      alert('Please enter a valid free service threshold');
+      toast.error('Please enter a valid free service threshold');
       return;
     }
     if (formData.service_cost_tax_rate < 0 || formData.service_cost_tax_rate > 100) {
-      alert('Service cost tax rate must be between 0 and 100');
+      toast.error('Service cost tax rate must be between 0 and 100');
       return;
     }
     if (formData.order_tax_rate < 0 || formData.order_tax_rate > 100) {
-      alert('Order tax rate must be between 0 and 100');
+      toast.error('Order tax rate must be between 0 and 100');
       return;
     }
-    
+
     const submitData: any = {
       service_cost_amount: parseFloat(formData.service_cost_amount.toString()),
       free_service_threshold: parseFloat(formData.free_service_threshold.toString()),
@@ -121,7 +136,7 @@ const AddEditServiceCostForm = ({
         </DialogHeader>
         <DialogBody>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <Label htmlFor="service_cost_amount">Service Cost Amount (₹)</Label>
                 <Input
@@ -131,11 +146,16 @@ const AddEditServiceCostForm = ({
                   min="0"
                   value={formData.service_cost_amount}
                   onChange={(e) =>
-                    setFormData({ ...formData, service_cost_amount: parseFloat(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      service_cost_amount: parseFloat(e.target.value) || 0
+                    })
                   }
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Charged for orders below threshold</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Charged for orders below threshold
+                </p>
               </div>
 
               <div>
@@ -147,15 +167,20 @@ const AddEditServiceCostForm = ({
                   min="0"
                   value={formData.free_service_threshold}
                   onChange={(e) =>
-                    setFormData({ ...formData, free_service_threshold: parseFloat(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      free_service_threshold: parseFloat(e.target.value) || 0
+                    })
                   }
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Orders ≥ this amount get free service</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Orders ≥ this amount get free service
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <Label htmlFor="service_cost_tax_rate">Service Cost Tax Rate (%)</Label>
                 <Input
@@ -166,11 +191,16 @@ const AddEditServiceCostForm = ({
                   max="100"
                   value={formData.service_cost_tax_rate}
                   onChange={(e) =>
-                    setFormData({ ...formData, service_cost_tax_rate: parseFloat(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      service_cost_tax_rate: parseFloat(e.target.value) || 0
+                    })
                   }
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Tax on service cost (when service cost &gt; 0)</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tax on service cost (when service cost &gt; 0)
+                </p>
               </div>
 
               <div>
@@ -187,11 +217,13 @@ const AddEditServiceCostForm = ({
                   }
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Tax on order (when service cost = 0)</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tax on order (when service cost = 0)
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <Label htmlFor="valid_from">Valid From</Label>
                 <Input
@@ -210,7 +242,7 @@ const AddEditServiceCostForm = ({
                   value={formData.valid_until}
                   onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
                 />
-                <p className="text-xs text-gray-500 mt-1">Leave empty for no expiry</p>
+                <p className="mt-1 text-xs text-muted-foreground">Leave empty for no expiry</p>
               </div>
             </div>
 
@@ -236,14 +268,17 @@ const AddEditServiceCostForm = ({
               </Label>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-sm mb-2">Calculation Preview:</h4>
+            <div className="rounded-lg border border-primary/25 bg-primary/5 p-4">
+              <h4 className="mb-2 text-sm font-semibold text-foreground">Calculation Preview:</h4>
               <div className="text-sm space-y-1">
                 <div>
-                  Order &lt; ₹{formData.free_service_threshold}: Service Cost = ₹{formData.service_cost_amount}, Tax = {formData.service_cost_tax_rate}% of service cost
+                  Order &lt; ₹{formData.free_service_threshold}: Service Cost = ₹
+                  {formData.service_cost_amount}, Tax = {formData.service_cost_tax_rate}% of service
+                  cost
                 </div>
                 <div>
-                  Order ≥ ₹{formData.free_service_threshold}: Service Cost = ₹0, Tax = {formData.order_tax_rate}% of order amount
+                  Order ≥ ₹{formData.free_service_threshold}: Service Cost = ₹0, Tax ={' '}
+                  {formData.order_tax_rate}% of order amount
                 </div>
               </div>
             </div>

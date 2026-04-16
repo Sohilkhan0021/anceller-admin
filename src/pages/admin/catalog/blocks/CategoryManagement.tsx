@@ -2,23 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import {
-  Zap,
-  Droplet,
-  Wind,
-  Sparkles,
-  Hammer,
-  WashingMachine
-} from 'lucide-react';
+import { Zap, Droplet, Wind, Sparkles, Hammer, WashingMachine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { FormField } from '@/components/forms/FormField';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Select,
@@ -36,16 +30,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogBody,
-  DialogFooter,
+  DialogFooter
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/services';
-import { ICategory, ICreateCategoryRequest, IUpdateCategoryRequest } from '@/services/category.types';
+import {
+  ICategory,
+  ICreateCategoryRequest,
+  IUpdateCategoryRequest
+} from '@/services/category.types';
 import { ContentLoader } from '@/components/loaders';
 import { Alert } from '@/components/alert';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -62,12 +60,18 @@ import { getImageUrl } from '@/utils/imageUrl';
 // }
 
 // Icon component that can use both KeenIcon, Lucide icons, and image URLs
-const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
+const CategoryIcon = ({
+  icon,
+  lucideIcon,
+  iconUrl,
+  imageUrl,
+  className
+}: {
   icon?: string;
   lucideIcon?: string;
   iconUrl?: string;
   imageUrl?: string;
-  className?: string
+  className?: string;
 }) => {
   // Priority: imageUrl > iconUrl > lucideIcon > icon
   if (imageUrl || iconUrl) {
@@ -79,7 +83,7 @@ const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
         <img
           src={imageSrc}
           alt="Category icon"
-          className={className || "w-5 h-5 object-cover"}
+          className={className || 'w-5 h-5 object-cover'}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             // Fallback to icon if image fails
@@ -98,26 +102,26 @@ const CategoryIcon = ({ icon, lucideIcon, iconUrl, imageUrl, className }: {
   // Try Lucide icon first if provided
   if (lucideIcon) {
     const LucideIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-      'zap': Zap,
-      'droplet': Droplet,
-      'wind': Wind,
-      'sparkles': Sparkles,
-      'hammer': Hammer,
+      zap: Zap,
+      droplet: Droplet,
+      wind: Wind,
+      sparkles: Sparkles,
+      hammer: Hammer,
       'washing-machine': WashingMachine
     };
     const LucideIcon = LucideIconMap[lucideIcon];
     if (LucideIcon) {
-      return <LucideIcon className={className || "text-primary"} />;
+      return <LucideIcon className={className || 'text-primary'} />;
     }
   }
 
   // Fallback to KeenIcon
   if (icon) {
-    return <KeenIcon icon={icon} className={className || "text-primary"} />;
+    return <KeenIcon icon={icon} className={className || 'text-primary'} />;
   }
 
   // Default fallback
-  return <KeenIcon icon="category" className={className || "text-primary"} />;
+  return <KeenIcon icon="category" className={className || 'text-primary'} />;
 };
 
 interface ICategoryManagementProps {
@@ -201,19 +205,11 @@ const CategoryManagement = ({
   });
 
   // Fetch categories with filters
-  const {
-    categories,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useCategories({
+  const { categories, pagination, isLoading, isError, error, refetch, isFetching } = useCategories({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
-    search: debouncedSearch,
+    search: debouncedSearch
   });
 
   // Handle status filter change
@@ -243,12 +239,15 @@ const CategoryManagement = ({
     // We keep this for compatibility but it won't be called anymore
   };
 
-  const handleToggleStatus = useCallback((categoryId: string, checked: boolean) => {
-    updateCategoryStatus({
-      id: categoryId,
-      is_active: checked
-    });
-  }, [updateCategoryStatus]);
+  const handleToggleStatus = useCallback(
+    (categoryId: string, checked: boolean) => {
+      updateCategoryStatus({
+        id: categoryId,
+        is_active: checked
+      });
+    },
+    [updateCategoryStatus]
+  );
 
   const handleDeleteClick = (categoryId: string) => {
     setCategoryToDelete(categoryId);
@@ -271,7 +270,7 @@ const CategoryManagement = ({
   const handleUpdateDisplayOrder = async (categoryId: string, newOrder: number) => {
     try {
       // Find the category to update
-      const category = categories.find(cat => cat.id === categoryId);
+      const category = categories.find((cat) => cat.id === categoryId);
       if (!category) {
         toast.error('Service not found');
         return;
@@ -293,7 +292,9 @@ const CategoryManagement = ({
 
   const getStatusBadge = (status: string) => {
     return status === 'active' ? (
-      <Badge variant="default" className="bg-success text-white">Active</Badge>
+      <Badge variant="default" className="bg-success text-white">
+        Active
+      </Badge>
     ) : (
       <Badge variant="outline">Inactive</Badge>
     );
@@ -323,13 +324,8 @@ const CategoryManagement = ({
           {isError && (
             <Alert variant="danger" className="mb-4">
               <div className="flex items-center justify-between">
-                <span>
-                  {error?.message || 'Failed to load services. Please try again.'}
-                </span>
-                <button
-                  onClick={() => refetch()}
-                  className="text-sm underline hover:no-underline"
-                >
+                <span>{error?.message || 'Failed to load services. Please try again.'}</span>
+                <button onClick={() => refetch()} className="text-sm underline hover:no-underline">
                   Retry
                 </button>
               </div>
@@ -337,31 +333,38 @@ const CategoryManagement = ({
           )}
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <div className="relative">
-                <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search services..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <FormField label="Search services" helperText="Find by service name.">
+                <div className="relative">
+                  <KeenIcon
+                    icon="magnifier"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Search services..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </FormField>
             </div>
 
             <div>
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormField label="Status">
+                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
             </div>
           </div>
 
@@ -396,13 +399,18 @@ const CategoryManagement = ({
                   <TableBody>
                     {categories.map((category, index) => {
                       // Handle displayOrder - might be undefined or use snake_case from API
-                      const displayOrder = category.displayOrder ??
+                      const displayOrder =
+                        category.displayOrder ??
                         (category as any).display_order ??
                         (category as any).sort_order ??
-                        (index + 1);
+                        index + 1;
 
                       // Get image URL for display
-                      const imageUrl = (category as any).image_url || (category as any).imageUrl || (category as any).icon_url || (category as any).image;
+                      const imageUrl =
+                        (category as any).image_url ||
+                        (category as any).imageUrl ||
+                        (category as any).icon_url ||
+                        (category as any).image;
                       const fullImageUrl = getImageUrl(imageUrl);
 
                       return (
@@ -429,17 +437,22 @@ const CategoryManagement = ({
                           <TableCell>
                             <Select
                               value={displayOrder.toString()}
-                              onValueChange={(value) => handleUpdateDisplayOrder(category.id, parseInt(value))}
+                              onValueChange={(value) =>
+                                handleUpdateDisplayOrder(category.id, parseInt(value))
+                              }
                             >
                               <SelectTrigger className="w-20">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {Array.from({ length: pagination?.total || categories.length }, (_, index) => (
-                                  <SelectItem key={index + 1} value={(index + 1).toString()}>
-                                    {index + 1}
-                                  </SelectItem>
-                                ))}
+                                {Array.from(
+                                  { length: pagination?.total || categories.length },
+                                  (_, index) => (
+                                    <SelectItem key={index + 1} value={(index + 1).toString()}>
+                                      {index + 1}
+                                    </SelectItem>
+                                  )
+                                )}
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -453,10 +466,19 @@ const CategoryManagement = ({
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {getStatusBadge(category.status || ((category as any).is_active === false ? 'inactive' : 'active'))}
+                              {getStatusBadge(
+                                category.status ||
+                                  ((category as any).is_active === false ? 'inactive' : 'active')
+                              )}
                               <Switch
-                                checked={category.status === 'active' || ((category as any).is_active !== false && category.status !== 'inactive')}
-                                onCheckedChange={(checked) => handleToggleStatus(category.id, checked)}
+                                checked={
+                                  category.status === 'active' ||
+                                  ((category as any).is_active !== false &&
+                                    category.status !== 'inactive')
+                                }
+                                onCheckedChange={(checked) =>
+                                  handleToggleStatus(category.id, checked)
+                                }
                               />
                             </div>
                           </TableCell>
@@ -465,6 +487,7 @@ const CategoryManagement = ({
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="flex-shrink-0">
                                   <KeenIcon icon="dots-vertical" />
+                                  <span className="sr-only">Open service actions</span>
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -497,7 +520,7 @@ const CategoryManagement = ({
               {pagination && pagination.totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
                     {pagination.total} services
                   </div>
@@ -562,8 +585,15 @@ const CategoryManagement = ({
           </DialogHeader>
           <DialogBody>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete the service <strong className="text-black">"{categoryToDelete ? categories.find(c => c.id === categoryToDelete)?.name || 'this service' : 'this service'}"</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete the service{' '}
+              <strong className="text-black">
+                "
+                {categoryToDelete
+                  ? categories.find((c) => c.id === categoryToDelete)?.name || 'this service'
+                  : 'this service'}
+                "
+              </strong>
+              ? This action cannot be undone.
             </p>
           </DialogBody>
           <DialogFooter className="gap-2">
@@ -574,11 +604,7 @@ const CategoryManagement = ({
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
               {isDeleting ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
@@ -611,7 +637,11 @@ const CategoryManagement = ({
                   {/* Service Image - Left Side */}
                   <div className="flex-shrink-0">
                     {(() => {
-                      const imageUrl = (viewingCategory as any).image_url || (viewingCategory as any).imageUrl || (viewingCategory as any).icon_url || (viewingCategory as any).image;
+                      const imageUrl =
+                        (viewingCategory as any).image_url ||
+                        (viewingCategory as any).imageUrl ||
+                        (viewingCategory as any).icon_url ||
+                        (viewingCategory as any).image;
                       const fullImageUrl = getImageUrl(imageUrl);
                       return fullImageUrl ? (
                         <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
@@ -637,15 +667,26 @@ const CategoryManagement = ({
                   <div className="flex-1 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Service Name</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Service Name
+                        </div>
                         <div className="text-sm font-medium">{viewingCategory.name || 'N/A'}</div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</div>
-                        <div>{getStatusBadge(viewingCategory.status || ((viewingCategory as any).is_active === false ? 'inactive' : 'active'))}</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Status
+                        </div>
+                        <div>
+                          {getStatusBadge(
+                            viewingCategory.status ||
+                              ((viewingCategory as any).is_active === false ? 'inactive' : 'active')
+                          )}
+                        </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Display Order</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Display Order
+                        </div>
                         <div className="text-sm">
                           {viewingCategory.displayOrder ??
                             (viewingCategory as any).display_order ??
@@ -654,7 +695,9 @@ const CategoryManagement = ({
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Service ID</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Service ID
+                        </div>
                         <div className="text-sm">{viewingCategory.id || 'N/A'}</div>
                       </div>
                     </div>
@@ -662,8 +705,12 @@ const CategoryManagement = ({
                     {/* Description */}
                     {viewingCategory.description && (
                       <div className="space-y-1 pt-4 border-t border-gray-200">
-                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</div>
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap">{viewingCategory.description}</div>
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Description
+                        </div>
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {viewingCategory.description}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -683,4 +730,3 @@ const CategoryManagement = ({
 };
 
 export { CategoryManagement };
-

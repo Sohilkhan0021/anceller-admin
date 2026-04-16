@@ -4,19 +4,19 @@ import { BookingManagementHeader } from './blocks/BookingManagementHeader';
 import { BookingManagementTable } from './blocks/BookingManagementTable';
 import { AddBookingForm } from './forms/AddBookingForm';
 import { EditBookingForm } from './forms/EditBookingForm';
-import { useBookings, useUpdateBookingStatus, useAssignProvider, useUpdateBooking } from '@/services';
+import { useBookings, useAssignProvider, useUpdateBooking } from '@/services';
 import { IBooking } from '@/services/booking.types';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 
 const BookingManagementContent = () => {
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editBooking, setEditBooking] = useState<IBooking | null>(null);
-  
+
   // Filter state
-  const [filters, setFilters] = useState<{ 
-    search: string; 
+  const [filters, setFilters] = useState<{
+    search: string;
     status: string;
     payment_status: string;
     start_date: string;
@@ -28,21 +28,13 @@ const BookingManagementContent = () => {
     payment_status: '',
     start_date: '',
     end_date: '',
-    category_id: '',
+    category_id: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
   // Fetch bookings with filters
-  const { 
-    bookings, 
-    pagination, 
-    isLoading, 
-    isError, 
-    error, 
-    refetch,
-    isFetching 
-  } = useBookings({
+  const { bookings, pagination, isLoading, isError, error, refetch, isFetching } = useBookings({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
@@ -50,21 +42,24 @@ const BookingManagementContent = () => {
     start_date: filters.start_date,
     end_date: filters.end_date,
     search: filters.search,
-    category_id: filters.category_id,
+    category_id: filters.category_id
   });
 
   // Handle filter changes
-  const handleFiltersChange = useCallback((newFilters: { 
-    search: string; 
-    status: string;
-    payment_status: string;
-    start_date: string;
-    end_date: string;
-    category_id?: string;
-  }) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, []);
+  const handleFiltersChange = useCallback(
+    (newFilters: {
+      search: string;
+      status: string;
+      payment_status: string;
+      start_date: string;
+      end_date: string;
+      category_id?: string;
+    }) => {
+      setFilters(newFilters);
+      setCurrentPage(1); // Reset to first page when filters change
+    },
+    []
+  );
 
   const handleAddBooking = () => {
     setIsAddFormOpen(true);
@@ -74,7 +69,9 @@ const BookingManagementContent = () => {
     // Prevent editing of canceled or completed bookings
     const status = (booking.status || '').toLowerCase();
     if (status === 'cancelled' || status === 'canceled' || status === 'completed') {
-      toast.error(`Cannot edit ${status} bookings. Only pending, accepted, or in-progress bookings can be edited.`);
+      toast.error(
+        `Cannot edit ${status} bookings. Only pending, accepted, or in-progress bookings can be edited.`
+      );
       return;
     }
     setEditBooking(booking);
@@ -91,16 +88,6 @@ const BookingManagementContent = () => {
   };
 
   // Mutations for booking updates
-  const updateStatusMutation = useUpdateBookingStatus({
-    onSuccess: (data) => {
-      toast.success(data.message || 'Booking status updated successfully');
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update booking status');
-    }
-  });
-
   const assignProviderMutation = useAssignProvider({
     onSuccess: (data) => {
       toast.success(data.message || 'Provider assigned successfully');
@@ -133,19 +120,19 @@ const BookingManagementContent = () => {
   const mapStatusToBackend = (status: string): string => {
     const normalized = (status || '').toLowerCase().trim();
     const statusMap: Record<string, string> = {
-      'pending': 'ACTIVE',
-      'accepted': 'ACTIVE',
+      pending: 'ACTIVE',
+      accepted: 'ACTIVE',
       'in-progress': 'IN_PROGRESS',
-      'in_progress': 'IN_PROGRESS',
-      'completed': 'COMPLETED',
-      'cancelled': 'CANCELED',
-      'canceled': 'CANCELED',
-      'rescheduled': 'RESCHEDULED',
-      'failed': 'FAILED',
-      'upcoming': 'UPCOMING',
-      'active': 'ACTIVE'
+      in_progress: 'IN_PROGRESS',
+      completed: 'COMPLETED',
+      cancelled: 'CANCELED',
+      canceled: 'CANCELED',
+      rescheduled: 'RESCHEDULED',
+      failed: 'FAILED',
+      upcoming: 'UPCOMING',
+      active: 'ACTIVE'
     };
-    
+
     return statusMap[normalized] || normalized.toUpperCase();
   };
 
@@ -175,9 +162,10 @@ const BookingManagementContent = () => {
 
       // Date and time
       if (bookingData.bookingDate) {
-        const date = bookingData.bookingDate instanceof Date 
-          ? bookingData.bookingDate 
-          : new Date(bookingData.bookingDate);
+        const date =
+          bookingData.bookingDate instanceof Date
+            ? bookingData.bookingDate
+            : new Date(bookingData.bookingDate);
         if (!isNaN(date.getTime())) {
           updateData.scheduled_date = date.toISOString().split('T')[0]; // YYYY-MM-DD format
         }
@@ -242,7 +230,7 @@ const BookingManagementContent = () => {
   return (
     <div className="grid gap-5 lg:gap-7.5">
       {/* Header with filters */}
-      <BookingManagementHeader 
+      <BookingManagementHeader
         onAddBooking={handleAddBooking}
         onFiltersChange={handleFiltersChange}
         initialFilters={filters}
@@ -250,19 +238,10 @@ const BookingManagementContent = () => {
 
       {/* Error State */}
       {isError && (
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load bookings. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load bookings. Please try again.'}
+          onRetry={() => refetch()}
+        />
       )}
 
       {/* Loading State */}
@@ -274,7 +253,7 @@ const BookingManagementContent = () => {
         </div>
       ) : (
         /* Booking Management Table */
-        <BookingManagementTable 
+        <BookingManagementTable
           bookings={bookings}
           pagination={pagination}
           isLoading={isFetching}
@@ -284,14 +263,14 @@ const BookingManagementContent = () => {
       )}
 
       {/* Add Booking Form */}
-      <AddBookingForm 
+      <AddBookingForm
         isOpen={isAddFormOpen}
         onClose={handleCloseAddForm}
         onSave={handleSaveBooking}
       />
 
       {/* Edit Booking Form */}
-      <EditBookingForm 
+      <EditBookingForm
         isOpen={isEditFormOpen}
         onClose={handleCloseEditForm}
         onSave={handleUpdateBooking}

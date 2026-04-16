@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -11,59 +10,59 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePayouts, usePayoutStats } from '@/services';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
+import { FormField } from '@/components/forms/FormField';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
 
 const ProviderPayoutsTab = () => {
   const [searchParams] = useSearchParams();
   const statusFromUrl = searchParams.get('status') || 'all';
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(statusFromUrl);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
 
   // Update filter when URL param changes
   useEffect(() => {
     const status = searchParams.get('status');
     if (status) {
       setStatusFilter(status);
+      setCurrentPage(1);
     }
   }, [searchParams]);
 
+  // Reset pagination when changing status filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
   // Fetch payouts
-  const {
-    payouts,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = usePayouts({
+  const { payouts, pagination, isLoading, isError, error, refetch, isFetching } = usePayouts({
     page: currentPage,
     limit: pageSize,
     status: statusFilter === 'all' ? '' : statusFilter,
-    search: searchTerm,
+    search: debouncedSearchTerm
   });
 
   // Fetch payout stats
   const { stats: payoutStats, isLoading: isLoadingStats } = usePayoutStats();
 
-  // Debounce search
+  // Debounce search (avoid firing API requests on every keystroke)
   useEffect(() => {
     const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
       setCurrentPage(1);
     }, 500);
     return () => clearTimeout(timer);
@@ -85,30 +84,12 @@ const ProviderPayoutsTab = () => {
     console.log('Processing bulk settlement...');
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: string; className: string; text: string }> = {
-      PENDING: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
-      APPROVED: { variant: 'default', className: 'bg-info text-white', text: 'Approved' },
-      PROCESSING: { variant: 'default', className: 'bg-info text-white', text: 'Processing' },
-      COMPLETED: { variant: 'default', className: 'bg-success text-white', text: 'Completed' },
-      FAILED: { variant: 'destructive', className: '', text: 'Failed' },
-      CANCELLED: { variant: 'secondary', className: '', text: 'Cancelled' },
-      pending: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
-      completed: { variant: 'default', className: 'bg-success text-white', text: 'Completed' },
-      failed: { variant: 'destructive', className: '', text: 'Failed' },
-      processing: { variant: 'default', className: 'bg-info text-white', text: 'Processing' }
-    };
-    
-    const config = statusConfig[status] || { variant: 'secondary', className: '', text: status };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
+      currencyDisplay: 'symbol' // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
@@ -124,19 +105,10 @@ const ProviderPayoutsTab = () => {
   if (isError) {
     return (
       <div className="space-y-6">
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load payouts. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load payouts. Please try again.'}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -144,22 +116,20 @@ const ProviderPayoutsTab = () => {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
         <div className="card">
           <div className="card-body">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 rounded-lg text-warning bg-warning-light">
                 <KeenIcon icon="time" className="text-xl" />
               </div>
-              <div className="text-sm font-medium text-warning">
-                Pending
-              </div>
+              <div className="text-sm font-medium text-warning">Pending</div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : formatCurrency(payoutStats?.pending_amount || 0)}
               </h3>
-              <p className="text-sm text-gray-600">Total Pending Payouts</p>
+              <p className="text-sm text-muted-foreground">Total Pending Payouts</p>
             </div>
           </div>
         </div>
@@ -170,15 +140,13 @@ const ProviderPayoutsTab = () => {
               <div className="p-3 rounded-lg text-success bg-success-light">
                 <KeenIcon icon="discount" className="text-xl" />
               </div>
-              <div className="text-sm font-medium text-success">
-                Commission
-              </div>
+              <div className="text-sm font-medium text-success">Commission</div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : formatCurrency(payoutStats?.total_commission || 0)}
               </h3>
-              <p className="text-sm text-gray-600">Total Commission Earned</p>
+              <p className="text-sm text-muted-foreground">Total Commission Earned</p>
             </div>
           </div>
         </div>
@@ -189,15 +157,13 @@ const ProviderPayoutsTab = () => {
               <div className="p-3 rounded-lg text-primary bg-primary-light">
                 <KeenIcon icon="shop" className="text-xl" />
               </div>
-              <div className="text-sm font-medium text-primary">
-                Providers
-              </div>
+              <div className="text-sm font-medium text-primary">Providers</div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : payoutStats?.total_payouts || 0}
               </h3>
-              <p className="text-sm text-gray-600">Total Payouts</p>
+              <p className="text-sm text-muted-foreground">Total Payouts</p>
             </div>
           </div>
         </div>
@@ -209,23 +175,26 @@ const ProviderPayoutsTab = () => {
           <h3 className="card-title">Provider Payouts</h3>
         </div>
         <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Search Bar */}
-            <div className="lg:col-span-2">
+            <FormField label="Search" helperText="Search by provider name or ID">
               <div className="relative">
-                <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <KeenIcon
+                  icon="magnifier"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 transform text-muted-foreground/70"
+                />
                 <Input
                   type="text"
-                  placeholder="Search by provider name or ID..."
+                  placeholder="Search providers..."
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10"
                 />
               </div>
-            </div>
+            </FormField>
 
             {/* Status Filter */}
-            <div>
+            <FormField label="Status">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
@@ -240,15 +209,15 @@ const ProviderPayoutsTab = () => {
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
 
-          <div className="flex justify-end gap-3 mt-4">
+          <div className="mt-4 flex justify-end gap-3">
             {/* <Button variant="outline">
               <KeenIcon icon="file-down" className="me-2" />
               Export Data
             </Button> */}
-            <Button variant="default" className="bg-success text-white hover:bg-success/90" onClick={handleBulkSettlement}>
+            <Button variant="destructive" onClick={() => setConfirmBulkOpen(true)}>
               <KeenIcon icon="cheque" className="me-2" />
               Bulk Settlement
             </Button>
@@ -269,23 +238,34 @@ const ProviderPayoutsTab = () => {
               <ContentLoader />
             </div>
           ) : payouts.length === 0 ? (
-            <div className="p-8 text-center">
-              <KeenIcon icon="cross-circle" className="text-4xl text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No payouts found</p>
-            </div>
+            <EmptyState
+              title="No payouts found"
+              description="Try a different status filter or search term."
+              icon="cross-circle"
+            />
           ) : (
             <>
-              <div className="overflow-x-auto w-full">
-                <Table className="w-full table-auto">
+              <div className="w-full overflow-x-auto">
+                <AdminDataTable className="w-full table-auto">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[200px]">Provider</TableHead>
-                      <TableHead className="hidden sm:table-cell min-w-[120px]">Total Earnings</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[120px]">Commission</TableHead>
-                      <TableHead className="hidden lg:table-cell min-w-[120px]">Net Amount</TableHead>
+                      <TableHead className="hidden sm:table-cell min-w-[120px]">
+                        Total Earnings
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell min-w-[120px]">
+                        Commission
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell min-w-[120px]">
+                        Net Amount
+                      </TableHead>
                       <TableHead className="hidden sm:table-cell min-w-[100px]">Status</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[120px]">Payout Date</TableHead>
-                      <TableHead className="hidden lg:table-cell min-w-[120px]">Processed At</TableHead>
+                      <TableHead className="hidden md:table-cell min-w-[120px]">
+                        Payout Date
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell min-w-[120px]">
+                        Processed At
+                      </TableHead>
                       <TableHead className="min-w-[120px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -299,30 +279,49 @@ const ProviderPayoutsTab = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="font-medium truncate">{payout.provider.name}</div>
-                              <div className="text-sm text-gray-500 hidden sm:block">{payout.bank_account} | {payout.ifsc_code}</div>
-                              <div className="text-xs text-gray-500 sm:hidden">{formatCurrency(payout.net_amount)}</div>
+                              <div className="hidden text-sm text-muted-foreground sm:block">
+                                {payout.bank_account} | {payout.ifsc_code}
+                              </div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                {formatCurrency(payout.net_amount)}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
                           <div className="text-center">
-                            <div className="font-semibold">{formatCurrency(payout.total_earnings)}</div>
+                            <div className="font-semibold">
+                              {formatCurrency(payout.total_earnings)}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="text-center">
-                            <div className="font-semibold text-warning">{formatCurrency(payout.commission_deducted)}</div>
-                            <div className="text-xs text-gray-500">
-                              ({payout.total_earnings > 0 ? ((payout.commission_deducted / payout.total_earnings) * 100).toFixed(1) : 0}%)
+                            <div className="font-semibold text-warning">
+                              {formatCurrency(payout.commission_deducted)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              (
+                              {payout.total_earnings > 0
+                                ? (
+                                    (payout.commission_deducted / payout.total_earnings) *
+                                    100
+                                  ).toFixed(1)
+                                : 0}
+                              %)
                             </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="text-center">
-                            <div className="font-semibold text-success">{formatCurrency(payout.net_amount)}</div>
+                            <div className="font-semibold text-success">
+                              {formatCurrency(payout.net_amount)}
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">{getStatusBadge(payout.status)}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <StatusBadge status={payout.status} />
+                        </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="min-w-[100px] whitespace-nowrap text-sm">
                             {formatDate(payout.payout_date)}
@@ -335,8 +334,8 @@ const ProviderPayoutsTab = () => {
                         </TableCell>
                         <TableCell>
                           {payout.status === 'PENDING' && (
-                            <Button 
-                              variant="default" className="bg-success text-white hover:bg-success/90" 
+                            <Button
+                              variant="default"
                               size="sm"
                               onClick={() => handleSettleNow(payout.payout_id)}
                             >
@@ -346,8 +345,8 @@ const ProviderPayoutsTab = () => {
                             </Button>
                           )}
                           {payout.status === 'FAILED' && (
-                            <Button 
-                              variant="outline" className="border-warning text-warning hover:bg-warning hover:text-white" 
+                            <Button
+                              variant="secondary"
                               size="sm"
                               onClick={() => handleSettleNow(payout.payout_id)}
                             >
@@ -360,60 +359,39 @@ const ProviderPayoutsTab = () => {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </AdminDataTable>
               </div>
-              
+
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="card-footer">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                      Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                      {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                      {pagination.total} payouts
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (pagination.page > 1 && !isFetching) {
-                            setCurrentPage(pagination.page - 1);
-                          }
-                        }}
-                        disabled={pagination.page <= 1 || isFetching}
-                      >
-                        <KeenIcon icon="arrow-left" className="me-1" />
-                        Previous
-                      </Button>
-                      <div className="text-sm text-gray-600">
-                        Page {pagination.page} of {pagination.totalPages}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (pagination.page < pagination.totalPages && !isFetching) {
-                            setCurrentPage(pagination.page + 1);
-                          }
-                        }}
-                        disabled={pagination.page >= pagination.totalPages || isFetching}
-                      >
-                        Next
-                        <KeenIcon icon="arrow-right" className="ms-1" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <AdminPagination
+                  page={pagination.page}
+                  total={pagination.total}
+                  totalPages={pagination.totalPages}
+                  limit={pagination.limit}
+                  onPageChange={setCurrentPage}
+                  isLoading={isFetching}
+                  itemLabel="payouts"
+                />
               )}
             </>
           )}
         </div>
       </div>
+      <ConfirmActionDialog
+        open={confirmBulkOpen}
+        title="Run bulk settlement"
+        description="This action will start settlement for eligible payouts. Continue?"
+        confirmText="Run Settlement"
+        danger
+        onOpenChange={setConfirmBulkOpen}
+        onConfirm={() => {
+          setConfirmBulkOpen(false);
+          handleBulkSettlement();
+        }}
+      />
     </div>
   );
 };
 
 export { ProviderPayoutsTab };
-
-

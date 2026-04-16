@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { KeenIcon } from '@/components';
 import { useDashboardStats } from '@/services';
 import { ContentLoader } from '@/components/loaders/ContentLoader';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 
 interface IKPICard {
   title: string;
@@ -60,11 +61,7 @@ const KPICards = ({ period = 'today' }: KPICardsProps) => {
 
   if (error || !stats) {
     return (
-      <div className="card">
-        <div className="card-body">
-          <p className="text-danger">Failed to load dashboard statistics. Please try again.</p>
-        </div>
-      </div>
+      <InlineErrorBanner message="Failed to load dashboard statistics. Please try again." />
     );
   }
 
@@ -131,14 +128,15 @@ const KPICards = ({ period = 'today' }: KPICardsProps) => {
     };
 
     return (
-      <div key={index} className={`card ${heightClass || ''}`}>
+      <div key={index} className={`card border border-border shadow-sm ${heightClass || ''}`}>
         <div className="card-body">
           <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-lg ${colorClasses[card.color as keyof typeof colorClasses]}`}>
+            <div className={`rounded-lg p-3 ${colorClasses[card.color as keyof typeof colorClasses]}`}>
               <KeenIcon icon={card.icon} className="text-xl" />
             </div>
             {card.change && (
-              <div className={`text-sm font-medium ${changeColorClasses[card.change.type]}`}>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${changeColorClasses[card.change.type]}`}>
+                <KeenIcon icon={card.change.type === 'increase' ? 'arrow-up-right' : 'arrow-down-right'} />
                 {card.change.value}
               </div>
             )}

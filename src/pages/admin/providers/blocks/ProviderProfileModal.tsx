@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import {
   getProviderPackages,
   useCommissionTiers,
@@ -147,14 +148,18 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
   const [kitHubAddress, setKitHubAddress] = useState('');
   const [billingPlanId, setBillingPlanId] = useState('');
   const billingPlanOptions = [
-    ...((commissionTiers || []).filter((tier: any) => tier.is_active).map((tier: any) => ({
-      value: tier.public_id,
-      label: `${tier.tier_name} (Commission) - ${tier.public_id}`
-    })) || []),
-    ...((packagesData?.packages || []).filter((pkg: any) => pkg.is_active).map((pkg: any) => ({
-      value: pkg.public_id,
-      label: `${pkg.package_name} (Package) - ${pkg.public_id}`
-    })) || [])
+    ...((commissionTiers || [])
+      .filter((tier: any) => tier.is_active)
+      .map((tier: any) => ({
+        value: tier.public_id,
+        label: `${tier.tier_name} (Commission) - ${tier.public_id}`
+      })) || []),
+    ...((packagesData?.packages || [])
+      .filter((pkg: any) => pkg.is_active)
+      .map((pkg: any) => ({
+        value: pkg.public_id,
+        label: `${pkg.package_name} (Package) - ${pkg.public_id}`
+      })) || [])
   ];
 
   const [feeType, setFeeType] = useState<'REGISTRATION' | 'TRAINING' | 'KIT'>('REGISTRATION');
@@ -230,6 +235,31 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     };
   });
 
+  const resolvedKycStatus = (() => {
+    const rawStatus = [
+      displayProvider?.kyc_status,
+      displayProvider?.kycStatus,
+      displayProvider?.verification_status,
+      displayProvider?.kyc?.status
+    ].find((value) => typeof value === 'string' && value.trim() !== '');
+
+    if (rawStatus) {
+      return rawStatus.toLowerCase();
+    }
+
+    if (displayProvider?.isVerified === true || displayProvider?.is_verified === true) {
+      return 'verified';
+    }
+
+    if (kycDocuments.length > 0) {
+      if (kycDocuments.some((doc: any) => doc.status === 'rejected')) return 'rejected';
+      if (kycDocuments.some((doc: any) => doc.status === 'pending')) return 'pending';
+      if (kycDocuments.every((doc: any) => doc.status === 'verified')) return 'verified';
+    }
+
+    return 'pending';
+  })();
+
   // Prefer admin-managed service_areas from provider profile if available
   const serviceZones = Array.isArray((displayProvider as any)?.service_areas)
     ? (displayProvider as any).service_areas.map((area: any) => ({
@@ -257,22 +287,6 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     service: 'Service', // This would need to come from the order/service data
     order_id: review.order_id
   }));
-
-  // Generate availability schedule from provider data
-  const availabilitySchedule = (() => {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const isAvailable = displayProvider?.is_available ?? false;
-    const startTime =
-      displayProvider?.availability_start || displayProvider?.availabilityStart || '09:00';
-    const endTime =
-      displayProvider?.availability_end || displayProvider?.availabilityEnd || '18:00';
-
-    return days.map((day) => ({
-      day,
-      time: isAvailable ? `${startTime} - ${endTime}` : 'Not Available',
-      status: isAvailable ? 'available' : 'unavailable'
-    }));
-  })();
 
   const onboardingStatus =
     onboarding?.onboarding_status || displayProvider?.onboarding_status || 'PENDING';
@@ -586,19 +600,34 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     return url.toLowerCase().includes('.pdf');
   };
 
+  const getDisplayValue = (...values: Array<string | null | undefined>) => {
+    const value = values.find((item) => {
+      if (!item) return false;
+      const normalized = item.trim().toLowerCase();
+      return (
+        normalized !== '' &&
+        normalized !== 'n/a' &&
+        normalized !== 'null' &&
+        normalized !== 'undefined'
+      );
+    });
+    return value || null;
+  };
+
   const providerName =
-    displayProvider?.name ||
-    displayProvider?.business_name ||
-    displayProvider?.user?.name ||
-    'Unknown Provider';
+    getDisplayValue(
+      displayProvider?.name,
+      displayProvider?.business_name,
+      displayProvider?.user?.name
+    ) || (providerId ? `Provider ${providerId}` : 'Provider Profile');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden p-0">
         <DialogHeader className="px-6 py-4">
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="flex items-center gap-3 min-w-0">
             <KeenIcon icon="shop" className="text-primary" />
-            Provider Profile - {providerName}
+            <span className="truncate">Provider Profile - {providerName}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -620,19 +649,39 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
 
         {/* Provider Details - Only show if not loading and no error */}
         {!isLoading && !isError && (
-          <div className="px-6 pb-6">
+          <div className="px-6 pb-6 overflow-y-auto max-h-[calc(92vh-130px)]">
             <Tabs defaultValue="personal" className="w-full">
-              <TabsList className="grid w-full grid-cols-10 gap-2">
-                <Tab value="personal">Personal Details</Tab>
-                <Tab value="onboarding">Onboarding</Tab>
-                <Tab value="kyc">KYC Documents</Tab>
-                <Tab value="earnings">Earnings</Tab>
-                <Tab value="jobs">Jobs</Tab>
-                <Tab value="wallet">Wallet</Tab>
-                <Tab value="billing">Billing</Tab>
-                <Tab value="zones">Service Zones</Tab>
-                <Tab value="schedule">Availability</Tab>
-                <Tab value="reviews">Reviews & Ratings</Tab>
+              <TabsList className="flex w-full gap-3 overflow-x-auto whitespace-nowrap px-1 py-2">
+                <Tab value="personal" className="shrink-0 px-4 py-2">
+                  Personal Details
+                </Tab>
+                <Tab value="onboarding" className="shrink-0 px-4 py-2">
+                  Onboarding
+                </Tab>
+                <Tab value="kyc" className="shrink-0 px-4 py-2">
+                  KYC Documents
+                </Tab>
+                <Tab value="earnings" className="shrink-0 px-4 py-2">
+                  Earnings
+                </Tab>
+                <Tab value="jobs" className="shrink-0 px-4 py-2">
+                  Jobs
+                </Tab>
+                <Tab value="wallet" className="shrink-0 px-4 py-2">
+                  Wallet
+                </Tab>
+                <Tab value="billing" className="shrink-0 px-4 py-2">
+                  Billing
+                </Tab>
+                <Tab value="zones" className="shrink-0 px-4 py-2">
+                  Service Zones
+                </Tab>
+                <Tab value="schedule" className="shrink-0 px-4 py-2">
+                  Availability
+                </Tab>
+                <Tab value="reviews" className="shrink-0 px-4 py-2">
+                  Reviews & Ratings
+                </Tab>
               </TabsList>
 
               {/* Personal Details Tab */}
@@ -640,13 +689,13 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Personal Details</h3>
-                    <p className="text-sm text-gray-600">Provider personal information</p>
+                    <p className="text-sm text-muted-foreground">Provider personal information</p>
                   </div>
                   <div className="card-body">
                     <div className="flex flex-col md:flex-row gap-6">
                       {/* Provider Image Section */}
                       <div className="flex-shrink-0 flex items-center justify-center md:items-start">
-                        <div className="w-32 h-32 rounded-lg bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+                        <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg border-2 border-border bg-surface-1">
                           {displayProvider?.profile_picture_url ||
                           displayProvider?.user?.profile_picture_url ||
                           displayProvider?.avatar ? (
@@ -669,16 +718,16 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           {!displayProvider?.profile_picture_url &&
                             !displayProvider?.user?.profile_picture_url &&
                             !displayProvider?.avatar && (
-                              <KeenIcon icon="user" className="text-gray-400 text-5xl" />
+                              <KeenIcon icon="user" className="text-5xl text-muted-foreground/70" />
                             )}
                         </div>
                       </div>
 
                       {/* Personal Details Table */}
                       <div className="flex-1 min-w-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Provider ID
                             </div>
                             <div className="text-sm font-medium">
@@ -686,7 +735,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Name
                             </div>
                             <div className="text-sm font-medium">
@@ -697,7 +746,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Business Name
                             </div>
                             <div className="text-sm">
@@ -705,7 +754,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Email
                             </div>
                             <div className="text-sm">
@@ -713,7 +762,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Phone
                             </div>
                             <div className="text-sm">
@@ -721,7 +770,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Status
                             </div>
                             <div>
@@ -731,21 +780,13 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               KYC Status
                             </div>
-                            <div>
-                              {getStatusBadge(
-                                (
-                                  displayProvider?.kyc_status ||
-                                  displayProvider?.kycStatus ||
-                                  'pending'
-                                ).toLowerCase()
-                              )}
-                            </div>
+                            <div>{getStatusBadge(resolvedKycStatus)}</div>
                           </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Joined Date
                             </div>
                             <div className="text-sm">
@@ -769,15 +810,15 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           displayProvider?.pincode ||
                           displayProvider?.country ||
                           (displayProvider?.zones && displayProvider.zones.length > 0)) && (
-                          <div className="mt-6 pt-6 border-t border-gray-200">
-                            <div className="text-sm font-medium text-gray-700 mb-4">
+                          <div className="mt-6 border-t border-border pt-6">
+                            <div className="mb-4 text-sm font-medium text-foreground">
                               Address Information
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {(displayProvider?.address ||
                                 (displayProvider?.zones && displayProvider.zones.length > 0)) && (
                                 <div className="space-y-1 md:col-span-2">
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Address
                                   </div>
                                   <div className="text-sm">
@@ -792,7 +833,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                               )}
                               {displayProvider?.city && (
                                 <div className="space-y-1">
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     City
                                   </div>
                                   <div className="text-sm">{displayProvider.city}</div>
@@ -800,7 +841,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                               )}
                               {displayProvider?.state && (
                                 <div className="space-y-1">
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     State
                                   </div>
                                   <div className="text-sm">{displayProvider.state}</div>
@@ -808,7 +849,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                               )}
                               {displayProvider?.pincode && (
                                 <div className="space-y-1">
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Pincode
                                   </div>
                                   <div className="text-sm">
@@ -818,7 +859,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                               )}
                               {displayProvider?.country && (
                                 <div className="space-y-1">
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Country
                                   </div>
                                   <div className="text-sm">{displayProvider.country}</div>
@@ -844,7 +885,10 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
                         Organization-wide default fees are configured on{' '}
-                        <Link to="/admin/onboarding-fee-defaults" className="text-primary underline">
+                        <Link
+                          to="/admin/onboarding-fee-defaults"
+                          className="text-primary underline"
+                        >
                           Onboarding fee defaults
                         </Link>
                         . Adjust amounts below for this provider only.
@@ -950,24 +994,19 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                   </span>
                                 )}
                               </div>
-                              <div className="flex flex-col md:flex-row gap-3 items-start md:items-end">
-                                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                                  <input
-                                    type="date"
-                                    className="border rounded px-2 py-1 text-sm w-full sm:w-auto"
-                                    value={trainingScheduledDate}
-                                    onChange={(e) => setTrainingScheduledDate(e.target.value)}
-                                  />
-                                  <input
-                                    type="time"
-                                    className="border rounded px-2 py-1 text-sm w-full sm:w-auto"
-                                    value={trainingScheduledTime}
-                                    onChange={(e) => setTrainingScheduledTime(e.target.value)}
-                                  />
-                                </div>
-                                <input
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                <Input
+                                  type="date"
+                                  value={trainingScheduledDate}
+                                  onChange={(e) => setTrainingScheduledDate(e.target.value)}
+                                />
+                                <Input
+                                  type="time"
+                                  value={trainingScheduledTime}
+                                  onChange={(e) => setTrainingScheduledTime(e.target.value)}
+                                />
+                                <Input
                                   type="text"
-                                  className="border rounded px-2 py-1 text-sm w-full md:flex-1"
                                   placeholder="Location (optional)"
                                   value={trainingLocation}
                                   onChange={(e) => setTrainingLocation(e.target.value)}
@@ -1051,31 +1090,25 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                       : 'Pending'}
                                 </span>
                               </div>
-                              <div className="flex flex-col md:flex-row gap-3 items-start md:items-end">
-                                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                                  <input
-                                    type="date"
-                                    className="border rounded px-2 py-1 text-sm w-full sm:w-auto"
-                                    value={kitScheduledDate}
-                                    onChange={(e) => setKitScheduledDate(e.target.value)}
-                                  />
-                                  <input
-                                    type="time"
-                                    className="border rounded px-2 py-1 text-sm w-full sm:w-auto"
-                                    value={kitScheduledTime}
-                                    onChange={(e) => setKitScheduledTime(e.target.value)}
-                                  />
-                                </div>
-                                <input
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                                <Input
+                                  type="date"
+                                  value={kitScheduledDate}
+                                  onChange={(e) => setKitScheduledDate(e.target.value)}
+                                />
+                                <Input
+                                  type="time"
+                                  value={kitScheduledTime}
+                                  onChange={(e) => setKitScheduledTime(e.target.value)}
+                                />
+                                <Input
                                   type="text"
-                                  className="border rounded px-2 py-1 text-sm w-full md:flex-1"
                                   placeholder="Hub location (optional)"
                                   value={kitHubLocation}
                                   onChange={(e) => setKitHubLocation(e.target.value)}
                                 />
-                                <input
+                                <Input
                                   type="text"
-                                  className="border rounded px-2 py-1 text-sm w-full md:flex-1"
                                   placeholder="Hub address (optional)"
                                   value={kitHubAddress}
                                   onChange={(e) => setKitHubAddress(e.target.value)}
@@ -1175,7 +1208,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             <div>
                               <Label className="text-xs text-gray-600">Fee type</Label>
                               <select
-                                className="border rounded px-2 py-1 text-sm w-full"
+                                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                 value={feeType}
                                 onChange={(e) => setFeeType(e.target.value as any)}
                               >
@@ -1186,20 +1219,18 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                             <div>
                               <Label className="text-xs text-gray-600">Amount (optional)</Label>
-                              <input
+                              <Input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                className="border rounded px-2 py-1 text-sm w-full"
                                 value={manualPaymentAmount}
                                 onChange={(e) => setManualPaymentAmount(e.target.value)}
                               />
                             </div>
                             <div>
                               <Label className="text-xs text-gray-600">Method</Label>
-                              <input
+                              <Input
                                 type="text"
-                                className="border rounded px-2 py-1 text-sm w-full"
                                 value={manualPaymentMethod}
                                 onChange={(e) => setManualPaymentMethod(e.target.value)}
                                 placeholder="upi/netbanking/wallet/cash_on_delivery"
@@ -1207,18 +1238,16 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             </div>
                             <div>
                               <Label className="text-xs text-gray-600">Txn Ref</Label>
-                              <input
+                              <Input
                                 type="text"
-                                className="border rounded px-2 py-1 text-sm w-full"
                                 value={manualTxnRef}
                                 onChange={(e) => setManualTxnRef(e.target.value)}
                               />
                             </div>
                             <div>
                               <Label className="text-xs text-gray-600">Remarks</Label>
-                              <input
+                              <Input
                                 type="text"
-                                className="border rounded px-2 py-1 text-sm w-full"
                                 value={manualRemarks}
                                 onChange={(e) => setManualRemarks(e.target.value)}
                               />
@@ -1396,46 +1425,46 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Earnings Overview</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Wallet balance and recent earnings for this provider.
                     </p>
                   </div>
                   <div className="card-body">
                     {isLoadingEarnings && (
-                      <div className="py-6 text-sm text-gray-500">Loading earnings...</div>
+                      <div className="py-6 text-sm text-muted-foreground">Loading earnings...</div>
                     )}
                     {isErrorEarnings && !isLoadingEarnings && (
-                      <div className="py-6 text-sm text-red-600">Failed to load earnings data.</div>
+                      <div className="py-6 text-sm text-danger">Failed to load earnings data.</div>
                     )}
                     {!isLoadingEarnings && !isErrorEarnings && (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                          <div className="p-4 rounded-lg border bg-gray-50">
-                            <div className="text-xs font-semibold text-gray-500 uppercase">
+                          <div className="p-4 rounded-lg border bg-surface-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">
                               Wallet Balance
                             </div>
                             <div className="mt-1 text-xl font-semibold">
                               {formatAmount(earningsDashboard?.wallet_balance ?? 0)}
                             </div>
                           </div>
-                          <div className="p-4 rounded-lg border bg-gray-50">
-                            <div className="text-xs font-semibold text-gray-500 uppercase">
+                          <div className="p-4 rounded-lg border bg-surface-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">
                               Available to Withdraw
                             </div>
                             <div className="mt-1 text-xl font-semibold">
                               {formatAmount(earningsDashboard?.available_withdraw_balance ?? 0)}
                             </div>
                           </div>
-                          <div className="p-4 rounded-lg border bg-gray-50">
-                            <div className="text-xs font-semibold text-gray-500 uppercase">
+                          <div className="p-4 rounded-lg border bg-surface-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">
                               Total Earnings
                             </div>
                             <div className="mt-1 text-xl font-semibold">
                               {formatAmount(earningsDashboard?.total_earnings ?? 0)}
                             </div>
                           </div>
-                          <div className="p-4 rounded-lg border bg-gray-50">
-                            <div className="text-xs font-semibold text-gray-500 uppercase">
+                          <div className="p-4 rounded-lg border bg-surface-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">
                               Total Jobs
                             </div>
                             <div className="mt-1 text-xl font-semibold">
@@ -1471,7 +1500,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                   <TableRow>
                                     <TableCell
                                       colSpan={4}
-                                      className="text-center py-6 text-gray-500"
+                                      className="text-center py-6 text-muted-foreground"
                                     >
                                       No earnings found
                                     </TableCell>
@@ -1486,7 +1515,9 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                         {formatAmount(earning.net_amount ?? earning.amount ?? 0)}
                                       </TableCell>
                                       <TableCell>
-                                        {getEarningsStatusLabel(earning.payout_status ?? earning.status)}
+                                        {getEarningsStatusLabel(
+                                          earning.payout_status ?? earning.status
+                                        )}
                                       </TableCell>
                                       <TableCell>
                                         {earning.earned_at
@@ -1511,52 +1542,73 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Jobs</h3>
-                    <p className="text-sm text-gray-600">Recent jobs handled by this provider.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Recent jobs handled by this provider.
+                    </p>
                   </div>
                   <div className="card-body p-0">
                     {isLoadingJobs && (
-                      <div className="py-6 text-sm text-gray-500 text-center">Loading jobs...</div>
+                      <div className="py-6 text-sm text-muted-foreground text-center">
+                        Loading jobs...
+                      </div>
                     )}
                     {isErrorJobs && !isLoadingJobs && (
-                      <div className="py-6 text-sm text-red-600 text-center">
+                      <div className="py-6 text-sm text-danger text-center">
                         Failed to load jobs.
                       </div>
                     )}
                     {!isLoadingJobs && !isErrorJobs && (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Job</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Scheduled At</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(jobsData?.jobs || []).length === 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[900px]">
+                          <TableHeader>
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center py-6 text-gray-500">
-                                No jobs found
-                              </TableCell>
+                              <TableHead className="w-[30%]">Job</TableHead>
+                              <TableHead className="w-[16%]">Status</TableHead>
+                              <TableHead className="w-[24%]">Customer</TableHead>
+                              <TableHead className="w-[14%] text-right">Amount</TableHead>
+                              <TableHead className="w-[16%]">Scheduled At</TableHead>
                             </TableRow>
-                          ) : (
-                            (jobsData?.jobs || []).map((job: any) => (
-                              <TableRow key={job.assignment_id}>
-                                <TableCell className="font-medium">{job.service_name}</TableCell>
-                                <TableCell>{job.status}</TableCell>
-                                <TableCell>{job.customer_name}</TableCell>
-                                <TableCell>{formatAmount(job.final_amount ?? 0)}</TableCell>
-                                <TableCell>
-                                  {job.scheduled_date
-                                    ? new Date(job.scheduled_date).toLocaleString()
-                                    : ''}
+                          </TableHeader>
+                          <TableBody>
+                            {(jobsData?.jobs || []).length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={5} className="py-12 text-center">
+                                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                    <KeenIcon
+                                      icon="calendar-remove"
+                                      className="text-2xl text-muted-foreground/70"
+                                    />
+                                    <p className="text-sm font-medium">No jobs found</p>
+                                    <p className="text-xs text-muted-foreground/70">
+                                      Jobs assigned to this provider will appear here.
+                                    </p>
+                                  </div>
                                 </TableCell>
                               </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
+                            ) : (
+                              (jobsData?.jobs || []).map((job: any) => (
+                                <TableRow key={job.assignment_id}>
+                                  <TableCell className="font-medium">
+                                    {job.service_name || 'N/A'}
+                                  </TableCell>
+                                  <TableCell>
+                                    <StatusBadge status={job.status || 'not scheduled'} />
+                                  </TableCell>
+                                  <TableCell>{job.customer_name || 'N/A'}</TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    {formatAmount(job.final_amount ?? 0)}
+                                  </TableCell>
+                                  <TableCell>
+                                    {job.scheduled_date
+                                      ? new Date(job.scheduled_date).toLocaleString()
+                                      : 'Not Scheduled'}
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1568,39 +1620,44 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                   <div className="card-header flex flex-row items-center justify-between">
                     <div>
                       <h3 className="card-title">Wallet</h3>
-                      <p className="text-sm text-gray-600">Provider wallet balance.</p>
+                      <p className="text-sm text-muted-foreground">Provider wallet balance.</p>
                     </div>
-                    <Button variant="default" size="sm" onClick={() => setTopUpModalOpen(true)} disabled={!providerId}>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setTopUpModalOpen(true)}
+                      disabled={!providerId}
+                    >
                       Top-up
                     </Button>
                   </div>
                   <div className="card-body">
                     {isLoadingWallet && (
-                      <div className="py-6 text-sm text-gray-500">Loading wallet...</div>
+                      <div className="py-6 text-sm text-muted-foreground">Loading wallet...</div>
                     )}
                     {isErrorWallet && !isLoadingWallet && (
-                      <div className="py-6 text-sm text-red-600">Failed to load wallet data.</div>
+                      <div className="py-6 text-sm text-danger">Failed to load wallet data.</div>
                     )}
                     {!isLoadingWallet && !isErrorWallet && (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 rounded-lg border bg-gray-50">
-                          <div className="text-xs font-semibold text-gray-500 uppercase">
+                        <div className="p-4 rounded-lg border bg-surface-1">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase">
                             Total Balance
                           </div>
                           <div className="mt-1 text-xl font-semibold">
                             {formatAmount(walletData?.total_balance ?? 0)}
                           </div>
                         </div>
-                        <div className="p-4 rounded-lg border bg-gray-50">
-                          <div className="text-xs font-semibold text-gray-500 uppercase">
+                        <div className="p-4 rounded-lg border bg-surface-1">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase">
                             Earnings Balance
                           </div>
                           <div className="mt-1 text-xl font-semibold">
                             {formatAmount(walletData?.earnings_balance ?? 0)}
                           </div>
                         </div>
-                        <div className="p-4 rounded-lg border bg-gray-50">
-                          <div className="text-xs font-semibold text-gray-500 uppercase">
+                        <div className="p-4 rounded-lg border bg-surface-1">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase">
                             Commission Balance
                           </div>
                           <div className="mt-1 text-xl font-semibold">
@@ -1618,21 +1675,23 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Billing Model</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Commission or package model selected for this provider.
                     </p>
                   </div>
                   <div className="card-body">
                     {isLoadingBilling && (
-                      <div className="py-6 text-sm text-gray-500">Loading billing model...</div>
+                      <div className="py-6 text-sm text-muted-foreground">
+                        Loading billing model...
+                      </div>
                     )}
                     {isErrorBilling && !isLoadingBilling && (
-                      <div className="py-6 text-sm text-red-600">Failed to load billing model.</div>
+                      <div className="py-6 text-sm text-danger">Failed to load billing model.</div>
                     )}
                     {!isLoadingBilling && !isErrorBilling && (
                       <>
-                        <div className="mb-4 rounded-md border p-3 bg-gray-50">
-                          <div className="text-xs font-medium text-gray-600 mb-2">
+                        <div className="mb-4 rounded-md border p-3 bg-surface-1">
+                          <div className="text-xs font-medium text-muted-foreground mb-2">
                             Assign plan to provider (commission tier or package public id)
                           </div>
                           <div className="flex items-center gap-2">
@@ -1668,7 +1727,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                           </div>
                         </div>
                         {!billingData?.selected_model ? (
-                          <div className="py-6 text-sm text-gray-500">
+                          <div className="py-6 text-sm text-muted-foreground">
                             No billing model selected for this provider.
                           </div>
                         ) : (
@@ -1700,32 +1759,42 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Service Zones</h3>
-                    <p className="text-sm text-gray-600">Areas where provider offers services</p>
+                    <p className="text-sm text-muted-foreground">
+                      Areas where provider offers services
+                    </p>
                   </div>
                   <div className="card-body p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Zone</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Jobs Completed</TableHead>
-                          {/* <TableHead>Actions</TableHead> */}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {serviceZones.length === 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table className="min-w-[720px]">
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                              No service zones found
-                            </TableCell>
+                            <TableHead>Zone</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Jobs Completed</TableHead>
+                            {/* <TableHead>Actions</TableHead> */}
                           </TableRow>
-                        ) : (
-                          serviceZones.map((zone: any, index: number) => (
-                            <TableRow key={zone.zone_id || index}>
-                              <TableCell className="font-medium">{zone.zone}</TableCell>
-                              <TableCell>{getStatusBadge(zone.status)}</TableCell>
-                              <TableCell>{zone.jobsCompleted || 0}</TableCell>
-                              {/* <TableCell>
+                        </TableHeader>
+                        <TableBody>
+                          {serviceZones.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={4}
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                No service zones found
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            serviceZones.map((zone: any, index: number) => (
+                              <TableRow key={zone.zone_id || index}>
+                                <TableCell className="font-medium">{zone.zone}</TableCell>
+                                <TableCell>
+                                  <StatusBadge status={zone.status} />
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {zone.jobsCompleted || 0}
+                                </TableCell>
+                                {/* <TableCell>
                           <div className="flex gap-2">
                             {zone.status === 'active' ? (
                               <Button variant="outline" className="border-warning text-warning hover:bg-warning hover:text-white" size="sm">
@@ -1740,11 +1809,12 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                             )}
                           </div>
                         </TableCell> */}
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
               </TabPanel>
@@ -1754,42 +1824,13 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Availability Schedule</h3>
-                    <p className="text-sm text-gray-600">Weekly working hours</p>
+                    <p className="text-sm text-muted-foreground">Weekly working hours</p>
                   </div>
                   <div className="card-body">
-                    <p className="text-gray-500 text-center py-8">
-                      Availability schedule feature coming soon
-                    </p>
-                  </div>
-                </div>
-              </TabPanel>
-
-              {/* Reviews & Ratings Tab */}
-              <TabPanel value="reviews" className="space-y-6 pt-6">
-                <div className="card">
-                  <div className="card-header">
-                    <h3 className="card-title">Availability Schedule</h3>
-                    <p className="text-sm text-gray-600">Weekly working hours</p>
-                  </div>
-                  <div className="card-body p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Day</TableHead>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {availabilitySchedule.map((schedule, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{schedule.day}</TableCell>
-                            <TableCell>{schedule.time}</TableCell>
-                            <TableCell>{getStatusBadge(schedule.status)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-muted-foreground">
+                      <KeenIcon icon="calendar-remove" className="text-4xl" />
+                      <p className="text-sm">Availability schedule feature coming soon</p>
+                    </div>
                   </div>
                 </div>
               </TabPanel>
@@ -1799,43 +1840,48 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                 <div className="card">
                   <div className="card-header">
                     <h3 className="card-title">Reviews & Ratings</h3>
-                    <p className="text-sm text-gray-600">Customer feedback and ratings</p>
+                    <p className="text-sm text-muted-foreground">Customer feedback and ratings</p>
                   </div>
                   <div className="card-body p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead>Rating</TableHead>
-                          <TableHead>Comment</TableHead>
-                          <TableHead>Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {reviews.length === 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table className="min-w-[900px]">
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                              No reviews found
-                            </TableCell>
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Service</TableHead>
+                            <TableHead>Rating</TableHead>
+                            <TableHead>Comment</TableHead>
+                            <TableHead>Date</TableHead>
                           </TableRow>
-                        ) : (
-                          reviews.map((review: any) => (
-                            <TableRow key={review.id || review.review_id}>
-                              <TableCell className="font-medium">{review.customerName}</TableCell>
-                              <TableCell>{review.service || 'N/A'}</TableCell>
-                              <TableCell>{renderStars(review.rating)}</TableCell>
-                              <TableCell className="max-w-xs">
-                                <div className="truncate" title={review.comment}>
-                                  {review.comment}
-                                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {reviews.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={5}
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                No reviews found
                               </TableCell>
-                              <TableCell>{review.date}</TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                          ) : (
+                            reviews.map((review: any) => (
+                              <TableRow key={review.id || review.review_id}>
+                                <TableCell className="font-medium">{review.customerName}</TableCell>
+                                <TableCell>{review.service || 'N/A'}</TableCell>
+                                <TableCell>{renderStars(review.rating)}</TableCell>
+                                <TableCell className="max-w-xs">
+                                  <div className="truncate" title={review.comment}>
+                                    {review.comment}
+                                  </div>
+                                </TableCell>
+                                <TableCell>{review.date}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
               </TabPanel>
@@ -1844,7 +1890,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
         )}
 
         {!isLoading && !isError && (
-          <div className="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+          <div className="flex justify-end gap-3 border-t bg-surface-1 px-6 py-4">
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
@@ -1940,19 +1986,33 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
             </div>
           </DialogBody>
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => { setTopUpModalOpen(false); setTopUpAmount(''); setTopUpDescription(''); }}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setTopUpModalOpen(false);
+                setTopUpAmount('');
+                setTopUpDescription('');
+              }}
+            >
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || adjustWalletMutation.isLoading}
+              disabled={
+                !topUpAmount || parseFloat(topUpAmount) <= 0 || adjustWalletMutation.isLoading
+              }
               onClick={() => {
                 if (!providerId) return;
                 const amt = parseFloat(topUpAmount);
                 if (isNaN(amt) || amt <= 0) return;
                 adjustWalletMutation.mutate({
                   providerId,
-                  data: { amount: amt, type: 'ADD', description: topUpDescription.trim() || undefined }
+                  data: {
+                    amount: amt,
+                    type: 'ADD',
+                    description: topUpDescription.trim() || undefined
+                  }
                 });
               }}
             >

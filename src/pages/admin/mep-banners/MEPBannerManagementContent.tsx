@@ -9,7 +9,7 @@ import { useMEPBanners } from '@/services';
 import { mepBannerService } from '@/services/mepBanner.service';
 import { IMEPBanner } from '@/services/mepBanner.types';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 import { toast } from 'sonner';
 
 const MEPBannerManagementContent = () => {
@@ -26,23 +26,15 @@ const MEPBannerManagementContent = () => {
   // Filter state
   const [filters, setFilters] = useState<{ search: string; status: string }>({
     search: '',
-    status: '',
+    status: ''
   });
 
   // Fetch MEP banners with filters
-  const {
-    banners,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useMEPBanners({
+  const { banners, pagination, isLoading, isError, error, refetch, isFetching } = useMEPBanners({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
-    search: filters.search,
+    search: filters.search
   });
 
   const handleAddBanner = () => {
@@ -98,7 +90,7 @@ const MEPBannerManagementContent = () => {
         title: bannerData.title || '',
         image: bannerData.image,
         is_active: bannerData.is_active ?? true,
-        banner_type: bannerData.banner_type || 'offer',
+        banner_type: bannerData.banner_type || 'offer'
       });
 
       toast.success('MEP banner created successfully');
@@ -122,7 +114,7 @@ const MEPBannerManagementContent = () => {
         image: bannerData.image,
         image_url: bannerData.image ? undefined : selectedBanner.image_url,
         is_active: bannerData.is_active ?? true,
-        banner_type: bannerData.banner_type || 'offer',
+        banner_type: bannerData.banner_type || 'offer'
       });
 
       toast.success('MEP banner updated successfully');
@@ -167,7 +159,7 @@ const MEPBannerManagementContent = () => {
 
       await mepBannerService.updateMEPBanner(banner.mep_banner_id, {
         banner_type: newType,
-        image_url: banner.image_url,
+        image_url: banner.image_url
       });
 
       toast.success('MEP banner type updated successfully');
@@ -191,19 +183,10 @@ const MEPBannerManagementContent = () => {
       <MEPBannerSettings />
 
       {isError && (
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load MEP banners. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load MEP banners. Please try again.'}
+          onRetry={() => refetch()}
+        />
       )}
 
       {isLoading && !isFetching ? (

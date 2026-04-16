@@ -2,7 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Container } from '@/components/container';
 import {
   Table,
@@ -10,7 +9,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -18,17 +17,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogBody,
-  DialogFooter,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useBookingDetail, useCancelBooking, useAssignProvider } from '@/services';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { formatCurrency } from '@/utils';
 import { ProviderSearchSelect } from '@/components/ProviderSearchSelect';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 
 const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,9 +38,9 @@ const BookingDetailsPage = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [assignNotes, setAssignNotes] = useState('');
-  
+
   const { booking, isLoading, isError, error, refetch } = useBookingDetail(id || null);
-  
+
   const cancelBookingMutation = useCancelBooking({
     onSuccess: (data) => {
       toast.success(data.message || 'Booking cancelled successfully');
@@ -51,7 +51,7 @@ const BookingDetailsPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to cancel booking');
-    },
+    }
   });
 
   const assignProviderMutation = useAssignProvider({
@@ -64,36 +64,16 @@ const BookingDetailsPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to assign provider');
-    },
+    }
   });
 
   const handleCancelBooking = () => {
     if (!id) return;
-    cancelBookingMutation.mutate({ 
-      bookingId: id, 
-      reason: cancelReason || 'Cancelled by admin' 
+    cancelBookingMutation.mutate({
+      bookingId: id,
+      reason: cancelReason || 'Cancelled by admin'
     });
   };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: string; className: string; text: string }> = {
-      completed: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Completed' },
-      pending: { variant: 'warning', className: 'bg-warning text-black font-semibold', text: 'Pending' },
-      cancelled: { variant: 'destructive', className: 'bg-danger text-white font-semibold', text: 'Cancelled' },
-      'in-progress': { variant: 'info', className: 'bg-primary text-white font-semibold', text: 'In Progress' },
-      accepted: { variant: 'secondary', className: 'bg-info text-white font-semibold', text: 'Accepted' },
-      CONFIRMED: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Confirmed' },
-      PENDING: { variant: 'warning', className: 'bg-warning text-black font-semibold', text: 'Pending' },
-      CANCELLED: { variant: 'destructive', className: 'bg-danger text-white font-semibold', text: 'Cancelled' },
-      COMPLETED: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Completed' },
-      active: { variant: 'success', className: 'bg-success text-white font-semibold', text: 'Active' },
-    };
-    
-    const normalizedStatus = status?.toLowerCase();
-    const config = statusConfig[normalizedStatus] || statusConfig[status] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: status };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
-  };
-
 
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -117,21 +97,18 @@ const BookingDetailsPage = () => {
   if (isError) {
     return (
       <Container>
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load booking details. Please try again.'}
-            </span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                Retry
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/bookings')}>
-                Back to Bookings
-              </Button>
-            </div>
+        <div className="space-y-4">
+          <InlineErrorBanner
+            message={error?.message || 'Failed to load booking details. Please try again.'}
+            onRetry={() => refetch()}
+          />
+          <div>
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin/bookings')}>
+              <KeenIcon icon="arrow-left" className="me-2" />
+              Back to Bookings
+            </Button>
           </div>
-        </Alert>
+        </div>
       </Container>
     );
   }
@@ -142,7 +119,9 @@ const BookingDetailsPage = () => {
         <div className="text-center py-12">
           <KeenIcon icon="cross-circle" className="text-6xl text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Booking Not Found</h2>
-          <p className="text-gray-600 mb-6">The booking you're looking for doesn't exist or has been removed.</p>
+          <p className="text-gray-600 mb-6">
+            The booking you're looking for doesn't exist or has been removed.
+          </p>
           <Button onClick={() => navigate('/admin/bookings')}>
             <KeenIcon icon="arrow-left" className="me-2" />
             Back to Bookings
@@ -175,18 +154,19 @@ const BookingDetailsPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {getStatusBadge(booking.status)}
-            {booking.status && !['CANCELLED', 'COMPLETED', 'cancelled', 'completed'].includes(booking.status) && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setCancelDialogOpen(true)}
-                disabled={cancelBookingMutation.isLoading}
-              >
-                <KeenIcon icon="cross-circle" className="me-2" />
-                Cancel Booking
-              </Button>
-            )}
+            <StatusBadge status={booking.status} />
+            {booking.status &&
+              !['CANCELLED', 'COMPLETED', 'cancelled', 'completed'].includes(booking.status) && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setCancelDialogOpen(true)}
+                  disabled={cancelBookingMutation.isLoading}
+                >
+                  <KeenIcon icon="cross-circle" className="me-2" />
+                  Cancel Booking
+                </Button>
+              )}
           </div>
         </div>
 
@@ -201,35 +181,39 @@ const BookingDetailsPage = () => {
               </div>
               <div className="card-body space-y-4">
                 {booking.items && booking.items.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Unit Price</TableHead>
-                        <TableHead>Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {booking.items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {item.service_name}
-                            {item.sub_service && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {item.sub_service.name}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>{item.sub_service?.category || 'N/A'}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{formatCurrency(item.unit_price)}</TableCell>
-                          <TableCell className="font-medium">{formatCurrency(item.total_price)}</TableCell>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[720px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Service</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Unit Price</TableHead>
+                          <TableHead>Total</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {booking.items.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              {item.service_name}
+                              {item.sub_service && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {item.sub_service.name}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>{item.sub_service?.category || 'N/A'}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{formatCurrency(item.unit_price)}</TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(item.total_price)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 ) : (
                   <p className="text-gray-600">No service items found</p>
                 )}
@@ -250,7 +234,7 @@ const BookingDetailsPage = () => {
                         {booking.address.full_address || booking.address.address_line_1 || 'N/A'}
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-gray-700">City</label>
@@ -262,7 +246,9 @@ const BookingDetailsPage = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700">Pincode</label>
-                        <p className="text-sm text-gray-900">{booking.address?.postal_code || booking.address?.pincode || 'N/A'}</p>
+                        <p className="text-sm text-gray-900">
+                          {booking.address?.postal_code || booking.address?.pincode || 'N/A'}
+                        </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700">Landmark</label>
@@ -284,45 +270,47 @@ const BookingDetailsPage = () => {
               </div>
               <div className="card-body p-0">
                 {booking.status_history && booking.status_history.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Changed At</TableHead>
-                        <TableHead>Changed By</TableHead>
-                        <TableHead>Reason</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {booking.status_history.map((entry, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            {getStatusBadge(entry.status)}
-                          </TableCell>
-                          <TableCell>{formatDateTime(entry.changed_at)}</TableCell>
-                          <TableCell>
-                            {entry.changed_by ? (
-                              <div>
-                                <div className="font-medium">{entry.changed_by.name}</div>
-                                <div className="text-xs text-gray-500">{entry.changed_by.role}</div>
-                              </div>
-                            ) : (
-                              'System'
-                            )}
-                          </TableCell>
-                          <TableCell className="max-w-xs">
-                            <div className="truncate" title={entry.reason || 'N/A'}>
-                              {entry.reason || 'N/A'}
-                            </div>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[720px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Changed At</TableHead>
+                          <TableHead>Changed By</TableHead>
+                          <TableHead>Reason</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="p-6 text-center text-gray-600">
-                    No status history available
+                      </TableHeader>
+                      <TableBody>
+                        {booking.status_history.map((entry, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <StatusBadge status={entry.status} />
+                            </TableCell>
+                            <TableCell>{formatDateTime(entry.changed_at)}</TableCell>
+                            <TableCell>
+                              {entry.changed_by ? (
+                                <div>
+                                  <div className="font-medium">{entry.changed_by.name}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {entry.changed_by.role}
+                                  </div>
+                                </div>
+                              ) : (
+                                'System'
+                              )}
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate" title={entry.reason || 'N/A'}>
+                                {entry.reason || 'N/A'}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
+                ) : (
+                  <div className="p-6 text-center text-gray-600">No status history available</div>
                 )}
               </div>
             </div>
@@ -369,7 +357,9 @@ const BookingDetailsPage = () => {
                         <p className="text-sm text-gray-600">{booking.provider.phone}</p>
                       )}
                       {booking.provider.provider_id && (
-                        <p className="text-xs text-gray-500 mt-1">ID: {booking.provider.provider_id}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          ID: {booking.provider.provider_id}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -377,7 +367,7 @@ const BookingDetailsPage = () => {
                     <div className="pt-3 border-t">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Assignment Status</span>
-                        {getStatusBadge(booking.provider.assignment_status)}
+                        <StatusBadge status={booking.provider.assignment_status} />
                       </div>
                     </div>
                   )}
@@ -385,7 +375,9 @@ const BookingDetailsPage = () => {
                     <div className="pt-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Assignment ID</span>
-                        <span className="text-xs font-mono text-gray-500">{booking.provider.assignment_id}</span>
+                        <span className="text-xs font-mono text-gray-500">
+                          {booking.provider.assignment_id}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -400,16 +392,19 @@ const BookingDetailsPage = () => {
                   <div className="text-center py-4">
                     <KeenIcon icon="user-tie" className="text-4xl text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-600 mb-4">No provider assigned</p>
-                    {booking.status && !['CANCELLED', 'COMPLETED', 'cancelled', 'completed'].includes(booking.status) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAssignDialogOpen(true)}
-                      >
-                        <KeenIcon icon="user-plus" className="me-2" />
-                        Assign Provider
-                      </Button>
-                    )}
+                    {booking.status &&
+                      !['CANCELLED', 'COMPLETED', 'cancelled', 'completed'].includes(
+                        booking.status
+                      ) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAssignDialogOpen(true)}
+                        >
+                          <KeenIcon icon="user-plus" className="me-2" />
+                          Assign Provider
+                        </Button>
+                      )}
                   </div>
                 </div>
               </div>
@@ -471,19 +466,25 @@ const BookingDetailsPage = () => {
                   </div>
                   <div className="text-sm text-gray-600">Total Amount</div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Subtotal</span>
-                    <span className="text-sm font-medium">{formatCurrency(booking.pricing.subtotal)}</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(booking.pricing.subtotal)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Tax</span>
-                    <span className="text-sm font-medium">{formatCurrency(booking.pricing.tax)}</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(booking.pricing.tax)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Discount</span>
-                    <span className="text-sm font-medium">{formatCurrency(booking.pricing.discount)}</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(booking.pricing.discount)}
+                    </span>
                   </div>
                   {booking.payment && (
                     <>
@@ -493,11 +494,15 @@ const BookingDetailsPage = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Payment Status</span>
-                        <div>{getStatusBadge(booking.payment.status)}</div>
+                        <div>
+                          <StatusBadge status={booking.payment.status} />
+                        </div>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Payment ID</span>
-                        <span className="text-sm font-mono text-xs">{booking.payment.payment_id}</span>
+                        <span className="text-sm font-mono text-xs">
+                          {booking.payment.payment_id}
+                        </span>
                       </div>
                     </>
                   )}
@@ -607,7 +612,7 @@ const BookingDetailsPage = () => {
                 assignProviderMutation.mutate({
                   bookingId: id,
                   providerId: selectedProviderId,
-                  notes: assignNotes || undefined,
+                  notes: assignNotes || undefined
                 });
               }}
               disabled={assignProviderMutation.isLoading || !selectedProviderId}

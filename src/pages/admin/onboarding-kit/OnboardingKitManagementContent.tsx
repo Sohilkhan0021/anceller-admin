@@ -136,7 +136,7 @@ const OnboardingKitManagementContent = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Training & Service Kit</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Upload or update the default images shown for Training and Service Kit on the provider
           app. To update payment status and training/kit completion per provider, use Provider
           Management → open a provider → Onboarding tab.
@@ -148,7 +148,7 @@ const OnboardingKitManagementContent = () => {
       <Card>
         <CardHeader>
           <CardTitle>Kit assets (images for provider app)</CardTitle>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             These images appear on the provider home screen for training and service kit cards.
           </p>
         </CardHeader>
@@ -169,7 +169,7 @@ const OnboardingKitManagementContent = () => {
                       className="max-h-48 object-contain rounded"
                     />
                   ) : (
-                    <div className="text-gray-500 flex flex-col items-center gap-2">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2">
                       <KeenIcon icon="image" className="text-4xl" />
                       <span className="text-sm">No image set</span>
                     </div>
@@ -192,7 +192,7 @@ const OnboardingKitManagementContent = () => {
 
               <div className="space-y-4">
                 <Label className="text-base font-medium">Service Kit Image</Label>
-                <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex flex-col items-center justify-center">
+                <div className="border rounded-lg p-4 bg-surface-1 min-h-[200px] flex flex-col items-center justify-center">
                   {serviceKitPreview ? (
                     <img
                       src={serviceKitPreview}
@@ -200,7 +200,7 @@ const OnboardingKitManagementContent = () => {
                       className="max-h-48 object-contain rounded"
                     />
                   ) : (
-                    <div className="text-gray-500 flex flex-col items-center gap-2">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2">
                       <KeenIcon icon="image" className="text-4xl" />
                       <span className="text-sm">No image set</span>
                     </div>
@@ -236,7 +236,7 @@ const OnboardingKitManagementContent = () => {
       <Card>
         <CardHeader>
           <CardTitle>Training and service kit details</CardTitle>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Manage content shown on provider onboarding cards.
           </p>
         </CardHeader>
@@ -312,7 +312,7 @@ const OnboardingKitManagementContent = () => {
           <CardTitle>Provider onboarding status & payment</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             To update registration fee paid, training fee paid, kit fee paid, and to mark training
             completed or kit delivered for a specific provider, go to Provider Management, open the
             provider profile, and use the <strong>Onboarding</strong> tab.

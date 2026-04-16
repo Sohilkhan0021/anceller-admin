@@ -1,14 +1,11 @@
 import clsx from 'clsx';
 import { useEffect } from 'react';
 import { Container } from '@/components/container';
-import { MegaMenu } from '../mega-menu';
 import { HeaderLogo, HeaderTopbar } from './';
-import { Breadcrumbs, useDemo1Layout } from '../';
-import { useLocation } from 'react-router';
+import { useDemo1Layout } from '../';
 
 const Header = () => {
   const { headerSticky } = useDemo1Layout();
-  const { pathname } = useLocation();
 
   useEffect(() => {
     if (headerSticky) {
@@ -25,9 +22,8 @@ const Header = () => {
         headerSticky && 'shadow-sm'
       )}
     >
-      <Container className="flex justify-between items-stretch lg:gap-4">
+      <Container className="flex items-center justify-between gap-3">
         <HeaderLogo />
-        {/* {pathname.includes('/account') ? <Breadcrumbs /> : <MegaMenu />} */}
         <HeaderTopbar />
       </Container>
     </header>

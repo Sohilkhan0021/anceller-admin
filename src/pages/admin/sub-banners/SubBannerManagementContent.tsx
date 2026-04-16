@@ -8,7 +8,8 @@ import { useSubBanners } from '@/services';
 import { subBannerService } from '@/services/subBanner.service';
 import { ISubBanner } from '@/services/subBanner.types';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
+import { toast } from 'sonner';
 
 const SubBannerManagementContent = () => {
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -24,23 +25,15 @@ const SubBannerManagementContent = () => {
   // Filter state
   const [filters, setFilters] = useState<{ search: string; status: string }>({
     search: '',
-    status: '',
+    status: ''
   });
 
   // Fetch sub-banners with filters
-  const {
-    subBanners,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useSubBanners({
+  const { subBanners, pagination, isLoading, isError, error, refetch, isFetching } = useSubBanners({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
-    search: filters.search,
+    search: filters.search
   });
 
   const handleAddSubBanner = () => {
@@ -72,7 +65,7 @@ const SubBannerManagementContent = () => {
       await refetch();
     } catch (error: any) {
       console.error('Failed to delete sub-banner:', error);
-      alert(error?.message || 'Failed to delete sub-banner. Please try again.');
+      toast.error(error?.message || 'Failed to delete sub-banner. Please try again.');
     } finally {
       setIsDeleting(false);
     }
@@ -95,7 +88,7 @@ const SubBannerManagementContent = () => {
         title: subBannerData.title || '',
         image: subBannerData.image,
         is_active: subBannerData.is_active ?? true,
-        category_id: subBannerData.category_id || null,
+        category_id: subBannerData.category_id || null
       });
 
       setIsAddFormOpen(false);
@@ -117,7 +110,10 @@ const SubBannerManagementContent = () => {
         image: subBannerData.image,
         image_url: subBannerData.image ? undefined : selectedSubBanner.image_url,
         is_active: subBannerData.is_active ?? true,
-        category_id: subBannerData.category_id !== undefined ? subBannerData.category_id : selectedSubBanner.category_id || null,
+        category_id:
+          subBannerData.category_id !== undefined
+            ? subBannerData.category_id
+            : selectedSubBanner.category_id || null
       });
 
       setIsEditFormOpen(false);
@@ -162,19 +158,10 @@ const SubBannerManagementContent = () => {
       />
 
       {isError && (
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load sub-banners. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load sub-banners. Please try again.'}
+          onRetry={() => refetch()}
+        />
       )}
 
       {isLoading && !isFetching ? (

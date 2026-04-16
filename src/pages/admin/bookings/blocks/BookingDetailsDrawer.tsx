@@ -1,20 +1,14 @@
-import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 
 interface IBookingDetailsDrawerProps {
@@ -29,7 +23,8 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: IBookingDetailsDrawe
   // Mock data for booking details
   const serviceInfo = {
     serviceType: booking.service,
-    description: 'Professional electrical repair service including wiring, switch installation, and safety checks.',
+    description:
+      'Professional electrical repair service including wiring, switch installation, and safety checks.',
     duration: '2-3 hours',
     materials: ['Electrical wires', 'Switch board', 'Safety equipment'],
     specialInstructions: 'Customer prefers morning appointments. Please call before arrival.'
@@ -99,8 +94,11 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: IBookingDetailsDrawe
       'in-progress': { variant: 'info', text: 'In Progress' },
       accepted: { variant: 'secondary', text: 'Accepted' }
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: 'secondary', text: status };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || {
+      variant: 'secondary',
+      text: status
+    };
     return <Badge variant={config.variant as any}>{config.text}</Badge>;
   };
 
@@ -108,157 +106,161 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: IBookingDetailsDrawe
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-[600px] sm:w-[800px] h-full flex flex-col p-0">
         <SheetHeader className="px-6 py-4 border-b">
-          <SheetTitle className="flex items-center gap-3">
+          <SheetTitle className="flex min-w-0 items-center gap-3">
             <KeenIcon icon="calendar-8" className="text-primary" />
-            Booking Details - {booking.id}
+            <span className="truncate">Booking Details - {booking.id}</span>
           </SheetTitle>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="space-y-6">
-          {/* Service Information */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Service Information</h3>
-            </div>
-            <div className="card-body space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Service Type</label>
-                  <p className="text-sm text-gray-900">{serviceInfo.serviceType}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Duration</label>
-                  <p className="text-sm text-gray-900">{serviceInfo.duration}</p>
-                </div>
+            {/* Service Information */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">Service Information</h3>
               </div>
-              
-              <div>
-                <label className="text-sm font-medium text-gray-700">Description</label>
-                <p className="text-sm text-gray-900">{serviceInfo.description}</p>
-              </div>
+              <div className="card-body space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Service Type</label>
+                    <p className="text-sm text-gray-900">{serviceInfo.serviceType}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Duration</label>
+                    <p className="text-sm text-gray-900">{serviceInfo.duration}</p>
+                  </div>
+                </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-700">Materials Required</label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {serviceInfo.materials.map((material, index) => (
-                    <Badge key={index} variant="outline" className="badge-outline">
-                      {material}
-                    </Badge>
-                  ))}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Description</label>
+                  <p className="text-sm text-gray-900">{serviceInfo.description}</p>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-700">Special Instructions</label>
-                <p className="text-sm text-gray-900">{serviceInfo.specialInstructions}</p>
-              </div>
-            </div>
-          </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Materials Required</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {serviceInfo.materials.map((material, index) => (
+                      <Badge key={index} variant="outline" className="badge-outline">
+                        {material}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
 
-          {/* Address & Location */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Address & Location</h3>
-            </div>
-            <div className="card-body space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Full Address</label>
-                <p className="text-sm text-gray-900">{addressInfo.fullAddress}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Landmark</label>
-                  <p className="text-sm text-gray-900">{addressInfo.landmark}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Coordinates</label>
-                  <p className="text-sm text-gray-900">{addressInfo.coordinates}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">Access Instructions</label>
-                <p className="text-sm text-gray-900">{addressInfo.accessInstructions}</p>
-              </div>
-
-              <div className="mt-4">
-                <Button variant="outline" size="sm">
-                  <KeenIcon icon="location" className="me-2" />
-                  View on Map
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Details */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Payment Details</h3>
-            </div>
-            <div className="card-body">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Amount</label>
-                  <p className="text-lg font-semibold text-gray-900">₹{paymentDetails.amount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Payment Method</label>
-                  <p className="text-sm text-gray-900">{paymentDetails.paymentMethod}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Transaction ID</label>
-                  <p className="text-sm text-gray-900 font-mono">{paymentDetails.transactionId}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Payment Status</label>
-                  <div className="mt-1">{getStatusBadge(paymentDetails.paymentStatus)}</div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Paid At</label>
-                  <p className="text-sm text-gray-900">{paymentDetails.paidAt}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Refund Status</label>
-                  <p className="text-sm text-gray-900">No refund</p>
+                  <label className="text-sm font-medium text-gray-700">Special Instructions</label>
+                  <p className="text-sm text-gray-900">{serviceInfo.specialInstructions}</p>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Audit Trail */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Audit Trail</h3>
-              <p className="text-sm text-gray-600">Complete timeline of booking events</p>
+            {/* Address & Location */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">Address & Location</h3>
+              </div>
+              <div className="card-body space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Full Address</label>
+                  <p className="text-sm text-gray-900">{addressInfo.fullAddress}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Landmark</label>
+                    <p className="text-sm text-gray-900">{addressInfo.landmark}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Coordinates</label>
+                    <p className="text-sm text-gray-900">{addressInfo.coordinates}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Access Instructions</label>
+                  <p className="text-sm text-gray-900">{addressInfo.accessInstructions}</p>
+                </div>
+
+                <div className="mt-4">
+                  <Button variant="outline" size="sm">
+                    <KeenIcon icon="location" className="me-2" />
+                    View on Map
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="card-body p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {auditTrail.map((entry, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{entry.action}</TableCell>
-                      <TableCell>{entry.timestamp}</TableCell>
-                      <TableCell>{entry.user}</TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate" title={entry.details}>
-                          {entry.details}
-                        </div>
-                      </TableCell>
+
+            {/* Payment Details */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">Payment Details</h3>
+              </div>
+              <div className="card-body">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Amount</label>
+                    <p className="text-lg font-semibold text-gray-900">
+                      ₹{paymentDetails.amount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Payment Method</label>
+                    <p className="text-sm text-gray-900">{paymentDetails.paymentMethod}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Transaction ID</label>
+                    <p className="text-sm text-gray-900 font-mono">
+                      {paymentDetails.transactionId}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Payment Status</label>
+                    <div className="mt-1">{getStatusBadge(paymentDetails.paymentStatus)}</div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Paid At</label>
+                    <p className="text-sm text-gray-900">{paymentDetails.paidAt}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Refund Status</label>
+                    <p className="text-sm text-gray-900">No refund</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Audit Trail */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">Audit Trail</h3>
+                <p className="text-sm text-gray-600">Complete timeline of booking events</p>
+              </div>
+              <div className="card-body p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Timestamp</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Details</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {auditTrail.map((entry, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{entry.action}</TableCell>
+                        <TableCell>{entry.timestamp}</TableCell>
+                        <TableCell>{entry.user}</TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate" title={entry.details}>
+                            {entry.details}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
         </div>
@@ -282,5 +284,3 @@ const BookingDetailsDrawer = ({ booking, isOpen, onClose }: IBookingDetailsDrawe
 };
 
 export { BookingDetailsDrawer };
-
-

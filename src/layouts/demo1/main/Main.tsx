@@ -51,11 +51,13 @@ const Main = () => {
 
       <Sidebar />
 
-      <div className="wrapper flex grow flex-col relative z-0">
+      <div className="wrapper relative z-0 flex grow flex-col">
         <Header />
 
-        <main className="grow content pt-5 relative z-0" role="content">
-          <Outlet />
+        <main className="content relative z-0 grow px-4 py-6 lg:px-6 xl:px-8" role="main">
+          <div className="mx-auto w-full max-w-[1440px]">
+            <Outlet />
+          </div>
         </main>
 
         <Footer />

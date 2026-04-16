@@ -9,7 +9,7 @@ import { useBanners } from '@/services';
 import { bannerService } from '@/services/banner.service';
 import { IBanner } from '@/services/banner.types';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 import { toast } from 'sonner';
 
 const BannerManagementContent = () => {
@@ -26,23 +26,15 @@ const BannerManagementContent = () => {
   // Filter state
   const [filters, setFilters] = useState<{ search: string; status: string }>({
     search: '',
-    status: '',
+    status: ''
   });
 
   // Fetch banners with filters
-  const {
-    banners,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useBanners({
+  const { banners, pagination, isLoading, isError, error, refetch, isFetching } = useBanners({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
-    search: filters.search,
+    search: filters.search
   });
 
   const handleAddBanner = () => {
@@ -100,7 +92,7 @@ const BannerManagementContent = () => {
         image: bannerData.image,
         is_active: bannerData.is_active ?? true,
         banner_type: bannerData.banner_type || 'offer',
-        category_id: bannerData.category_id || null,
+        category_id: bannerData.category_id || null
       });
 
       setIsAddFormOpen(false);
@@ -124,8 +116,14 @@ const BannerManagementContent = () => {
         image: bannerData.image,
         image_url: bannerData.image ? undefined : selectedBanner.image_url,
         is_active: bannerData.is_active ?? true,
-        banner_type: bannerData.banner_type !== undefined ? bannerData.banner_type : selectedBanner.banner_type || 'offer',
-        category_id: bannerData.category_id !== undefined ? bannerData.category_id : selectedBanner.category_id || null,
+        banner_type:
+          bannerData.banner_type !== undefined
+            ? bannerData.banner_type
+            : selectedBanner.banner_type || 'offer',
+        category_id:
+          bannerData.category_id !== undefined
+            ? bannerData.category_id
+            : selectedBanner.category_id || null
       });
 
       setIsEditFormOpen(false);
@@ -171,7 +169,7 @@ const BannerManagementContent = () => {
 
       await bannerService.updateBanner(banner.banner_id, {
         banner_type: newType,
-        image_url: banner.image_url,
+        image_url: banner.image_url
       });
 
       toast.success('Banner type updated successfully');
@@ -198,19 +196,10 @@ const BannerManagementContent = () => {
 
       {/* Error State */}
       {isError && (
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load banners. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load banners. Please try again.'}
+          onRetry={() => refetch()}
+        />
       )}
 
       {/* Loading State */}

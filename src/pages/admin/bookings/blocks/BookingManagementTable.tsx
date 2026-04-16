@@ -4,31 +4,28 @@ import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { IBooking, IPaginationMeta } from '@/services/booking.types';
 import { useCancelBooking, useDeleteBooking } from '@/services';
 import { ContentLoader } from '@/components/loaders';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
 
 interface IBookingManagementTableProps {
   bookings: IBooking[];
   pagination: IPaginationMeta | null;
   isLoading?: boolean;
-  onEditBooking?: (booking: IBooking) => void;
-  onPageChange?: (page: number) => void;
+  onEditBooking?: Function;
+  onPageChange?: Function;
 }
 
 const BookingManagementTable = ({
@@ -39,23 +36,8 @@ const BookingManagementTable = ({
   onPageChange
 }: IBookingManagementTableProps) => {
   const navigate = useNavigate();
-  const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
-
-  const handleSelectBooking = (bookingId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedBookings([...selectedBookings, bookingId]);
-    } else {
-      setSelectedBookings(selectedBookings.filter(id => id !== bookingId));
-    }
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedBookings(bookings.map(booking => booking.id));
-    } else {
-      setSelectedBookings([]);
-    }
-  };
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   const handleViewDetails = (booking: IBooking) => {
     navigate(`/admin/bookings/${booking.id}`);
@@ -67,7 +49,7 @@ const BookingManagementTable = ({
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to cancel booking');
-    },
+    }
   });
 
   const deleteBookingMutation = useDeleteBooking({
@@ -76,34 +58,16 @@ const BookingManagementTable = ({
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete booking');
-    },
+    }
   });
 
-  const handleCancelBooking = (bookingId: string) => {
-    if (window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
-      cancelBookingMutation.mutate({ bookingId, reason: 'Cancelled by admin' });
-    }
-  };
+  const handleCancelBooking = (bookingId: string) => setConfirmCancelId(bookingId);
 
-  const handleDeleteBooking = (bookingId: string) => {
-    if (window.confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
-      deleteBookingMutation.mutate(bookingId);
-    }
-  };
+  const handleDeleteBooking = (bookingId: string) => setConfirmDeleteId(bookingId);
 
   const handleReassignProvider = (bookingId: string) => {
     // TODO: Implement reassign provider functionality
     console.log('Reassigning provider for booking:', bookingId);
-  };
-
-  const handleRefund = (bookingId: string) => {
-    // TODO: Implement refund functionality
-    console.log('Processing refund for booking:', bookingId);
-  };
-
-  const handleManualOverride = (bookingId: string) => {
-    // TODO: Implement manual override functionality
-    console.log('Manual override for booking:', bookingId);
   };
 
   const capitalizeFirstLetter = (value: string) => {
@@ -111,27 +75,12 @@ const BookingManagementTable = ({
     return value.charAt(0).toUpperCase() + value.slice(1);
   };
 
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { variant: 'default', className: 'bg-warning text-black font-semibold', text: 'Pending' },
-      accepted: { variant: 'default', className: 'bg-info text-white font-semibold', text: 'Accepted' },
-      completed: { variant: 'default', className: 'bg-success text-white font-semibold', text: 'Completed' },
-      cancelled: { variant: 'destructive', className: 'bg-danger text-white font-semibold', text: 'Cancelled' },
-      'in-progress': { variant: 'secondary', className: 'bg-primary text-white font-semibold', text: 'In Progress' },
-      active: { variant: 'default', className: 'bg-success text-white font-semibold', text: 'Active' }
-    };
-
-    const config = statusConfig[status?.toLowerCase() as keyof typeof statusConfig] || { variant: 'secondary', className: 'bg-gray-600 text-white font-semibold', text: capitalizeFirstLetter(status), };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
+      currencyDisplay: 'symbol' // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
@@ -143,13 +92,13 @@ const BookingManagementTable = ({
       if (dateOnlyPattern.test(dateTime)) {
         // Format date-only string
         const date = new Date(dateTime + 'T00:00:00'); // Add time to avoid timezone issues
-        return date.toLocaleDateString('en-IN', { 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric' 
+        return date.toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
         });
       }
-      
+
       // Check if it's a date+time string (YYYY-MM-DD HH:mm format)
       const dateTimePattern = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/;
       const dateTimeMatch = dateTime.match(dateTimePattern);
@@ -158,15 +107,15 @@ const BookingManagementTable = ({
         const dateStr = dateTimeMatch[1];
         const timeStr = dateTimeMatch[2];
         const date = new Date(dateStr + 'T' + timeStr + ':00');
-        return date.toLocaleDateString('en-IN', { 
-          year: 'numeric', 
-          month: 'short', 
+        return date.toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'short',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit'
         });
       }
-      
+
       const date = new Date(dateTime);
       if (isNaN(date.getTime())) {
         // Try parsing as date string without time
@@ -175,7 +124,7 @@ const BookingManagementTable = ({
           return dateOnly.toLocaleDateString('en-IN', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
+            day: 'numeric'
           });
         }
         return 'N/A';
@@ -185,7 +134,7 @@ const BookingManagementTable = ({
         month: 'short',
         day: 'numeric',
         hour: 'numeric',
-        minute: '2-digit',
+        minute: '2-digit'
       });
     } catch {
       return 'N/A';
@@ -197,10 +146,10 @@ const BookingManagementTable = ({
     const iconMap = {
       'Credit Card': 'credit-card',
       'Debit Card': 'credit-card',
-      'UPI': 'smartphone',
+      UPI: 'smartphone',
       'Net Banking': 'bank',
-      'Wallet': 'wallet',
-      'Cash': 'money'
+      Wallet: 'wallet',
+      Cash: 'money'
     };
 
     return iconMap[paymentType as keyof typeof iconMap] || 'money';
@@ -215,7 +164,7 @@ const BookingManagementTable = ({
           </h3>
           {/* {selectedBookings.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {selectedBookings.length} selected
               </span>
               <Button
@@ -238,17 +187,15 @@ const BookingManagementTable = ({
             <ContentLoader />
           </div>
         ) : bookings.length === 0 ? (
-          <div className="p-8 text-center">
-            <KeenIcon icon="calendar-8" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No bookings found</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Try adjusting your search or filter criteria
-            </p>
-          </div>
+          <EmptyState
+            title="No bookings found"
+            description="Try adjusting your search or filter criteria."
+            icon="calendar-8"
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table className="min-w-full table-fixed">
+              <AdminDataTable className="min-w-full table-fixed">
                 <TableHeader>
                   <TableRow>
                     {/* <TableHead className="w-12 hidden sm:table-cell"> */}
@@ -278,7 +225,10 @@ const BookingManagementTable = ({
                         /> */}
                       {/* </TableCell> */}
                       <TableCell className="hidden sm:table-cell">
-                        <div className="font-medium text-xs max-w-[120px] truncate" title={booking.id}>
+                        <div
+                          className="font-medium text-xs max-w-[120px] truncate"
+                          title={booking.id}
+                        >
                           {booking.id || 'N/A'}
                         </div>
                       </TableCell>
@@ -288,13 +238,22 @@ const BookingManagementTable = ({
                             <KeenIcon icon="user" className="text-primary text-xs" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate text-sm" title={booking.userName || 'N/A'}>
+                            <div
+                              className="font-medium truncate text-sm"
+                              title={booking.userName || 'N/A'}
+                            >
                               {booking.userName || 'N/A'}
                             </div>
-                            <div className="text-xs text-gray-500 hidden sm:block truncate" title={booking.phone || 'N/A'}>
+                            <div
+                              className="text-xs text-muted-foreground hidden sm:block truncate"
+                              title={booking.phone || 'N/A'}
+                            >
                               {booking.phone || 'N/A'}
                             </div>
-                            <div className="text-xs text-gray-500 sm:hidden truncate max-w-[100px]" title={booking.id || 'N/A'}>
+                            <div
+                              className="text-xs text-muted-foreground sm:hidden truncate max-w-[100px]"
+                              title={booking.id || 'N/A'}
+                            >
                               {booking.id ? booking.id.substring(0, 15) + '...' : 'N/A'}
                             </div>
                           </div>
@@ -306,32 +265,57 @@ const BookingManagementTable = ({
                             <KeenIcon icon="shop" className="text-success text-sm" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">{booking.providerName || 'N/A'}</div>
-                            <div className="text-sm text-gray-500">Provider</div>
+                            <div className="font-medium truncate">
+                              {booking.providerName || 'N/A'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">Provider</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell w-[100px] px-2">
                         <div className="min-w-0 w-full">
-                          <Badge variant="outline" className="badge-outline w-full truncate block" title={booking.service || 'N/A'}>
+                          <Badge
+                            variant="outline"
+                            className="badge-outline w-full truncate block"
+                            title={booking.service || 'N/A'}
+                          >
                             <span className="block truncate">{booking.service || 'N/A'}</span>
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell w-[160px] px-2">
                         <div className="min-w-0 w-full space-y-1">
-                          <div className="font-medium text-sm truncate w-full" title={formatDateTime(booking.dateTime) !== 'N/A' ? formatDateTime(booking.dateTime) : booking.dateTime}>
+                          <div
+                            className="font-medium text-sm truncate w-full"
+                            title={
+                              formatDateTime(booking.dateTime) !== 'N/A'
+                                ? formatDateTime(booking.dateTime)
+                                : booking.dateTime
+                            }
+                          >
                             {(() => {
-                              const dateTimeStr = formatDateTime(booking.dateTime) !== 'Invalid Date' ? formatDateTime(booking.dateTime) : (booking.dateTime ? new Date(booking.dateTime).toLocaleDateString() : 'N/A');
-                              return dateTimeStr.length > 12 ? dateTimeStr.substring(0, 12) + '...' : dateTimeStr;
+                              const dateTimeStr =
+                                formatDateTime(booking.dateTime) !== 'Invalid Date'
+                                  ? formatDateTime(booking.dateTime)
+                                  : booking.dateTime
+                                    ? new Date(booking.dateTime).toLocaleDateString()
+                                    : 'N/A';
+                              return dateTimeStr.length > 12
+                                ? dateTimeStr.substring(0, 12) + '...'
+                                : dateTimeStr;
                             })()}
                           </div>
-                          <div className="text-xs text-gray-500 truncate w-full" title={booking.address || 'N/A'}>
+                          <div
+                            className="text-xs text-muted-foreground truncate w-full"
+                            title={booking.address || 'N/A'}
+                          >
                             {booking.address || 'N/A'}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">{getStatusBadge(booking.status)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <StatusBadge status={booking.status} />
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <div className="text-center">
                           <div className="font-semibold">{formatCurrency(booking.amount || 0)}</div>
@@ -339,7 +323,10 @@ const BookingManagementTable = ({
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <div className="flex items-center gap-2">
-                          <KeenIcon icon={getPaymentTypeIcon(booking.paymentType)} className="text-gray-500 text-sm" />
+                          <KeenIcon
+                            icon={getPaymentTypeIcon(booking.paymentType)}
+                            className="text-muted-foreground text-sm"
+                          />
                           {/* <span className="text-sm">{booking.paymentType || 'N/A'}</span> */}
                           <span className="text-sm">
                             {booking.paymentType
@@ -359,12 +346,13 @@ const BookingManagementTable = ({
                               </Badge>
                             </div>
                             <div className="sm:hidden">
-                              {getStatusBadge(booking.status)}
+                              <StatusBadge status={booking.status} />
                             </div>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="flex-shrink-0 p-1">
+                                <span className="sr-only">Open booking actions</span>
                                 <KeenIcon icon="dots-vertical" className="text-sm" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -385,13 +373,15 @@ const BookingManagementTable = ({
                                     <KeenIcon icon="cross-circle" className="me-2" />
                                     Cancel Booking
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleReassignProvider(booking.id)}>
+                                  <DropdownMenuItem
+                                    onClick={() => handleReassignProvider(booking.id)}
+                                  >
                                     <KeenIcon icon="refresh" className="me-2" />
                                     Reassign Provider
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => handleDeleteBooking(booking.id)}
                                 className="text-danger"
                                 disabled={deleteBookingMutation.isLoading}
@@ -406,61 +396,59 @@ const BookingManagementTable = ({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </AdminDataTable>
             </div>
 
             {/* Pagination Controls */}
             {pagination && pagination.totalPages > 1 && onPageChange && (
-              <div className="card-footer">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
-                  <div className="text-sm text-gray-600">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                    {pagination.total} bookings
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newPage = Math.max(1, pagination.page - 1);
-                        if (newPage !== pagination.page && newPage >= 1) {
-                          onPageChange(newPage);
-                        }
-                      }}
-                      disabled={!pagination.hasPreviousPage || isLoading}
-                    >
-                      <KeenIcon icon="arrow-left" className="me-1" />
-                      Previous
-                    </Button>
-                    <div className="text-sm text-gray-600">
-                      Page {pagination.page} of {pagination.totalPages}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newPage = Math.min(pagination.totalPages, pagination.page + 1);
-                        if (newPage !== pagination.page && newPage <= pagination.totalPages) {
-                          onPageChange(newPage);
-                        }
-                      }}
-                      disabled={!pagination.hasNextPage || isLoading}
-                    >
-                      Next
-                      <KeenIcon icon="arrow-right" className="ms-1" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <AdminPagination
+                page={pagination.page}
+                total={pagination.total}
+                totalPages={pagination.totalPages}
+                limit={pagination.limit}
+                onPageChange={onPageChange}
+                isLoading={isLoading}
+                itemLabel="bookings"
+              />
             )}
           </>
         )}
       </div>
+      <ConfirmActionDialog
+        open={Boolean(confirmCancelId)}
+        title="Cancel booking"
+        description="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmText="Cancel Booking"
+        danger
+        loading={cancelBookingMutation.isLoading}
+        onOpenChange={(open: boolean) => !open && setConfirmCancelId(null)}
+        onConfirm={() => {
+          if (confirmCancelId) {
+            cancelBookingMutation.mutate({
+              bookingId: confirmCancelId,
+              reason: 'Cancelled by admin'
+            });
+          }
+          setConfirmCancelId(null);
+        }}
+      />
+      <ConfirmActionDialog
+        open={Boolean(confirmDeleteId)}
+        title="Delete booking"
+        description="Are you sure you want to delete this booking? This action cannot be undone."
+        confirmText="Delete Booking"
+        danger
+        loading={deleteBookingMutation.isLoading}
+        onOpenChange={(open: boolean) => !open && setConfirmDeleteId(null)}
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            deleteBookingMutation.mutate(confirmDeleteId);
+          }
+          setConfirmDeleteId(null);
+        }}
+      />
     </div>
   );
 };
 
 export { BookingManagementTable };
-
-

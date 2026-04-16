@@ -14,7 +14,7 @@ import {
   useAdminProviderPackages,
   useCreateProviderPackage,
   useUpdateProviderPackage,
-  useDeleteProviderPackage,
+  useDeleteProviderPackage
 } from '@/services/billingModels.hooks';
 import type { ICommissionTier, IProviderPackage } from '@/services/billingModels.service';
 import { formatAmount } from '@/utils/currency';
@@ -29,7 +29,7 @@ const emptyTierForm = () => ({
   priority_allocation: false,
   description: '',
   is_active: true,
-  is_default: false,
+  is_default: false
 });
 
 const emptyPackageForm = () => ({
@@ -39,7 +39,7 @@ const emptyPackageForm = () => ({
   validity_days: '30',
   carry_forward_percentage: '50',
   description: '',
-  is_active: true,
+  is_active: true
 });
 
 const BillingManagementContent = () => {
@@ -58,7 +58,7 @@ const BillingManagementContent = () => {
     data: packagesData,
     isLoading: isLoadingPackages,
     isError: isErrorPackages,
-    error: packagesError,
+    error: packagesError
   } = useAdminProviderPackages({ page: 1, limit: 100 });
   const createPackageMutation = useCreateProviderPackage();
   const updatePackageMutation = useUpdateProviderPackage();
@@ -80,7 +80,7 @@ const BillingManagementContent = () => {
       priority_allocation: !!tier.priority_allocation,
       description: tier.description || '',
       is_active: !!tier.is_active,
-      is_default: !!tier.is_default,
+      is_default: !!tier.is_default
     });
   };
 
@@ -95,8 +95,7 @@ const BillingManagementContent = () => {
       tier_level: Number(tierForm.tier_level),
       commission_rate: Number(tierForm.commission_rate),
       minimum_wallet: Math.max(0, Number(tierForm.minimum_wallet) || 0),
-      min_rating:
-        tierForm.min_rating.trim() === '' ? null : Number(tierForm.min_rating),
+      min_rating: tierForm.min_rating.trim() === '' ? null : Number(tierForm.min_rating),
       min_jobs_completed:
         tierForm.min_jobs_completed && tierForm.min_jobs_completed.trim() !== ''
           ? Math.max(0, Number(tierForm.min_jobs_completed) || 0)
@@ -104,7 +103,7 @@ const BillingManagementContent = () => {
       priority_allocation: tierForm.priority_allocation,
       description: tierForm.description || undefined,
       is_active: tierForm.is_active,
-      is_default: tierForm.is_default,
+      is_default: tierForm.is_default
     };
 
     try {
@@ -142,7 +141,7 @@ const BillingManagementContent = () => {
       validity_days: String(p.validity_days ?? 30),
       carry_forward_percentage: String(p.carry_forward_percentage ?? 50),
       description: p.description || '',
-      is_active: !!p.is_active,
+      is_active: !!p.is_active
     });
   };
 
@@ -162,7 +161,7 @@ const BillingManagementContent = () => {
         Math.max(0, Number(packageForm.carry_forward_percentage) || 0)
       ),
       description: packageForm.description || undefined,
-      is_active: packageForm.is_active,
+      is_active: packageForm.is_active
     };
 
     try {
@@ -181,7 +180,8 @@ const BillingManagementContent = () => {
   };
 
   const handleDeletePackage = async (packageId: string) => {
-    if (!window.confirm('Deactivate this package? (Cannot delete if active subscriptions exist.)')) return;
+    if (!window.confirm('Deactivate this package? (Cannot delete if active subscriptions exist.)'))
+      return;
     try {
       await deletePackageMutation.mutateAsync(packageId);
       toast.success('Package deactivated');
@@ -196,11 +196,11 @@ const BillingManagementContent = () => {
   return (
     <div className="space-y-6 px-4 pt-4 md:px-6 md:pt-6">
       <div className="max-w-3xl space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Billing Models</h1>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          Configure commission tiers (per-job %, wallet minimums, eligibility hints) and MG / subscription
-          packages (fee, lead quota, plan validity in days, carry-forward %). Changes apply to new provider
-          selections and renewals.
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Billing Models</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Configure commission tiers (per-job %, wallet minimums, eligibility hints) and MG /
+          subscription packages (fee, lead quota, plan validity in days, carry-forward %). Changes
+          apply to new provider selections and renewals.
         </p>
       </div>
 
@@ -217,7 +217,9 @@ const BillingManagementContent = () => {
 
             <TabPanel value="commission" className="space-y-4 pt-6">
               {isError && (
-                <Alert variant="danger">{(error as Error)?.message || 'Failed to load tiers'}</Alert>
+                <Alert variant="danger">
+                  {(error as Error)?.message || 'Failed to load tiers'}
+                </Alert>
               )}
               {isLoading ? (
                 <ContentLoader />
@@ -225,7 +227,7 @@ const BillingManagementContent = () => {
                 <>
                   <div className="overflow-x-auto border rounded mb-4">
                     <table className="min-w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-surface-1">
                         <tr>
                           <th className="px-3 py-2 text-left">Tier</th>
                           <th className="px-3 py-2 text-left">Level</th>
@@ -260,7 +262,7 @@ const BillingManagementContent = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 border-red-200"
+                                className="text-danger border-danger/40"
                                 onClick={() => handleDeleteTier(t.tier_id)}
                               >
                                 Delete
@@ -270,7 +272,7 @@ const BillingManagementContent = () => {
                         ))}
                         {(tiers || []).length === 0 && (
                           <tr>
-                            <td className="px-3 py-3 text-gray-500" colSpan={9}>
+                            <td className="px-3 py-3 text-muted-foreground" colSpan={9}>
                               No commission tiers found.
                             </td>
                           </tr>
@@ -279,7 +281,7 @@ const BillingManagementContent = () => {
                     </table>
                   </div>
 
-                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50/50">
+                  <div className="border rounded-lg p-4 space-y-3 bg-surface-1/50">
                     <h3 className="text-sm font-semibold">
                       {editingTierId ? 'Edit commission tier' : 'Create commission tier'}
                     </h3>
@@ -311,7 +313,9 @@ const BillingManagementContent = () => {
                           step={0.01}
                           className="border rounded px-3 py-2 text-sm w-full bg-white"
                           value={tierForm.commission_rate}
-                          onChange={(e) => setTierForm({ ...tierForm, commission_rate: e.target.value })}
+                          onChange={(e) =>
+                            setTierForm({ ...tierForm, commission_rate: e.target.value })
+                          }
                         />
                       </div>
                       {/* <div>
@@ -348,7 +352,7 @@ const BillingManagementContent = () => {
                             setTierForm({ ...tierForm, priority_allocation: e.target.checked })
                           }
                         />
-                        <Label htmlFor="tier-priority" className="text-sm text-gray-700">
+                        <Label htmlFor="tier-priority" className="text-sm text-muted-foreground">
                           Priority allocation (e.g. Gold — prefer in dispatch when applicable)
                         </Label>
                       </div>
@@ -357,7 +361,9 @@ const BillingManagementContent = () => {
                         <textarea
                           className="border rounded px-3 py-2 text-sm w-full min-h-[80px] bg-white"
                           value={tierForm.description}
-                          onChange={(e) => setTierForm({ ...tierForm, description: e.target.value })}
+                          onChange={(e) =>
+                            setTierForm({ ...tierForm, description: e.target.value })
+                          }
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -365,9 +371,11 @@ const BillingManagementContent = () => {
                           id="tier-active"
                           type="checkbox"
                           checked={tierForm.is_active}
-                          onChange={(e) => setTierForm({ ...tierForm, is_active: e.target.checked })}
+                          onChange={(e) =>
+                            setTierForm({ ...tierForm, is_active: e.target.checked })
+                          }
                         />
-                        <Label htmlFor="tier-active" className="text-sm text-gray-600">
+                        <Label htmlFor="tier-active" className="text-sm text-muted-foreground">
                           Active
                         </Label>
                       </div>
@@ -402,7 +410,7 @@ const BillingManagementContent = () => {
                 <>
                   <div className="overflow-x-auto border rounded mb-4">
                     <table className="min-w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-surface-1">
                         <tr>
                           <th className="px-3 py-2 text-left">Package</th>
                           <th className="px-3 py-2 text-left">Fee (₹)</th>
@@ -425,13 +433,17 @@ const BillingManagementContent = () => {
                             <td className="px-3 py-2">{p.active_subscriptions_count ?? 0}</td>
                             <td className="px-3 py-2">{p.is_active ? 'Yes' : 'No'}</td>
                             <td className="px-3 py-2 space-x-2 whitespace-nowrap">
-                              <Button variant="outline" size="sm" onClick={() => startEditPackage(p)}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEditPackage(p)}
+                              >
                                 Edit
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 border-red-200"
+                                className="text-danger border-danger/40"
                                 onClick={() => handleDeletePackage(p.package_id)}
                               >
                                 Deactivate
@@ -441,7 +453,7 @@ const BillingManagementContent = () => {
                         ))}
                         {packages.length === 0 && (
                           <tr>
-                            <td className="px-3 py-3 text-gray-500" colSpan={8}>
+                            <td className="px-3 py-3 text-muted-foreground" colSpan={8}>
                               No packages found.
                             </td>
                           </tr>
@@ -450,7 +462,7 @@ const BillingManagementContent = () => {
                     </table>
                   </div>
 
-                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50/50">
+                  <div className="border rounded-lg p-4 space-y-3 bg-surface-1/50">
                     <h3 className="text-sm font-semibold">
                       {editingPackageId ? 'Edit package' : 'Create package'}
                     </h3>
@@ -461,7 +473,9 @@ const BillingManagementContent = () => {
                           className="border rounded px-3 py-2 text-sm w-full bg-white"
                           placeholder="e.g. MG Plan-30"
                           value={packageForm.package_name}
-                          onChange={(e) => setPackageForm({ ...packageForm, package_name: e.target.value })}
+                          onChange={(e) =>
+                            setPackageForm({ ...packageForm, package_name: e.target.value })
+                          }
                         />
                       </div>
                       <div>
@@ -472,7 +486,9 @@ const BillingManagementContent = () => {
                           step={0.01}
                           className="border rounded px-3 py-2 text-sm w-full bg-white"
                           value={packageForm.monthly_fee}
-                          onChange={(e) => setPackageForm({ ...packageForm, monthly_fee: e.target.value })}
+                          onChange={(e) =>
+                            setPackageForm({ ...packageForm, monthly_fee: e.target.value })
+                          }
                         />
                       </div>
                       <div>
@@ -482,7 +498,9 @@ const BillingManagementContent = () => {
                           min={1}
                           className="border rounded px-3 py-2 text-sm w-full bg-white"
                           value={packageForm.lead_quota}
-                          onChange={(e) => setPackageForm({ ...packageForm, lead_quota: e.target.value })}
+                          onChange={(e) =>
+                            setPackageForm({ ...packageForm, lead_quota: e.target.value })
+                          }
                         />
                       </div>
                       <div>
@@ -493,9 +511,13 @@ const BillingManagementContent = () => {
                           max={365}
                           className="border rounded px-3 py-2 text-sm w-full bg-white"
                           value={packageForm.validity_days}
-                          onChange={(e) => setPackageForm({ ...packageForm, validity_days: e.target.value })}
+                          onChange={(e) =>
+                            setPackageForm({ ...packageForm, validity_days: e.target.value })
+                          }
                         />
-                        <p className="text-xs text-gray-500 mt-1">e.g. 30 or 15 for MG windows.</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          e.g. 30 or 15 for MG windows.
+                        </p>
                       </div>
                       <div>
                         <Label>Carry-forward % (unused leads)</Label>
@@ -507,7 +529,10 @@ const BillingManagementContent = () => {
                           className="border rounded px-3 py-2 text-sm w-full bg-white"
                           value={packageForm.carry_forward_percentage}
                           onChange={(e) =>
-                            setPackageForm({ ...packageForm, carry_forward_percentage: e.target.value })
+                            setPackageForm({
+                              ...packageForm,
+                              carry_forward_percentage: e.target.value
+                            })
                           }
                         />
                       </div>
@@ -516,7 +541,9 @@ const BillingManagementContent = () => {
                         <textarea
                           className="border rounded px-3 py-2 text-sm w-full min-h-[72px] bg-white"
                           value={packageForm.description}
-                          onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
+                          onChange={(e) =>
+                            setPackageForm({ ...packageForm, description: e.target.value })
+                          }
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -524,9 +551,11 @@ const BillingManagementContent = () => {
                           id="pkg-active"
                           type="checkbox"
                           checked={packageForm.is_active}
-                          onChange={(e) => setPackageForm({ ...packageForm, is_active: e.target.checked })}
+                          onChange={(e) =>
+                            setPackageForm({ ...packageForm, is_active: e.target.checked })
+                          }
                         />
-                        <Label htmlFor="pkg-active" className="text-sm text-gray-600">
+                        <Label htmlFor="pkg-active" className="text-sm text-muted-foreground">
                           Active
                         </Label>
                       </div>
@@ -534,7 +563,9 @@ const BillingManagementContent = () => {
                     <div className="flex gap-2 pt-2">
                       <Button
                         onClick={handleSavePackage}
-                        disabled={createPackageMutation.isLoading || updatePackageMutation.isLoading}
+                        disabled={
+                          createPackageMutation.isLoading || updatePackageMutation.isLoading
+                        }
                       >
                         {editingPackageId ? 'Update package' : 'Create package'}
                       </Button>

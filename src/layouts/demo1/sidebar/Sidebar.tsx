@@ -18,7 +18,6 @@ export const Sidebar = () => {
   const selfRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [scrollableHeight, setScrollableHeight] = useState<number>(0);
-  const scrollableOffset = 0; // Removed fixed offset - padding is handled by flexbox
   const [viewportHeight] = useViewport();
   const { pathname, prevPathname } = usePathname();
 

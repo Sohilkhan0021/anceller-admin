@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -44,6 +45,8 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     base_price: '' as string | number,
     currency: 'INR',
     duration_minutes: '' as string | number
+    ,
+    info: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -104,6 +107,8 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           base_price: apiData.base_price || '',
           currency: 'INR', // Currency is always INR
           duration_minutes: apiData.duration_minutes || apiData.estimated_duration_minutes || ''
+          ,
+          info: apiData.info || apiData.meta_data?.info || ''
         });
         
         // Set image preview if image exists (only if imageUrl is a non-empty string)
@@ -138,6 +143,8 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           base_price: subServiceData.base_price || '',
           currency: 'INR', // Currency is always INR
           duration_minutes: subServiceData.duration_minutes || subServiceData.estimated_duration_minutes || ''
+          ,
+          info: subServiceData.info || subServiceData.meta_data?.info || ''
         });
         
         // Set image preview
@@ -157,6 +164,8 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           base_price: '',
           currency: 'INR', // Currency is always INR
           duration_minutes: ''
+          ,
+          info: ''
         });
         setImagePreview(null);
       }
@@ -355,6 +364,24 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     }
   };
 
+  const infoEditorRef = useRef<HTMLTextAreaElement | null>(null);
+  const insertInfoTag = (tag: 'p' | 'ul' | 'li' | 'strong') => {
+    const editor = infoEditorRef.current;
+    if (!editor) return;
+    const start = editor.selectionStart || 0;
+    const end = editor.selectionEnd || 0;
+    const selected = formData.info.slice(start, end);
+    let replacement = selected;
+
+    if (tag === 'p') replacement = `<p>${selected || 'Description'}</p>`;
+    if (tag === 'ul') replacement = `<ul>\n  <li>${selected || 'Point'}</li>\n</ul>`;
+    if (tag === 'li') replacement = `<li>${selected || 'Point'}</li>`;
+    if (tag === 'strong') replacement = `<strong>${selected || 'Important'}</strong>`;
+
+    const next = `${formData.info.slice(0, start)}${replacement}${formData.info.slice(end)}`;
+    handleInputChange('info', next);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -511,6 +538,27 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
               )}
               <p className="text-xs text-gray-500 mt-1">
                 Duration in minutes (1-1440 minutes, max 24 hours)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="info">Sub-Service Info (HTML)</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('p')}>Paragraph</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('ul')}>Bullet List</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('li')}>List Item</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('strong')}>Bold</Button>
+              </div>
+              <Textarea
+                id="info"
+                ref={infoEditorRef}
+                value={formData.info}
+                onChange={(e) => handleInputChange('info', e.target.value)}
+                className="mt-2 min-h-[140px] font-mono text-xs"
+                placeholder="<p>Details...</p><ul><li>Point 1</li><li>Point 2</li></ul>"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                This content is returned to app clients as `info` in sub-service responses.
               </p>
             </div>
 

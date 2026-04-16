@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -10,113 +8,88 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { usePaymentTransactions, useExportPaymentData } from '@/services';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { usePaymentTransactions } from '@/services';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
+import { FormField } from '@/components/forms/FormField';
 
 const CustomerPaymentsTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [gatewayFilter, setGatewayFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
   // Fetch payment transactions
-  const {
-    transactions,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = usePaymentTransactions({
-    page: currentPage,
-    limit: pageSize,
-    status: statusFilter === 'all' ? '' : statusFilter,
-    gateway: gatewayFilter === 'all' ? '' : gatewayFilter,
-    search: searchTerm,
-  });
+  const { transactions, pagination, isLoading, isError, error, refetch, isFetching } =
+    usePaymentTransactions({
+      page: currentPage,
+      limit: pageSize,
+      status: statusFilter === 'all' ? '' : statusFilter,
+      gateway: gatewayFilter === 'all' ? '' : gatewayFilter,
+      search: debouncedSearchTerm
+    });
 
-  const exportMutation = useExportPaymentData();
-
-  // Reset page when filters change
+  // Reset page when non-search filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, gatewayFilter, searchTerm]);
+  }, [statusFilter, gatewayFilter]);
+
+  // Debounce search (avoid firing API requests on every keystroke)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
 
-  const handleExport = async () => {
-    try {
-      const data = await exportMutation.mutateAsync({
-        status: statusFilter === 'all' ? '' : statusFilter,
-      });
-
-      // Convert to CSV
-      if (data && data.length > 0) {
-        const headers = Object.keys(data[0]);
-        const csvContent = [
-          headers.join(','),
-          ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `payments_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        toast.success('Payment data exported successfully');
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to export payment data');
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: string; className: string; text: string }> = {
-      SUCCESS: { variant: 'default', className: 'bg-success text-white', text: 'Success' },
-      PENDING: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
-      FAILED: { variant: 'destructive', className: '', text: 'Failed' },
-      REFUNDED: { variant: 'secondary', className: '', text: 'Refunded' },
-      PARTIALLY_REFUNDED: { variant: 'secondary', className: '', text: 'Partially Refunded' },
-      success: { variant: 'default', className: 'bg-success text-white', text: 'Success' },
-      pending: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
-      failed: { variant: 'destructive', className: '', text: 'Failed' },
-      cod: { variant: 'secondary', className: '', text: 'COD' }
-    };
-
-    const config = statusConfig[status] || { variant: 'outline', className: '', text: status };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
-  };
-
   const getPaymentModeIcon = (paymentMode: string) => {
-    const iconMap: Record<string, string> = {
-      'Credit Card': 'credit-card',
-      'Debit Card': 'credit-card',
-      'UPI': 'smartphone',
-      'Net Banking': 'bank',
-      'Wallet': 'wallet',
-      'COD': 'money',
-      'razorpay': 'credit-card',
-      'cash': 'money'
-    };
+    const normalized = (paymentMode || '').trim().toLowerCase();
+    if (!normalized) return 'money';
 
-    return iconMap[paymentMode] || 'money';
+    if (
+      normalized.includes('credit') ||
+      normalized.includes('debit') ||
+      normalized.includes('razorpay')
+    ) {
+      return 'credit-card';
+    }
+
+    if (normalized.includes('upi')) return 'smartphone';
+
+    if (
+      normalized.includes('net banking') ||
+      normalized.includes('net') ||
+      normalized.includes('bank')
+    ) {
+      return 'bank';
+    }
+
+    if (normalized.includes('wallet')) return 'wallet';
+
+    if (
+      normalized.includes('cod') ||
+      normalized.includes('cash') ||
+      normalized.includes('pay after service') ||
+      normalized.includes('pay after')
+    ) {
+      return 'money';
+    }
+
+    return 'money';
   };
 
   const formatCurrency = (amount: number) => {
@@ -124,7 +97,7 @@ const CustomerPaymentsTab = () => {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
+      currencyDisplay: 'symbol' // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
@@ -140,19 +113,10 @@ const CustomerPaymentsTab = () => {
   if (isError) {
     return (
       <div className="space-y-6">
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load payment transactions. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load payment transactions. Please try again.'}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -165,23 +129,29 @@ const CustomerPaymentsTab = () => {
           <h3 className="card-title">Customer Payments</h3>
         </div>
         <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Search Bar */}
-            <div className="lg:col-span-2">
+            <FormField
+              label="Search"
+              helperText="Search by transaction ID, user, or gateway transaction ID"
+            >
               <div className="relative">
-                <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <KeenIcon
+                  icon="magnifier"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 transform text-muted-foreground/70"
+                />
                 <Input
                   type="text"
-                  placeholder="Search by transaction ID, user, or gateway transaction ID..."
+                  placeholder="Search transactions..."
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10"
                 />
               </div>
-            </div>
+            </FormField>
 
             {/* Status Filter */}
-            <div>
+            <FormField label="Status">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
@@ -194,14 +164,17 @@ const CustomerPaymentsTab = () => {
                   <SelectItem value="REFUNDED">Refunded</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
 
             {/* Gateway Filter */}
-            <div>
-              <Select value={gatewayFilter} onValueChange={(value) => {
-                setGatewayFilter(value);
-                setCurrentPage(1);
-              }}>
+            <FormField label="Gateway">
+              <Select
+                value={gatewayFilter}
+                onValueChange={(value) => {
+                  setGatewayFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by gateway" />
                 </SelectTrigger>
@@ -211,7 +184,7 @@ const CustomerPaymentsTab = () => {
                   <SelectItem value="Pay After Service">Cash</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
 
           {/* <div className="flex justify-end mt-4">
@@ -240,23 +213,30 @@ const CustomerPaymentsTab = () => {
               <ContentLoader />
             </div>
           ) : transactions.length === 0 ? (
-            <div className="p-8 text-center">
-              <KeenIcon icon="cross-circle" className="text-4xl text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No payment transactions found</p>
-            </div>
+            <EmptyState
+              title="No payment transactions found"
+              description="Adjust filters and try again."
+              icon="cross-circle"
+            />
           ) : (
             <>
               <div className="w-full">
-                <Table className="w-full table-fixed" containerClassName="!overflow-x-hidden">
+                <AdminDataTable className="w-full table-fixed">
                   <TableHeader>
                     <TableRow>
                       {/* <TableHead className="hidden sm:table-cell w-[15%]">Transaction ID</TableHead> */}
                       <TableHead className="w-[25%] px-4">Transaction</TableHead>
-                      <TableHead className="hidden md:table-cell w-[10%] text-center px-4">Amount</TableHead>
-                      <TableHead className="hidden lg:table-cell w-[12%] px-4">Payment Mode</TableHead>
+                      <TableHead className="hidden md:table-cell w-[10%] text-center px-4">
+                        Amount
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell w-[12%] px-4">
+                        Payment Mode
+                      </TableHead>
                       <TableHead className="hidden sm:table-cell w-[10%] px-4">Status</TableHead>
                       <TableHead className="hidden md:table-cell w-[13%] px-4">Date</TableHead>
-                      <TableHead className="hidden lg:table-cell w-[15%] px-4">Gateway Transaction ID</TableHead>
+                      <TableHead className="hidden lg:table-cell w-[15%] px-4">
+                        Gateway Transaction ID
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -274,25 +254,38 @@ const CustomerPaymentsTab = () => {
                               <div className="font-medium break-words whitespace-normal leading-tight">
                                 {transaction.user.name}
                               </div>
-                              <div className="text-sm text-gray-500 hidden sm:block break-all whitespace-normal leading-tight mt-1">
+                              <div className="mt-1 hidden break-all whitespace-normal text-sm leading-tight text-muted-foreground sm:block">
                                 {transaction.transaction_id}
                               </div>
-                              <div className="text-xs text-gray-500 sm:hidden">{formatCurrency(transaction.amount)}</div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                {formatCurrency(transaction.amount)}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell px-4">
                           <div className="text-center">
-                            <div className="font-semibold">{formatCurrency(transaction.amount)}</div>
+                            <div className="font-semibold">
+                              {formatCurrency(transaction.amount)}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell px-4">
                           <div className="flex items-center gap-2 whitespace-normal break-words leading-tight">
-                            <KeenIcon icon={getPaymentModeIcon(transaction.payment_method_display || transaction.payment_mode)} className="text-gray-500 text-sm flex-shrink-0" />
-                            <span className="text-sm">{transaction.payment_method_display || transaction.payment_mode}</span>
+                            <KeenIcon
+                              icon={getPaymentModeIcon(
+                                transaction.payment_method_display || transaction.payment_mode
+                              )}
+                              className="text-sm text-muted-foreground flex-shrink-0"
+                            />
+                            <span className="text-sm">
+                              {transaction.payment_method_display || transaction.payment_mode}
+                            </span>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell px-4">{getStatusBadge(transaction.status)}</TableCell>
+                        <TableCell className="hidden sm:table-cell px-4">
+                          <StatusBadge status={transaction.status} />
+                        </TableCell>
                         <TableCell className="hidden md:table-cell px-4">
                           {/* <div className="text-sm whitespace-normal leading-tight"> */}
                           <div className="text-sm whitespace-nowrap">
@@ -307,51 +300,20 @@ const CustomerPaymentsTab = () => {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </AdminDataTable>
               </div>
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="card-footer">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
-                    <div className="text-sm text-gray-600">
-                      Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                      {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                      {pagination.total} transactions
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (pagination.page > 1 && !isFetching) {
-                            setCurrentPage(pagination.page - 1);
-                          }
-                        }}
-                        disabled={pagination.page <= 1 || isFetching}
-                      >
-                        <KeenIcon icon="arrow-left" className="me-1" />
-                        Previous
-                      </Button>
-                      <div className="text-sm text-gray-600">
-                        Page {pagination.page} of {pagination.totalPages}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (pagination.page < pagination.totalPages && !isFetching) {
-                            setCurrentPage(pagination.page + 1);
-                          }
-                        }}
-                        disabled={pagination.page >= pagination.totalPages || isFetching}
-                      >
-                        Next
-                        <KeenIcon icon="arrow-right" className="ms-1" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <AdminPagination
+                  page={pagination.page}
+                  total={pagination.total}
+                  totalPages={pagination.totalPages}
+                  limit={pagination.limit}
+                  onPageChange={setCurrentPage}
+                  isLoading={isFetching}
+                  itemLabel="transactions"
+                />
               )}
             </>
           )}
@@ -362,5 +324,3 @@ const CustomerPaymentsTab = () => {
 };
 
 export { CustomerPaymentsTab };
-
-

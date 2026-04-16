@@ -8,26 +8,34 @@ interface IServiceCostManagementHeaderProps {
   activeConfig: IServiceCostConfig | undefined;
 }
 
-const ServiceCostManagementHeader = ({ onCreate, activeConfig }: IServiceCostManagementHeaderProps) => {
+const ServiceCostManagementHeader = ({
+  onCreate,
+  activeConfig
+}: IServiceCostManagementHeaderProps) => {
   return (
     <div className="card">
       <div className="card-header flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <KeenIcon icon="calculator" className="text-primary text-2xl" />
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Service Cost Configuration</h1>
-            <p className="text-sm text-gray-600">Manage service charges and tax rates for orders</p>
+            <h1 className="text-xl font-bold text-foreground lg:text-2xl">
+              Service Cost Configuration
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage service charges and tax rates for orders
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {activeConfig && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
+            <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2">
               <Badge variant="default" className="bg-green-500 text-white text-xs">
                 Active
               </Badge>
-              <span className="text-sm text-gray-700">
-                ₹{activeConfig.service_cost_amount} service fee for orders &lt; ₹{activeConfig.free_service_threshold}
+              <span className="text-sm text-foreground">
+                ₹{activeConfig.service_cost_amount} service fee for orders &lt; ₹
+                {activeConfig.free_service_threshold}
               </span>
             </div>
           )}

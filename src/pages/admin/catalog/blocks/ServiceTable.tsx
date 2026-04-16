@@ -4,19 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { FormField } from '@/components/forms/FormField';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   Select,
@@ -25,19 +20,14 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogBody,
-  DialogFooter,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { useServices, useDeleteService, useUpdateService, useCategories } from '@/services';
 import { IService } from '@/services/service.types';
@@ -63,7 +53,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
-
   // Debounce search to avoid too many API calls
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -85,19 +74,11 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   const availableServices = Array.isArray(allCategories) ? allCategories : [];
 
   // Fetch services with filters
-  const {
-    services,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useServices({
+  const { services, pagination, isLoading, isError, error, refetch, isFetching } = useServices({
     page: currentPage,
     limit: pageSize,
     status: '', // We'll handle status filtering client-side if needed
-    search: debouncedSearch,
+    search: debouncedSearch
   });
 
   // Update service mutation
@@ -123,7 +104,6 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     }
   });
 
-
   // Column visibility state - description and popularity hidden by default
   const [columnVisibility, setColumnVisibility] = useState({
     order: true,
@@ -134,11 +114,11 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     popularity: false, // Hidden by default
     bookings: true,
     revenue: true,
-    actions: true,
+    actions: true
   });
 
   const toggleColumn = (column: keyof typeof columnVisibility) => {
-    setColumnVisibility(prev => ({
+    setColumnVisibility((prev) => ({
       ...prev,
       [column]: !prev[column]
     }));
@@ -164,16 +144,19 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
+      currencyDisplay: 'symbol' // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
-  const handleToggleStatus = useCallback((serviceId: string, newStatus: boolean) => {
-    updateService({
-      id: serviceId,
-      is_active: newStatus
-    });
-  }, [updateService]);
+  const handleToggleStatus = useCallback(
+    (serviceId: string, newStatus: boolean) => {
+      updateService({
+        id: serviceId,
+        is_active: newStatus
+      });
+    },
+    [updateService]
+  );
 
   const handleEditPricing = (serviceId: string) => {
     // TODO: Implement edit pricing
@@ -181,7 +164,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
   };
 
   const handleEditService = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
+    const service = services.find((s) => s.id === serviceId);
     if (service && onEditService) {
       // Ensure all fields are properly mapped for editing
       const serviceWithData: any = {
@@ -192,8 +175,11 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
         description: service.description,
         image_url: service.image_url || service.image,
         status: service.status || ((service as any).is_active === false ? 'inactive' : 'active'),
-        displayOrder: service.displayOrder || service.display_order || (service as any).sort_order || 1,
-        is_active: service.status === 'active' || ((service as any).is_active !== false && service.status !== 'inactive'),
+        displayOrder:
+          service.displayOrder || service.display_order || (service as any).sort_order || 1,
+        is_active:
+          service.status === 'active' ||
+          ((service as any).is_active !== false && service.status !== 'inactive'),
         // Include categoryId - already normalized by useServices hook
         categoryId: service.categoryId || (service as any).category_id,
         category_id: service.categoryId || (service as any).category_id,
@@ -217,13 +203,13 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
 
   const getStatusBadge = (status: string) => {
     return status === 'active' ? (
-      <Badge variant="default" className="bg-success text-white">Active</Badge>
+      <Badge variant="default" className="bg-success text-white">
+        Active
+      </Badge>
     ) : (
       <Badge variant="outline">Inactive</Badge>
     );
   };
-  
-  
 
   const getPopularityBadge = (popularity: number) => {
     if (popularity >= 90) return { variant: 'success', text: 'Very Popular' };
@@ -232,10 +218,12 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
     return { variant: 'secondary', text: 'Low' };
   };
 
-
   // Client-side filtering for service (category) - filter by service/category
-  let filteredServices = services.filter(service => {
-    const matchesService = serviceFilter === 'all' || service.categoryId === serviceFilter || service.id === serviceFilter;
+  let filteredServices = services.filter((service) => {
+    const matchesService =
+      serviceFilter === 'all' ||
+      service.categoryId === serviceFilter ||
+      service.id === serviceFilter;
     return matchesService;
   });
 
@@ -266,7 +254,8 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
           <div className="flex flex-row items-center justify-between w-full gap-4">
             <div>
               <h3 className="card-title">
-                Sub-Service Management {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
+                Sub-Service Management{' '}
+                {pagination ? `(${pagination.total})` : `(${filteredServices.length})`}
               </h3>
               <p className="text-sm text-gray-600">Manage sub-service pricing and availability</p>
             </div>
@@ -281,154 +270,198 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
           {isError && (
             <Alert variant="danger">
               <div className="flex items-center justify-between">
-                <span>
-                  {error?.message || 'Failed to load services. Please try again.'}
-                </span>
-                <button
-                  onClick={() => refetch()}
-                  className="text-sm underline hover:no-underline"
-                >
+                <span>{error?.message || 'Failed to load services. Please try again.'}</span>
+                <button onClick={() => refetch()} className="text-sm underline hover:no-underline">
                   Retry
                 </button>
               </div>
             </Alert>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
             {/* Search Bar */}
-            <div className="relative flex-1 sm:w-64">
-              <KeenIcon icon="magnifier" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="lg:col-span-4">
+              <FormField label="Search sub-services">
+                <div className="relative">
+                  <KeenIcon
+                    icon="magnifier"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Search by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </FormField>
             </div>
 
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All Services" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                {isLoadingCategories ? (
-                  <SelectItem value="loading" disabled>Loading services...</SelectItem>
-                ) : availableServices && Array.isArray(availableServices) && availableServices.length > 0 ? (
-                  availableServices.map((service) => {
-                    const serviceId = service.id || service.public_id || service.category_id;
-                    const serviceName = service.name;
-                    // Ensure serviceId is a string (not undefined)
-                    if (!serviceId) return null;
-                    return (
-                      <SelectItem key={serviceId} value={serviceId}>
-                        {serviceName}
+            <div className="lg:col-span-3">
+              <FormField label="Service">
+                <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Services" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Services</SelectItem>
+                    {isLoadingCategories ? (
+                      <SelectItem value="loading" disabled>
+                        Loading services...
                       </SelectItem>
-                    );
-                  }).filter(Boolean)
-                ) : (
-                  <SelectItem value="no-services" disabled>No services available</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+                    ) : availableServices &&
+                      Array.isArray(availableServices) &&
+                      availableServices.length > 0 ? (
+                      availableServices
+                        .map((service) => {
+                          const serviceId = service.id || service.public_id || service.category_id;
+                          const serviceName = service.name;
+                          // Ensure serviceId is a string (not undefined)
+                          if (!serviceId) return null;
+                          return (
+                            <SelectItem key={serviceId} value={serviceId}>
+                              {serviceName}
+                            </SelectItem>
+                          );
+                        })
+                        .filter(Boolean)
+                    ) : (
+                      <SelectItem value="no-services" disabled>
+                        No services available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="displayOrder">Display Order</SelectItem>
-                <SelectItem value="popularity">Popularity</SelectItem>
-                <SelectItem value="bookings">Bookings</SelectItem>
-                <SelectItem value="revenue">Revenue</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="price">Price</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="lg:col-span-2">
+              <FormField label="Sort by">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="displayOrder">Display Order</SelectItem>
+                    <SelectItem value="popularity">Popularity</SelectItem>
+                    <SelectItem value="bookings">Bookings</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="price">Price</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
 
             {/* Columns Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-40">
-                  Columns
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 max-h-[400px] overflow-y-auto">
-                <div className="p-2 space-y-2">
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-order"
-                      checked={columnVisibility.order}
-                      onCheckedChange={() => toggleColumn('order')}
-                    />
-                    <label htmlFor="col-order" className="text-sm font-medium leading-none cursor-pointer">
-                      Order
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-subService"
-                      checked={columnVisibility.subService}
-                      onCheckedChange={() => toggleColumn('subService')}
-                    />
-                    <label htmlFor="col-subService" className="text-sm font-medium leading-none cursor-pointer">
-                      Sub-Service Name
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-service"
-                      checked={columnVisibility.service}
-                      onCheckedChange={() => toggleColumn('service')}
-                    />
-                    <label htmlFor="col-service" className="text-sm font-medium leading-none cursor-pointer">
-                      Service
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-description"
-                      checked={columnVisibility.description}
-                      onCheckedChange={() => toggleColumn('description')}
-                    />
-                    <label htmlFor="col-description" className="text-sm font-medium leading-none cursor-pointer">
-                      Description
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-status"
-                      checked={columnVisibility.status}
-                      onCheckedChange={() => toggleColumn('status')}
-                    />
-                    <label htmlFor="col-status" className="text-sm font-medium leading-none cursor-pointer">
-                      Status
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-bookings"
-                      checked={columnVisibility.bookings}
-                      onCheckedChange={() => toggleColumn('bookings')}
-                    />
-                    <label htmlFor="col-bookings" className="text-sm font-medium leading-none cursor-pointer">
-                      Bookings
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2 px-2 py-1.5">
-                    <Checkbox
-                      id="col-revenue"
-                      checked={columnVisibility.revenue}
-                      onCheckedChange={() => toggleColumn('revenue')}
-                    />
-                    <label htmlFor="col-revenue" className="text-sm font-medium leading-none cursor-pointer">
-                      Revenue
-                    </label>
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="lg:col-span-3">
+              <FormField label="Columns">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      Columns
+                      <KeenIcon icon="down" className="text-xs" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 max-h-[400px] overflow-y-auto">
+                    <div className="p-2 space-y-2">
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-order"
+                          checked={columnVisibility.order}
+                          onCheckedChange={() => toggleColumn('order')}
+                        />
+                        <label
+                          htmlFor="col-order"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Order
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-subService"
+                          checked={columnVisibility.subService}
+                          onCheckedChange={() => toggleColumn('subService')}
+                        />
+                        <label
+                          htmlFor="col-subService"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Sub-Service Name
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-service"
+                          checked={columnVisibility.service}
+                          onCheckedChange={() => toggleColumn('service')}
+                        />
+                        <label
+                          htmlFor="col-service"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Service
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-description"
+                          checked={columnVisibility.description}
+                          onCheckedChange={() => toggleColumn('description')}
+                        />
+                        <label
+                          htmlFor="col-description"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Description
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-status"
+                          checked={columnVisibility.status}
+                          onCheckedChange={() => toggleColumn('status')}
+                        />
+                        <label
+                          htmlFor="col-status"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Status
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-bookings"
+                          checked={columnVisibility.bookings}
+                          onCheckedChange={() => toggleColumn('bookings')}
+                        />
+                        <label
+                          htmlFor="col-bookings"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Bookings
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2 px-2 py-1.5">
+                        <Checkbox
+                          id="col-revenue"
+                          checked={columnVisibility.revenue}
+                          onCheckedChange={() => toggleColumn('revenue')}
+                        />
+                        <label
+                          htmlFor="col-revenue"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Revenue
+                        </label>
+                      </div>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </FormField>
+            </div>
           </div>
         </div>
       </div>
@@ -452,20 +485,36 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               <table className="caption-bottom text-sm" style={{ minWidth: '1200px' }}>
                 <TableHeader>
                   <TableRow>
-                    {columnVisibility.order && <TableHead className="w-[50px] text-center">Order</TableHead>}
-                    {columnVisibility.subService && <TableHead className="w-[200px]">Name</TableHead>}
-                    {columnVisibility.service && <TableHead className="w-[200px]">Service</TableHead>}
-                    {columnVisibility.description && <TableHead className="w-[160px]">Description</TableHead>}
+                    {columnVisibility.order && (
+                      <TableHead className="w-[50px] text-center">Order</TableHead>
+                    )}
+                    {columnVisibility.subService && (
+                      <TableHead className="w-[200px]">Name</TableHead>
+                    )}
+                    {columnVisibility.service && (
+                      <TableHead className="w-[200px]">Service</TableHead>
+                    )}
+                    {columnVisibility.description && (
+                      <TableHead className="w-[160px]">Description</TableHead>
+                    )}
                     {columnVisibility.status && <TableHead className="w-[100px]">Status</TableHead>}
-                    {columnVisibility.popularity && <TableHead className="w-[90px]">Popularity</TableHead>}
-                    {columnVisibility.bookings && <TableHead className="w-[70px] text-center">Bookings</TableHead>}
-                    {columnVisibility.revenue && <TableHead className="w-[90px] text-center">Revenue</TableHead>}
-                    {columnVisibility.actions && <TableHead className="w-[60px] text-center">Actions</TableHead>}
+                    {columnVisibility.popularity && (
+                      <TableHead className="w-[90px]">Popularity</TableHead>
+                    )}
+                    {columnVisibility.bookings && (
+                      <TableHead className="w-[70px] text-center">Bookings</TableHead>
+                    )}
+                    {columnVisibility.revenue && (
+                      <TableHead className="w-[90px] text-center">Revenue</TableHead>
+                    )}
+                    {columnVisibility.actions && (
+                      <TableHead className="w-[60px] text-center">Actions</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredServices.map((service, index) => {
-                    const displayOrder = service.displayOrder ?? (index + 1);
+                    const displayOrder = service.displayOrder ?? index + 1;
                     return (
                       <TableRow key={service.id}>
                         {columnVisibility.order && (
@@ -478,7 +527,11 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                             <div className="flex items-center gap-2">
                               {(() => {
                                 // Try multiple possible image field names
-                                const imageUrl = (service as any).image_url || (service as any).imageUrl || (service as any).image || '';
+                                const imageUrl =
+                                  (service as any).image_url ||
+                                  (service as any).imageUrl ||
+                                  (service as any).image ||
+                                  '';
                                 const fullImageUrl = getImageUrl(imageUrl);
 
                                 // If image URL is invalid (local path, etc.), show placeholder
@@ -509,101 +562,122 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
                                 );
                               })()}
                               <div className="min-w-0 flex-1">
-                                <div className="font-medium text-sm truncate">{service.name || 'N/A'}</div>
-                                <div className="text-xs text-gray-500 truncate">ID: {service.id || 'N/A'}</div>
+                                <div className="font-medium text-sm truncate">
+                                  {service.name || 'N/A'}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  ID: {service.id || 'N/A'}
+                                </div>
                               </div>
                             </div>
                           </TableCell>
                         )}
-                      {columnVisibility.service && (
-                        <TableCell className="w-[200px]">
-                          <div className="font-medium text-sm truncate" title={service.categoryName || '—'}>
-                            {service.categoryName || '—'}
-                          </div>
-                        </TableCell>
-                      )}
-                      {columnVisibility.description && (
-                        <TableCell className="w-[160px]">
-                          <div className="text-sm text-gray-600 truncate" style={{ maxWidth: '160px' }} title={service.description || '—'}>
-                            {service.description || '—'}
-                          </div>
-                        </TableCell>
-                      )}
-                      {columnVisibility.status && (
-                        <TableCell className="w-[100px]">
-                          <div className="flex items-center gap-1.5 flex-nowrap">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span>
-                                    <Switch
-                                      checked={service.status === 'active'}
-                                      onCheckedChange={(checked) => handleToggleStatus(service.id, checked)}
-                                      className="service-status-switch flex-shrink-0 data-[state=checked]:bg-danger data-[state=unchecked]:bg-transparent"
-                                    />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Changes affect new bookings only</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <div className="flex-shrink-0">
-                              {getStatusBadge(service.status || 'inactive')}
+                        {columnVisibility.service && (
+                          <TableCell className="w-[200px]">
+                            <div
+                              className="font-medium text-sm truncate"
+                              title={service.categoryName || '—'}
+                            >
+                              {service.categoryName || '—'}
                             </div>
-                          </div>
-                        </TableCell>
-                      )}
-                      {columnVisibility.popularity && (
-                        <TableCell className="w-[90px]">
-                          <Badge variant="outline" className="badge-outline text-xs whitespace-nowrap px-1.5 py-0.5">
-                            {getPopularityBadge(service.popularity || 0).text}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {columnVisibility.bookings && (
-                        <TableCell className="w-[70px]">
-                          <div className="text-center">
-                            <div className="font-semibold text-sm">{service.bookings || 0}</div>
-                          </div>
-                        </TableCell>
-                      )}
-                      {columnVisibility.revenue && (
-                        <TableCell className="w-[90px]">
-                          <div className="text-center">
-                            <div className="font-semibold text-success text-sm whitespace-nowrap">
-                              {formatCurrency(service.revenue)}
+                          </TableCell>
+                        )}
+                        {columnVisibility.description && (
+                          <TableCell className="w-[160px]">
+                            <div
+                              className="text-sm text-gray-600 truncate"
+                              style={{ maxWidth: '160px' }}
+                              title={service.description || '—'}
+                            >
+                              {service.description || '—'}
                             </div>
-                          </div>
-                        </TableCell>
-                      )}
-                      {columnVisibility.actions && (
-                        <TableCell className="w-[60px]">
-                          <div className="flex items-center justify-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="flex-shrink-0 p-1 h-8 w-8">
-                                  <KeenIcon icon="dots-vertical" className="text-base" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditService(service.id)}>
-                                  <KeenIcon icon="pencil" className="me-2" />
-                                  Edit Sub-Service
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteClick(service.id)}
-                                  className="text-danger"
-                                  disabled={isDeleting}
-                                >
-                                  <KeenIcon icon="trash" className="me-2" />
-                                  Delete Sub-Service
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      )}
+                          </TableCell>
+                        )}
+                        {columnVisibility.status && (
+                          <TableCell className="w-[100px]">
+                            <div className="flex items-center gap-1.5 flex-nowrap">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <Switch
+                                        checked={service.status === 'active'}
+                                        onCheckedChange={(checked) =>
+                                          handleToggleStatus(service.id, checked)
+                                        }
+                                        className="service-status-switch flex-shrink-0 data-[state=checked]:bg-danger data-[state=unchecked]:bg-transparent"
+                                      />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Changes affect new bookings only</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <div className="flex-shrink-0">
+                                {getStatusBadge(service.status || 'inactive')}
+                              </div>
+                            </div>
+                          </TableCell>
+                        )}
+                        {columnVisibility.popularity && (
+                          <TableCell className="w-[90px]">
+                            <Badge
+                              variant="outline"
+                              className="badge-outline text-xs whitespace-nowrap px-1.5 py-0.5"
+                            >
+                              {getPopularityBadge(service.popularity || 0).text}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        {columnVisibility.bookings && (
+                          <TableCell className="w-[70px]">
+                            <div className="text-center">
+                              <div className="font-semibold text-sm">{service.bookings || 0}</div>
+                            </div>
+                          </TableCell>
+                        )}
+                        {columnVisibility.revenue && (
+                          <TableCell className="w-[90px]">
+                            <div className="text-center">
+                              <div className="font-semibold text-success text-sm whitespace-nowrap">
+                                {formatCurrency(service.revenue)}
+                              </div>
+                            </div>
+                          </TableCell>
+                        )}
+                        {columnVisibility.actions && (
+                          <TableCell className="w-[60px]">
+                            <div className="flex items-center justify-center">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-shrink-0 p-1 h-8 w-8"
+                                  >
+                                    <KeenIcon icon="dots-vertical" className="text-base" />
+                                    <span className="sr-only">Open sub-service actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditService(service.id)}>
+                                    <KeenIcon icon="pencil" className="me-2" />
+                                    Edit Sub-Service
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteClick(service.id)}
+                                    className="text-danger"
+                                    disabled={isDeleting}
+                                  >
+                                    <KeenIcon icon="trash" className="me-2" />
+                                    Delete Sub-Service
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -616,7 +690,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
               <div className="card-footer">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
                   <div className="text-sm text-gray-600">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
                     {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
                     {pagination.total} services
                   </div>
@@ -669,8 +743,15 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
           </DialogHeader>
           <DialogBody>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete the service <strong className="text-black">"{serviceToDelete ? services.find(s => s.id === serviceToDelete)?.name || 'this service' : 'this service'}"</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete the service{' '}
+              <strong className="text-black">
+                "
+                {serviceToDelete
+                  ? services.find((s) => s.id === serviceToDelete)?.name || 'this service'
+                  : 'this service'}
+                "
+              </strong>
+              ? This action cannot be undone.
             </p>
           </DialogBody>
           <DialogFooter className="gap-2">
@@ -681,11 +762,7 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
               {isDeleting ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
@@ -706,4 +783,3 @@ const ServiceTable = ({ onEditService, onAddService }: IServiceTableProps) => {
 };
 
 export { ServiceTable };
-

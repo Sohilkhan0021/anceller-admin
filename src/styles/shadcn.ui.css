@@ -25,6 +25,26 @@
     --chart-3: 212 88% 51%;
     --chart-4: 252 83% 52%;
     --chart-5: 349 86% 50%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 230 25% 98%;
+    --surface-3: 230 25% 96%;
+    --info: 212 88% 51%;
+    --info-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 24 10% 10%;
+    --danger: 349 86% 50%;
+    --danger-foreground: 0 0% 100%;
+    --status-active: 142 71% 45%;
+    --status-active-foreground: 0 0% 100%;
+    --status-pending: 38 92% 50%;
+    --status-pending-foreground: 24 10% 10%;
+    --status-inactive: 220 9% 46%;
+    --status-inactive-foreground: 0 0% 100%;
+    --status-progress: 212 88% 51%;
+    --status-progress-foreground: 0 0% 100%;
+    --focus-ring: 356 89% 52%;
   }
 
   .dark {
@@ -52,6 +72,26 @@
     --chart-3: 212 88% 51%;
     --chart-4: 256 89% 53%;
     --chart-5: 349 86% 50%;
+    --surface-1: 222 15% 13%;
+    --surface-2: 224 14% 16%;
+    --surface-3: 224 14% 19%;
+    --info: 212 88% 60%;
+    --info-foreground: 0 0% 100%;
+    --success: 142 66% 44%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 24 10% 10%;
+    --danger: 349 86% 58%;
+    --danger-foreground: 0 0% 100%;
+    --status-active: 142 66% 44%;
+    --status-active-foreground: 0 0% 100%;
+    --status-pending: 38 92% 58%;
+    --status-pending-foreground: 24 10% 10%;
+    --status-inactive: 220 9% 55%;
+    --status-inactive-foreground: 0 0% 100%;
+    --status-progress: 212 88% 60%;
+    --status-progress-foreground: 0 0% 100%;
+    --focus-ring: 356 89% 58%;
   }
 }
 
@@ -61,5 +101,32 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Service area map selector */
+.service-area-marker-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #0ea5e9;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+}
+
+.service-area-radius-circle {
+  animation: service-area-pulse 1.2s ease-out;
+  transform-origin: center;
+}
+
+@keyframes service-area-pulse {
+  0% {
+    stroke-opacity: 0.95;
+    fill-opacity: 0.35;
+  }
+  100% {
+    stroke-opacity: 0.75;
+    fill-opacity: 0.15;
   }
 }

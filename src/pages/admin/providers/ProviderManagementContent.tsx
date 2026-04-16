@@ -11,11 +11,11 @@ import { EditProviderForm } from './forms/EditProviderForm';
 import { useProviders, useCreateProvider, useUpdateProvider } from '@/services';
 import { IProvider } from '@/services/provider.types';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 
 const ProviderManagementContent = () => {
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [selectedProvider, setSelectedProvider] = useState<IProvider | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -27,11 +27,16 @@ const ProviderManagementContent = () => {
   const statusFromUrl = searchParams.get('status') || '';
 
   // Filter state
-  const [filters, setFilters] = useState<{ search: string; status: string; kyc_status?: string; category_id?: string }>({
+  const [filters, setFilters] = useState<{
+    search: string;
+    status: string;
+    kyc_status?: string;
+    category_id?: string;
+  }>({
     search: '',
     status: statusFromUrl,
     kyc_status: kycStatusFromUrl,
-    category_id: '',
+    category_id: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -41,41 +46,36 @@ const ProviderManagementContent = () => {
     const kycStatus = searchParams.get('kyc_status') || '';
     const status = searchParams.get('status') || '';
     if (kycStatus || status) {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         kyc_status: kycStatus,
-        status: status,
+        status: status
       }));
     }
   }, [searchParams]);
 
   // Fetch providers with filters
-  const {
-    providers,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useProviders({
+  const { providers, pagination, isLoading, isError, error, refetch, isFetching } = useProviders({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
     search: filters.search,
     kyc_status: filters.kyc_status,
-    category_id: filters.category_id,
+    category_id: filters.category_id
   });
 
   // Handle filter changes
-  const handleFiltersChange = useCallback((newFilters: { search: string; status: string; category_id?: string }) => {
-    setFilters(prev => ({
-      ...prev,
-      ...newFilters,
-      kyc_status: prev.kyc_status, // Preserve kyc_status
-    }));
-    setCurrentPage(1); // Reset to first page when filters change
-  }, []);
+  const handleFiltersChange = useCallback(
+    (newFilters: { search: string; status: string; category_id?: string }) => {
+      setFilters((prev) => ({
+        ...prev,
+        ...newFilters,
+        kyc_status: prev.kyc_status // Preserve kyc_status
+      }));
+      setCurrentPage(1); // Reset to first page when filters change
+    },
+    []
+  );
 
   const handleProviderSelect = (provider: IProvider) => {
     setSelectedProvider(provider);
@@ -106,8 +106,8 @@ const ProviderManagementContent = () => {
   };
 
   // Create provider mutation
-  const { mutateAsync: createProvider, isLoading: isCreating } = useCreateProvider({
-    onSuccess: (data) => {
+  const { mutateAsync: createProvider } = useCreateProvider({
+    onSuccess: () => {
       // toast.success('Provider created successfully'); // Form will handle success toast
       setIsAddFormOpen(false);
       queryClient.invalidateQueries(['providers']);
@@ -123,7 +123,8 @@ const ProviderManagementContent = () => {
       email: providerData.email,
       phone: providerData.phone,
       password: providerData.password || undefined, // Optional password
-      business_name: providerData.businessName || `${providerData.firstName} ${providerData.lastName}`.trim(),
+      business_name:
+        providerData.businessName || `${providerData.firstName} ${providerData.lastName}`.trim(),
       category_ids: providerData.serviceCategory ? [providerData.serviceCategory] : [],
       pan_number: providerData.panNumber,
       aadhaarNumber: providerData.aadhaarNumber,
@@ -136,14 +137,14 @@ const ProviderManagementContent = () => {
       kyc_status: providerData.kycStatus || 'pending',
       status: providerData.status || 'active',
       isVerified: providerData.isVerified || false,
-      notes: providerData.notes,
+      notes: providerData.notes
     };
 
     return createProvider(apiData);
   };
 
-  const { mutateAsync: updateProvider, isLoading: isUpdating } = useUpdateProvider({
-    onSuccess: (data) => {
+  const { mutateAsync: updateProvider } = useUpdateProvider({
+    onSuccess: () => {
       toast.success('Provider updated successfully');
       setIsEditFormOpen(false);
       setEditProvider(null);
@@ -151,7 +152,7 @@ const ProviderManagementContent = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update provider');
-    },
+    }
   });
 
   const handleUpdateProvider = async (providerData: any) => {
@@ -159,13 +160,13 @@ const ProviderManagementContent = () => {
       toast.error('Provider ID is missing');
       return;
     }
-    
+
     const providerId = editProvider.id || editProvider.provider_id;
     if (!providerId) {
       toast.error('Provider ID is missing');
       return;
     }
-    
+
     // Transform form data to API format
     const apiData: any = {
       business_name: providerData.businessName || providerData.business_name,
@@ -175,15 +176,15 @@ const ProviderManagementContent = () => {
       pan_number: providerData.panNumber,
       bank_account_number: providerData.bankAccount,
       bank_ifsc: providerData.ifscCode,
-      category_ids: providerData.serviceCategory ? [providerData.serviceCategory] : undefined,
+      category_ids: providerData.serviceCategory ? [providerData.serviceCategory] : undefined
     };
 
     // Remove undefined values
-    Object.keys(apiData).forEach(key => apiData[key] === undefined && delete apiData[key]);
+    Object.keys(apiData).forEach((key) => apiData[key] === undefined && delete apiData[key]);
 
     try {
       await updateProvider({ providerId: providerId as string, data: apiData });
-    } catch (error) {
+    } catch {
       // Error is handled by the hook's onError callback
     }
   };
@@ -204,19 +205,10 @@ const ProviderManagementContent = () => {
 
       {/* Error State */}
       {isError && (
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load providers. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load providers. Please try again.'}
+          onRetry={() => refetch()}
+        />
       )}
 
       {/* Loading State */}

@@ -7,7 +7,7 @@ import { EditUserForm } from './forms/EditUserForm';
 import { useUsers } from '@/services';
 import { IUser } from '@/services/user.types';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 import { useUserManage } from '@/providers/userManageProvider';
 
 const UserManagementContent = () => {
@@ -20,7 +20,7 @@ const UserManagementContent = () => {
   // Filter state
   const [filters, setFilters] = useState<{ search: string; status: string }>({
     search: '',
-    status: '',
+    status: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -28,19 +28,11 @@ const UserManagementContent = () => {
   const { createUser, updateUser } = useUserManage();
 
   // Fetch users with filters
-  const {
-    users,
-    pagination,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useUsers({
+  const { users, pagination, isLoading, isError, error, refetch, isFetching } = useUsers({
     page: currentPage,
     limit: pageSize,
     status: filters.status,
-    search: filters.search,
+    search: filters.search
   });
 
   // Handle filter changes
@@ -89,25 +81,28 @@ const UserManagementContent = () => {
         console.error('User ID is missing');
         return;
       }
-      
+
       // Transform form data to API format
       // Handle phone number - ensure we don't send +91 if it's already in the number
       let phoneNumber = userData.phone || '';
       if (phoneNumber && typeof phoneNumber === 'string') {
         // Remove any +91 prefix that might be present
-        phoneNumber = phoneNumber.replace(/^\+91\s*/g, '').replace(/\s*\+91\s*/g, '').trim();
+        phoneNumber = phoneNumber
+          .replace(/^\+91\s*/g, '')
+          .replace(/\s*\+91\s*/g, '')
+          .trim();
         if (phoneNumber.startsWith('+91')) {
           phoneNumber = phoneNumber.substring(3).trim();
         }
       }
-      
+
       const updateData: any = {
         first_name: userData.firstName,
         last_name: userData.lastName,
         email: userData.email,
-        phone_number: phoneNumber,
+        phone_number: phoneNumber
       };
-      
+
       // Add optional fields
       if (userData.address) updateData.address = userData.address;
       if (userData.city) updateData.city = userData.city;
@@ -118,7 +113,7 @@ const UserManagementContent = () => {
       if (typeof userData.isVerified === 'boolean') {
         updateData.is_verified = userData.isVerified;
       }
-      
+
       await updateUser(userId, updateData);
       setIsEditFormOpen(false);
       setEditUser(null);
@@ -128,7 +123,6 @@ const UserManagementContent = () => {
       console.error('Failed to update user:', error);
     }
   };
-
 
   return (
     <div className="grid gap-5 lg:gap-7.5">
@@ -142,19 +136,10 @@ const UserManagementContent = () => {
 
       {/* Error State */}
       {isError && (
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {error?.message || 'Failed to load users. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetch()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={error?.message || 'Failed to load users. Please try again.'}
+          onRetry={() => refetch()}
+        />
       )}
 
       {/* Loading State */}
@@ -177,18 +162,10 @@ const UserManagementContent = () => {
       )}
 
       {/* User Detail Modal */}
-      <UserDetailModal
-        user={selectedUser}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
+      <UserDetailModal user={selectedUser} isOpen={isModalOpen} onClose={handleCloseModal} />
 
       {/* Add User Form */}
-      <AddUserForm
-        isOpen={isAddFormOpen}
-        onClose={handleCloseAddForm}
-        onSave={handleSaveUser}
-      />
+      <AddUserForm isOpen={isAddFormOpen} onClose={handleCloseAddForm} onSave={handleSaveUser} />
 
       {/* Edit User Form */}
       <EditUserForm

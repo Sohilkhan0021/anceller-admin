@@ -1,30 +1,25 @@
-import { useState } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from '@/components/ui/select';
 import { IServiceCostConfig } from '@/services/serviceCost.service';
 import { ContentLoader } from '@/components/loaders';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
+import { AdminPagination } from '@/components/admin/AdminPagination';
 
 interface IServiceCostManagementTableProps {
   configs: IServiceCostConfig[];
@@ -37,11 +32,11 @@ interface IServiceCostManagementTableProps {
     hasPreviousPage: boolean;
   } | null;
   isLoading?: boolean;
-  onEdit: (config: IServiceCostConfig) => void;
-  onDelete: (configId: string) => void;
-  onToggleActive?: (config: IServiceCostConfig) => void;
-  onPageChange: (page: number) => void;
-  onFilterChange: (filter: boolean | undefined) => void;
+  onEdit: Function;
+  onDelete: Function;
+  onToggleActive?: Function;
+  onPageChange: Function;
+  onFilterChange: Function;
   currentFilter?: boolean | undefined;
 }
 
@@ -93,7 +88,7 @@ const ServiceCostManagementTable = ({
       </div>
 
       <div className="card-body p-0">
-        <Table>
+        <AdminDataTable>
           <TableHeader>
             <TableRow>
               <TableHead>Service Cost</TableHead>
@@ -107,8 +102,12 @@ const ServiceCostManagementTable = ({
           <TableBody>
             {configs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                  No service cost configurations found
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <EmptyState
+                    title="No service cost configurations"
+                    description="No service cost configurations found for the selected filter."
+                    icon="setting-2"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -116,11 +115,11 @@ const ServiceCostManagementTable = ({
                 <TableRow key={config.config_id}>
                   <TableCell>
                     <div className="font-medium">₹{config.service_cost_amount}</div>
-                    <div className="text-sm text-gray-500">Service fee</div>
+                    <div className="text-sm text-muted-foreground">Service fee</div>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">₹{config.free_service_threshold}</div>
-                    <div className="text-sm text-gray-500">Free above this</div>
+                    <div className="text-sm text-muted-foreground">Free above this</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -129,12 +128,7 @@ const ServiceCostManagementTable = ({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={config.is_active ? 'default' : 'secondary'}
-                      className={config.is_active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}
-                    >
-                      {config.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <StatusBadge status={config.is_active ? 'active' : 'inactive'} />
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -146,6 +140,7 @@ const ServiceCostManagementTable = ({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
+                          <span className="sr-only">Open service cost actions</span>
                           <KeenIcon icon="dots-vertical" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -159,7 +154,10 @@ const ServiceCostManagementTable = ({
                             onClick={() => onToggleActive(config)}
                             className={config.is_active ? 'text-warning' : 'text-success'}
                           >
-                            <KeenIcon icon={config.is_active ? 'cross-circle' : 'check-circle'} className="me-2" />
+                            <KeenIcon
+                              icon={config.is_active ? 'cross-circle' : 'check-circle'}
+                              className="me-2"
+                            />
                             {config.is_active ? 'Deactivate' : 'Activate'}
                           </DropdownMenuItem>
                         )}
@@ -177,34 +175,19 @@ const ServiceCostManagementTable = ({
               ))
             )}
           </TableBody>
-        </Table>
+        </AdminDataTable>
       </div>
 
       {pagination && pagination.totalPages > 1 && (
-        <div className="card-footer flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} configurations
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page - 1)}
-              disabled={!pagination.hasPreviousPage}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page + 1)}
-              disabled={!pagination.hasNextPage}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <AdminPagination
+          page={pagination.page}
+          total={pagination.total}
+          totalPages={pagination.totalPages}
+          limit={pagination.limit}
+          onPageChange={onPageChange}
+          isLoading={isLoading}
+          itemLabel="configurations"
+        />
       )}
     </div>
   );

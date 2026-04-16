@@ -1,23 +1,20 @@
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { IServiceArea, IGetServiceAreasResponse } from '@/services';
 import { ContentLoader } from '@/components/loaders';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
+import { AdminPagination } from '@/components/admin/AdminPagination';
 
 interface IServiceAreaManagementTableProps {
   areas: IServiceArea[];
   pagination: IGetServiceAreasResponse['pagination'] | null;
   isLoading?: boolean;
-  onEdit: (area: IServiceArea) => void;
-  onDelete: (areaId: string) => void;
-  onPageChange?: (page: number) => void;
+  onEdit: Function;
+  onDelete: Function;
+  onPageChange?: Function;
 }
 
 const ServiceAreaManagementTable = ({
@@ -26,7 +23,7 @@ const ServiceAreaManagementTable = ({
   isLoading = false,
   onEdit,
   onDelete,
-  onPageChange,
+  onPageChange
 }: IServiceAreaManagementTableProps) => {
   const formatRadius = (radius?: string | number | null) => {
     if (radius === null || radius === undefined) return 'N/A';
@@ -43,17 +40,15 @@ const ServiceAreaManagementTable = ({
             <ContentLoader />
           </div>
         ) : areas.length === 0 ? (
-          <div className="p-8 text-center">
-            <KeenIcon icon="map" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No service areas found</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Try adjusting your search or add a new service area.
-            </p>
-          </div>
+          <EmptyState
+            title="No service areas found"
+            description="Try adjusting your search or add a new service area."
+            icon="map"
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table className="min-w-full">
+              <AdminDataTable className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
@@ -73,7 +68,7 @@ const ServiceAreaManagementTable = ({
                           <div className="flex flex-col">
                             <span>{area.area_name}</span>
                             {area.landmark && (
-                              <span className="text-xs text-gray-500 truncate max-w-[220px]">
+                              <span className="text-xs text-muted-foreground truncate max-w-[220px]">
                                 {area.landmark}
                               </span>
                             )}
@@ -84,23 +79,11 @@ const ServiceAreaManagementTable = ({
                       <TableCell className="hidden lg:table-cell">{area.state || 'N/A'}</TableCell>
                       <TableCell>{formatRadius(area.radius_km)}</TableCell>
                       <TableCell>
-                        <span
-                          className={
-                            area.is_active
-                              ? 'inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-success text-white'
-                              : 'inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700'
-                          }
-                        >
-                          {area.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        <StatusBadge status={area.is_active ? 'active' : 'inactive'} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEdit(area)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => onEdit(area)}>
                             <KeenIcon icon="notepad-edit" className="me-1" />
                             Edit
                           </Button>
@@ -117,33 +100,19 @@ const ServiceAreaManagementTable = ({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </AdminDataTable>
             </div>
 
             {pagination && onPageChange && (
-              <div className="flex items-center justify-between px-6 py-4 border-t">
-                <div className="text-sm text-gray-600">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() => onPageChange(pagination.page - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() => onPageChange(pagination.page + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              <AdminPagination
+                page={pagination.page}
+                total={pagination.total}
+                totalPages={pagination.totalPages}
+                limit={pagination.limit}
+                onPageChange={onPageChange}
+                isLoading={isLoading}
+                itemLabel="service areas"
+              />
             )}
           </>
         )}
@@ -153,4 +122,3 @@ const ServiceAreaManagementTable = ({
 };
 
 export { ServiceAreaManagementTable };
-

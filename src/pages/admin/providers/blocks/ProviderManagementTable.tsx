@@ -3,45 +3,29 @@ import { toast } from 'sonner';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { IProvider, IPaginationMeta } from '@/services/provider.types';
 import { ContentLoader } from '@/components/loaders';
-import {
-  useUpdateProviderStatus,
-  useDeleteProvider
-} from '@/services';
-import { toAbsoluteUrl } from '@/utils';
+import { useUpdateProviderStatus, useDeleteProvider } from '@/services';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
 
 interface IProviderManagementTableProps {
   providers: IProvider[];
   pagination: IPaginationMeta | null;
   isLoading?: boolean;
-  onProviderSelect: (provider: IProvider) => void;
-  onEditProvider?: (provider: IProvider) => void;
-  onPageChange?: (page: number) => void;
+  onProviderSelect: Function;
+  onEditProvider?: Function;
+  onPageChange?: Function;
 }
 
 const ProviderManagementTable = ({
@@ -52,7 +36,6 @@ const ProviderManagementTable = ({
   onEditProvider,
   onPageChange
 }: IProviderManagementTableProps) => {
-
   // Generic confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -69,44 +52,41 @@ const ProviderManagementTable = ({
     confirmText: '',
     variant: 'default',
     illustration: '23',
-    onConfirm: () => { },
+    onConfirm: () => {}
   });
 
-
-
   const updateStatusMutation = useUpdateProviderStatus({
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Provider status updated successfully');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update provider status');
-    },
+    }
   });
 
   const deleteProviderMutation = useDeleteProvider({
-    onSuccess: (data) => {
-      toast.success(data.message || 'Provider deleted successfully');
+    onSuccess: (response) => {
+      toast.success(response.message || 'Provider deleted successfully');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete provider');
-    },
+    }
   });
 
   const handleViewProfile = (provider: IProvider) => {
     onProviderSelect(provider);
   };
 
-
-
   const handleBlockProvider = (providerId: string) => {
     setConfirmModal({
       isOpen: true,
       title: 'Block Provider',
-      description: 'Are you sure you want to block this provider? They will not be able to log in or access their account.',
+      description:
+        'Are you sure you want to block this provider? They will not be able to log in or access their account.',
       confirmText: 'Block Provider',
       variant: 'destructive',
       illustration: '23', // Warning illustration
-      onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'SUSPENDED' }), // API uses SUSPENDED for block in this context
+      onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'SUSPENDED' }) // API uses SUSPENDED for block in this context
     });
   };
 
@@ -118,7 +98,7 @@ const ProviderManagementTable = ({
       confirmText: 'Suspend Provider',
       variant: 'destructive',
       illustration: '23',
-      onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'SUSPENDED' }),
+      onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'SUSPENDED' })
     });
   };
 
@@ -126,11 +106,12 @@ const ProviderManagementTable = ({
     setConfirmModal({
       isOpen: true,
       title: 'Activate Provider',
-      description: 'Are you sure you want to activate this provider? This will restore their access to the platform.',
+      description:
+        'Are you sure you want to activate this provider? This will restore their access to the platform.',
       confirmText: 'Activate Provider',
       variant: 'success',
       illustration: '1', // Person with laptop illustration from ref
-      onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'ACTIVE' }),
+      onConfirm: () => updateStatusMutation.mutate({ providerId, status: 'ACTIVE' })
     });
   };
 
@@ -138,45 +119,13 @@ const ProviderManagementTable = ({
     setConfirmModal({
       isOpen: true,
       title: 'Delete Provider',
-      description: 'Are you sure you want to delete this provider? This action cannot be undone. All provider data, KYC documents, and related information will be permanently removed.',
+      description:
+        'Are you sure you want to delete this provider? This action cannot be undone. All provider data, KYC documents, and related information will be permanently removed.',
       confirmText: 'Delete Provider',
       variant: 'destructive',
       illustration: '23', // Warning illustration
-      onConfirm: () => deleteProviderMutation.mutate(providerId),
+      onConfirm: () => deleteProviderMutation.mutate(providerId)
     });
-  };
-
-  const getKYCStatusBadge = (status: string) => {
-    // Normalize status to lowercase for comparison
-    const normalizedStatus = (status || '').toLowerCase();
-    const statusConfig: { [key: string]: { variant: string; className: string; text: string } } = {
-      approved: { variant: 'default', className: 'bg-success text-white', text: 'Approved' },
-      pending: { variant: 'default', className: 'bg-warning text-white', text: 'Pending' },
-      rejected: { variant: 'destructive', className: '', text: 'Rejected' },
-      'under-review': { variant: 'secondary', className: '', text: 'Under Review' },
-      'under_review': { variant: 'secondary', className: '', text: 'Under Review' }
-    };
-
-    const config = statusConfig[normalizedStatus] || { variant: 'secondary', className: '', text: status };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
-  };
-
-  const getStatusBadge = (status: string, isDeleted?: boolean) => {
-    if (isDeleted) {
-      return <Badge variant="destructive" className="bg-gray-500 text-white">Deleted</Badge>;
-    }
-    // Normalize status to lowercase for comparison
-    const normalizedStatus = (status || '').toLowerCase();
-    const statusConfig: { [key: string]: { variant: string; className: string; text: string } } = {
-      active: { variant: 'default', className: 'bg-success text-white', text: 'Active' },
-      inactive: { variant: 'secondary', className: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 font-medium', text: 'Inactive' },
-      blocked: { variant: 'destructive', className: '', text: 'Blocked' },
-      blacklisted: { variant: 'destructive', className: '', text: 'Blocked' },
-      suspended: { variant: 'default', className: 'bg-warning text-white', text: 'Suspended' }
-    };
-
-    const config = statusConfig[normalizedStatus] || { variant: 'outline', className: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 font-medium', text: status || 'Inactive' };
-    return <Badge variant={config.variant as any} className={config.className}>{config.text}</Badge>;
   };
 
   const formatDate = (dateString: string) => {
@@ -198,7 +147,7 @@ const ProviderManagementTable = ({
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
+      currencyDisplay: 'symbol' // Ensure ₹ symbol is displayed
     }).format(amount);
   };
 
@@ -217,13 +166,15 @@ const ProviderManagementTable = ({
 
     const remainingStars = 5 - Math.ceil(rating);
     for (let i = 0; i < remainingStars; i++) {
-      stars.push(<KeenIcon key={`empty-${i}`} icon="star" className="text-gray-300 text-sm" />);
+      stars.push(
+        <KeenIcon key={`empty-${i}`} icon="star" className="text-muted-foreground/40 text-sm" />
+      );
     }
 
     return (
       <div className="flex items-center gap-1">
         {stars}
-        <span className="text-sm text-gray-600 ml-1">({rating.toFixed(1)})</span>
+        <span className="ml-1 text-sm text-muted-foreground">({rating.toFixed(1)})</span>
       </div>
     );
   };
@@ -242,17 +193,15 @@ const ProviderManagementTable = ({
             <ContentLoader />
           </div>
         ) : providers.length === 0 ? (
-          <div className="p-8 text-center">
-            <KeenIcon icon="shop" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No providers found</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Try adjusting your search or filter criteria
-            </p>
-          </div>
+          <EmptyState
+            title="No providers found"
+            description="Try adjusting your search or filter criteria."
+            icon="shop"
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table className="min-w-full">
+              <AdminDataTable className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="hidden sm:table-cell">Provider ID</TableHead>
@@ -269,7 +218,9 @@ const ProviderManagementTable = ({
                 <TableBody>
                   {providers.map((provider) => (
                     <TableRow key={provider.id}>
-                      <TableCell className="hidden sm:table-cell font-medium">{provider.id}</TableCell>
+                      <TableCell className="hidden sm:table-cell font-medium">
+                        {provider.id}
+                      </TableCell>
                       <TableCell className="max-w-[200px]">
                         <div className="flex items-center gap-3">
                           {provider.avatar ? (
@@ -301,10 +252,12 @@ const ProviderManagementTable = ({
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{provider.name || 'N/A'}</div>
-                            <div className="text-sm text-gray-500 hidden sm:block">
+                            <div className="hidden text-sm text-muted-foreground sm:block">
                               Joined {formatDate(provider.joinDate)}
                             </div>
-                            <div className="text-xs text-gray-500 sm:hidden">{provider.id || 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground sm:hidden">
+                              {provider.id || 'N/A'}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -314,7 +267,7 @@ const ProviderManagementTable = ({
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {getKYCStatusBadge(provider.kycStatus)}
+                        <StatusBadge status={provider.kycStatus} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {renderStars(provider.rating || 0)}
@@ -322,33 +275,44 @@ const ProviderManagementTable = ({
                       <TableCell className="hidden sm:table-cell">
                         <div className="text-center">
                           <div className="font-semibold">{provider.jobsCompleted || 0}</div>
-                          <div className="text-sm text-gray-500">jobs</div>
+                          <div className="text-sm text-muted-foreground">jobs</div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <div className="text-center">
                           <div className="font-semibold">
-                            {formatCurrency(typeof provider.earnings === 'number' ? provider.earnings : provider.earnings?.total_net || 0)}
+                            {formatCurrency(
+                              typeof provider.earnings === 'number'
+                                ? provider.earnings
+                                : provider.earnings?.total_net || 0
+                            )}
                           </div>
-                          <div className="text-sm text-gray-500">total</div>
+                          <div className="text-sm text-muted-foreground">total</div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {getStatusBadge(provider.status, (provider as any).is_deleted)}
+                        <StatusBadge
+                          status={(provider as any).is_deleted ? 'inactive' : provider.status}
+                          label={(provider as any).is_deleted ? 'Deleted' : undefined}
+                        />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end">
-                          <div className="flex flex-col gap-1 sm:hidden mr-2">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="mr-2 flex flex-col gap-1 sm:hidden">
                             <div className="md:hidden">
-                              {getKYCStatusBadge(provider.kycStatus)}
+                              <StatusBadge status={provider.kycStatus} />
                             </div>
                             <div className="lg:hidden">
-                              {getStatusBadge(provider.status, (provider as any).is_deleted)}
+                              <StatusBadge
+                                status={(provider as any).is_deleted ? 'inactive' : provider.status}
+                                label={(provider as any).is_deleted ? 'Deleted' : undefined}
+                              />
                             </div>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="flex-shrink-0">
+                                <span className="sr-only">Open provider actions</span>
                                 <KeenIcon icon="dots-vertical" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -363,7 +327,7 @@ const ProviderManagementTable = ({
                                   Edit Provider
                                 </DropdownMenuItem>
                               )}
-                              {((provider.status || '').toLowerCase() === 'active') && (
+                              {(provider.status || '').toLowerCase() === 'active' && (
                                 <>
                                   <DropdownMenuItem
                                     onClick={() => handleBlockProvider(provider.id)}
@@ -383,7 +347,8 @@ const ProviderManagementTable = ({
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              {((provider.status || '').toLowerCase() === 'suspended' || (provider.status || '').toLowerCase() === 'blocked') && (
+                              {((provider.status || '').toLowerCase() === 'suspended' ||
+                                (provider.status || '').toLowerCase() === 'blocked') && (
                                 <DropdownMenuItem
                                   onClick={() => handleActivateProvider(provider.id)}
                                   className="text-success"
@@ -396,7 +361,9 @@ const ProviderManagementTable = ({
                               <DropdownMenuItem
                                 onClick={() => handleDeleteProvider(provider.id)}
                                 className="text-danger"
-                                disabled={deleteProviderMutation.isLoading || updateStatusMutation.isLoading}
+                                disabled={
+                                  deleteProviderMutation.isLoading || updateStatusMutation.isLoading
+                                }
                               >
                                 <KeenIcon icon="trash" className="me-2" />
                                 Delete Provider
@@ -408,115 +375,38 @@ const ProviderManagementTable = ({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </AdminDataTable>
             </div>
 
             {/* Pagination Controls */}
             {pagination && onPageChange && (
-              <div className="card-footer">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
-                  <div className="text-sm text-gray-600">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                    {pagination.total} providers
-                  </div>
-                  {pagination.totalPages > 1 && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (pagination.page > 1 && !isLoading) {
-                            onPageChange(pagination.page - 1);
-                          }
-                        }}
-                        disabled={pagination.page <= 1 || isLoading}
-                      >
-                        <KeenIcon icon="arrow-left" className="me-1" />
-                        Previous
-                      </Button>
-                      <div className="text-sm text-gray-600">
-                        Page {pagination.page} of {pagination.totalPages}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (pagination.page < pagination.totalPages && !isLoading) {
-                            onPageChange(pagination.page + 1);
-                          }
-                        }}
-                        disabled={pagination.page >= pagination.totalPages || isLoading}
-                      >
-                        Next
-                        <KeenIcon icon="arrow-right" className="ms-1" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <AdminPagination
+                page={pagination.page}
+                total={pagination.total}
+                totalPages={pagination.totalPages}
+                limit={pagination.limit}
+                onPageChange={onPageChange}
+                isLoading={isLoading}
+                itemLabel="providers"
+              />
             )}
           </>
         )}
       </div>
 
-      {/* Generic Confirmation Dialog */}
-      <Dialog
+      <ConfirmActionDialog
         open={confirmModal.isOpen}
-        onOpenChange={(open) => setConfirmModal(prev => ({ ...prev, isOpen: open }))}
-      >
-        <DialogContent className="max-w-[500px]">
-          <DialogHeader className="border-0 pt-5 justify-center">
-            <DialogTitle></DialogTitle>
-          </DialogHeader>
-          <DialogBody className="flex flex-col items-center pt-0 pb-10">
-            <div className="mb-6">
-              <img
-                src={toAbsoluteUrl(`/media/illustrations/${confirmModal.illustration}.svg`)}
-                className="dark:hidden max-h-[160px]"
-                alt="Confirmation Illustration"
-              />
-              <img
-                src={toAbsoluteUrl(`/media/illustrations/${confirmModal.illustration}-dark.svg`)}
-                className="light:hidden max-h-[160px]"
-                alt="Confirmation Illustration"
-              />
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-900 text-center mb-3">
-              {confirmModal.title}
-            </h3>
-
-            <div className="text-center mb-8 px-6">
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {confirmModal.description}
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-3 w-full px-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                disabled={updateStatusMutation.isLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant={confirmModal.variant === 'success' ? 'default' : confirmModal.variant}
-                className={`flex-1 ${confirmModal.variant === 'success' ? 'bg-[#15D053] hover:bg-[#12b84a] text-white border-0 font-semibold' : ''}`}
-                onClick={() => {
-                  confirmModal.onConfirm();
-                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                }}
-                disabled={updateStatusMutation.isLoading || deleteProviderMutation.isLoading}
-              >
-                {(updateStatusMutation.isLoading || deleteProviderMutation.isLoading) ? 'Processing...' : confirmModal.confirmText}
-              </Button>
-            </div>
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        danger={confirmModal.variant === 'destructive'}
+        loading={updateStatusMutation.isLoading || deleteProviderMutation.isLoading}
+        onOpenChange={(open: boolean) => setConfirmModal((prev) => ({ ...prev, isOpen: open }))}
+        onConfirm={() => {
+          confirmModal.onConfirm();
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        }}
+      />
     </div>
   );
 };

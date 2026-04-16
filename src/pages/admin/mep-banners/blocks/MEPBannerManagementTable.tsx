@@ -1,24 +1,20 @@
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { IMEPBanner } from '@/services/mepBanner.types';
 import { ContentLoader } from '@/components/loaders';
 import { getImageUrl } from '@/utils/imageUrl';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { AdminDataTable } from '@/components/admin/AdminDataTable';
+import { AdminPagination } from '@/components/admin/AdminPagination';
 
 interface IMEPBannerManagementTableProps {
   banners: IMEPBanner[];
@@ -29,11 +25,11 @@ interface IMEPBannerManagementTableProps {
     totalPages: number;
   } | null;
   isLoading?: boolean;
-  onViewBanner: (banner: IMEPBanner) => void;
-  onEditBanner: (banner: IMEPBanner) => void;
-  onDeleteBanner: (banner: IMEPBanner) => void;
-  onBannerTypeChange?: (banner: IMEPBanner, newType: 'offer' | 'buy_banner') => void;
-  onPageChange?: (page: number) => void;
+  onViewBanner: Function;
+  onEditBanner: Function;
+  onDeleteBanner: Function;
+  onBannerTypeChange?: Function;
+  onPageChange?: Function;
 }
 
 const MEPBannerManagementTable = ({
@@ -46,19 +42,12 @@ const MEPBannerManagementTable = ({
   onBannerTypeChange,
   onPageChange
 }: IMEPBannerManagementTableProps) => {
-  const getStatusBadge = (isActive: boolean) => {
-    if (isActive) {
-      return <Badge variant="default" className="bg-success text-white">Active</Badge>;
-    } else {
-      return <Badge variant="outline">Inactive</Badge>;
-    }
-  };
-
   return (
     <div className="card">
       <div className="card-header">
         <h3 className="card-title">
-          MEP Banners {pagination ? `(${pagination.total})` : banners.length > 0 ? `(${banners.length})` : ''}
+          MEP Banners{' '}
+          {pagination ? `(${pagination.total})` : banners.length > 0 ? `(${banners.length})` : ''}
         </h3>
       </div>
 
@@ -68,16 +57,14 @@ const MEPBannerManagementTable = ({
             <ContentLoader />
           </div>
         ) : banners.length === 0 ? (
-          <div className="p-8 text-center">
-            <KeenIcon icon="image" className="text-gray-400 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600">No MEP banners found</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Click "Add a MEP Banner" to create your first MEP banner
-            </p>
-          </div>
+          <EmptyState
+            title="No MEP banners found"
+            description='Click "Add a MEP Banner" to create your first MEP banner.'
+            icon="image"
+          />
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <AdminDataTable>
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[200px]">MEP Banner Title</TableHead>
@@ -92,7 +79,7 @@ const MEPBannerManagementTable = ({
                   return (
                     <TableRow key={banner.mep_banner_id}>
                       <TableCell>
-                        <div className="font-medium text-gray-900">{banner.title || 'N/A'}</div>
+                        <div className="font-medium text-foreground">{banner.title || 'N/A'}</div>
                       </TableCell>
                       <TableCell>
                         {banner.image_url ? (
@@ -103,12 +90,13 @@ const MEPBannerManagementTable = ({
                               className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                               crossOrigin="anonymous"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"%3E%3Crect fill="%23ddd" width="64" height="64"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                (e.target as HTMLImageElement).src =
+                                  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"%3E%3Crect fill="%23ddd" width="64" height="64"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
                               }}
                             />
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-sm">No image</span>
+                          <span className="text-muted-foreground text-sm">No image</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -122,11 +110,11 @@ const MEPBannerManagementTable = ({
                                 value="offer"
                                 checked={!banner.banner_type || banner.banner_type === 'offer'}
                                 onChange={() => onBannerTypeChange?.(banner, 'offer')}
-                                className="w-4 h-4 text-primary focus:ring-primary"
+                                className="w-4 h-4 text-primary focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring))] focus-visible:ring-offset-2"
                                 disabled={isLoading}
                               />
-                              <Label 
-                                htmlFor={`mep_banner_type_offer_${banner.mep_banner_id}`} 
+                              <Label
+                                htmlFor={`mep_banner_type_offer_${banner.mep_banner_id}`}
                                 className="font-normal cursor-pointer text-sm"
                               >
                                 Offer
@@ -140,11 +128,11 @@ const MEPBannerManagementTable = ({
                                 value="buy_banner"
                                 checked={banner.banner_type === 'buy_banner'}
                                 onChange={() => onBannerTypeChange?.(banner, 'buy_banner')}
-                                className="w-4 h-4 text-primary focus:ring-primary"
+                                className="w-4 h-4 text-primary focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring))] focus-visible:ring-offset-2"
                                 disabled={isLoading}
                               />
-                              <Label 
-                                htmlFor={`mep_banner_type_buy_${banner.mep_banner_id}`} 
+                              <Label
+                                htmlFor={`mep_banner_type_buy_${banner.mep_banner_id}`}
                                 className="font-normal cursor-pointer text-sm"
                               >
                                 Buy Banner
@@ -153,11 +141,14 @@ const MEPBannerManagementTable = ({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(banner.is_active)}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={banner.is_active ? 'active' : 'inactive'} />
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
+                              <span className="sr-only">Open MEP banner actions</span>
                               <KeenIcon icon="dots-vertical" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -184,46 +175,21 @@ const MEPBannerManagementTable = ({
                   );
                 })}
               </TableBody>
-            </Table>
+            </AdminDataTable>
           </div>
         )}
       </div>
 
-      {pagination && pagination.totalPages > 1 && (
-        <div className="card-footer">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="text-sm text-gray-600">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-              {pagination.total} MEP banners
-            </div>
-            {onPageChange && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(pagination.page - 1)}
-                  disabled={pagination.page <= 1 || isLoading}
-                >
-                  <KeenIcon icon="arrow-left" className="me-1" />
-                  Previous
-                </Button>
-                <div className="text-sm text-gray-600 px-2">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages || isLoading}
-                >
-                  Next
-                  <KeenIcon icon="arrow-right" className="ms-1" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+      {pagination && onPageChange && (
+        <AdminPagination
+          page={pagination.page}
+          total={pagination.total}
+          totalPages={pagination.totalPages}
+          limit={pagination.limit}
+          onPageChange={onPageChange}
+          isLoading={isLoading}
+          itemLabel="MEP banners"
+        />
       )}
     </div>
   );

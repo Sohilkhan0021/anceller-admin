@@ -9,17 +9,19 @@ const AdminDashboardContent = () => {
 
   return (
     <div className="grid gap-4 lg:gap-7.5">
-      {/* Header with date filters */}
       <AdminDashboardHeader onPeriodChange={setSelectedPeriod} />
-
-      {/* KPI Cards */}
-      <KPICards period={selectedPeriod} />
-
-      {/* Charts Section */}
-      <DashboardCharts period={selectedPeriod} />
-
-      {/* Quick Links */}
-      <QuickLinks />
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Key Metrics</h2>
+        <KPICards period={selectedPeriod} />
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Performance Trends</h2>
+        <DashboardCharts period={selectedPeriod} />
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
+        <QuickLinks />
+      </section>
     </div>
   );
 };

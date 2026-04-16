@@ -28,6 +28,7 @@ export interface IGetSubServiceByIdResponse {
     base_price?: string;
     currency?: string;
     duration_minutes?: number;
+    info?: string;
     skills_tags?: any;
     max_add_count?: number;
     is_active?: boolean;
@@ -200,6 +201,8 @@ export const createSubService = async (
     formData.append('duration_minutes', (data.duration_minutes !== undefined ? data.duration_minutes : 1).toString());
     if (data.is_active !== undefined) formData.append('is_active', data.is_active.toString());
     if (data.sort_order !== undefined) formData.append('sort_order', data.sort_order.toString());
+    if (data.info !== undefined) formData.append('info', data.info || '');
+    if (data.doesNotIncludeHtml !== undefined) formData.append('doesNotIncludeHtml', data.doesNotIncludeHtml || '');
     
     // Handle image - prioritize file upload over image_url
     if (data.image instanceof File) {
@@ -306,12 +309,14 @@ export const updateSubService = async (
     if (data.service_id) formData.append('service_id', data.service_id);
     if (data.name) formData.append('name', data.name);
     if (data.description !== undefined) formData.append('description', data.description || '');
-    // base_price and duration_minutes are required - always send them
-    formData.append('base_price', (data.base_price !== undefined ? data.base_price : 0).toString());
+    // Don't overwrite existing values unless provided
+    if (data.base_price !== undefined) formData.append('base_price', data.base_price.toString());
     formData.append('currency', 'INR'); // Currency is always INR
-    formData.append('duration_minutes', (data.duration_minutes !== undefined ? data.duration_minutes : 1).toString());
+    if (data.duration_minutes !== undefined) formData.append('duration_minutes', data.duration_minutes.toString());
     if (data.is_active !== undefined) formData.append('is_active', data.is_active.toString());
     if (data.sort_order !== undefined) formData.append('sort_order', data.sort_order.toString());
+    if (data.info !== undefined) formData.append('info', data.info || '');
+    if (data.doesNotIncludeHtml !== undefined) formData.append('doesNotIncludeHtml', data.doesNotIncludeHtml || '');
     
     // Handle image - prioritize file upload over image_url
     if (data.image instanceof File) {

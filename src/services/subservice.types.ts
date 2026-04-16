@@ -27,6 +27,9 @@ export interface ISubService {
   // Additional fields that might come from API
   public_id?: string;
   description?: string;
+  info?: string;
+  doesNotIncludeHtml?: string;
+  doesNotInclude?: string[];
   base_price?: number;
   duration_minutes?: number;
   created_at?: string;
@@ -95,6 +98,8 @@ export interface IUpdateSubServiceRequest {
   is_active?: boolean;
   sort_order?: number;
   meta_data?: string | object;
+  info?: string;
+  doesNotIncludeHtml?: string;
 }
 
 /**
@@ -107,6 +112,9 @@ export interface IUpdateSubServiceResponse {
     sub_service_id: string;
     name?: string;
     description?: string;
+    info?: string;
+    doesNotIncludeHtml?: string;
+    doesNotInclude?: string[];
     image_url?: string | null;
     base_price?: string;
     currency?: string;

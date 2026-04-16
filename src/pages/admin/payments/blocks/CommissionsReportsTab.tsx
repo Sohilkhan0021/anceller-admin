@@ -15,11 +15,11 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import { useRevenueStats, useRevenueByGateway } from '@/services';
 import { ContentLoader } from '@/components/loaders';
-import { Alert } from '@/components/alert';
+import { InlineErrorBanner } from '@/components/admin/InlineErrorBanner';
 
 const CommissionsReportsTab = () => {
   const [reportPeriod, setReportPeriod] = useState('this-month');
@@ -69,30 +69,25 @@ const CommissionsReportsTab = () => {
   } = useRevenueStats(startDate, endDate);
 
   // Fetch revenue by gateway
-  const {
-    revenue: revenueByGateway,
-    isLoading: isLoadingGateway
-  } = useRevenueByGateway(startDate, endDate);
+  const { revenue: revenueByGateway, isLoading: isLoadingGateway } = useRevenueByGateway(
+    startDate,
+    endDate
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-      currencyDisplay: 'symbol', // Ensure ₹ symbol is displayed
+      currencyDisplay: 'symbol' // Ensure ₹ symbol is displayed
     }).format(amount);
-  };
-
-  const handleDownloadReport = (format: string) => {
-    // TODO: Implement report download API
-    console.log(`Downloading ${format} report...`);
   };
 
   // Calculate commission breakdown from revenue by gateway
   const commissionBreakdown = useMemo(() => {
     if (!revenueByGateway || revenueByGateway.length === 0) return [];
-    
-    return revenueByGateway.map(item => ({
+
+    return revenueByGateway.map((item) => ({
       service: item.gateway || 'Unknown',
       totalBookings: item.transaction_count || 0,
       grossRevenue: item.revenue || 0,
@@ -104,19 +99,10 @@ const CommissionsReportsTab = () => {
   if (isStatsError) {
     return (
       <div className="space-y-6">
-        <Alert variant="danger">
-          <div className="flex items-center justify-between">
-            <span>
-              {statsError?.message || 'Failed to load revenue statistics. Please try again.'}
-            </span>
-            <button
-              onClick={() => refetchStats()}
-              className="text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </div>
-        </Alert>
+        <InlineErrorBanner
+          message={statsError?.message || 'Failed to load revenue statistics. Please try again.'}
+          onRetry={() => refetchStats()}
+        />
       </div>
     );
   }
@@ -127,7 +113,7 @@ const CommissionsReportsTab = () => {
   return (
     <div className="space-y-6">
       {/* Revenue Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         <div className="card">
           <div className="card-body">
             <div className="flex items-center justify-between mb-4">
@@ -136,10 +122,10 @@ const CommissionsReportsTab = () => {
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : formatCurrency(revenueStats?.total_revenue || 0)}
               </h3>
-              <p className="text-sm text-gray-600">Gross Revenue</p>
+              <p className="text-sm text-muted-foreground">Gross Revenue</p>
             </div>
           </div>
         </div>
@@ -152,10 +138,10 @@ const CommissionsReportsTab = () => {
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : formatCurrency(netCommission)}
               </h3>
-              <p className="text-sm text-gray-600">Net Commission</p>
+              <p className="text-sm text-muted-foreground">Net Commission</p>
             </div>
           </div>
         </div>
@@ -168,10 +154,10 @@ const CommissionsReportsTab = () => {
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : formatCurrency(revenueStats?.total_refunds || 0)}
               </h3>
-              <p className="text-sm text-gray-600">Refunds</p>
+              <p className="text-sm text-muted-foreground">Refunds</p>
             </div>
           </div>
         </div>
@@ -184,10 +170,10 @@ const CommissionsReportsTab = () => {
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-foreground sm:text-2xl">
                 {isLoadingStats ? '...' : formatCurrency(netRevenue)}
               </h3>
-              <p className="text-sm text-gray-600">Net Revenue</p>
+              <p className="text-sm text-muted-foreground">Net Revenue</p>
             </div>
           </div>
         </div>
@@ -196,10 +182,12 @@ const CommissionsReportsTab = () => {
       {/* Report Controls */}
       <div className="card">
         <div className="card-header">
-          <div className="flex flex-row items-center justify-between w-full gap-4">
+          <div className="flex w-full flex-row items-center justify-between gap-4">
             <div>
               <h3 className="card-title">Revenue Reports</h3>
-              <p className="text-sm text-gray-600">Generate and download financial reports</p>
+              <p className="text-sm text-muted-foreground">
+                Generate and download financial reports
+              </p>
             </div>
             <div className="flex gap-3">
               <Select value={reportPeriod} onValueChange={setReportPeriod}>
@@ -239,19 +227,26 @@ const CommissionsReportsTab = () => {
             </div>
           ) : commissionBreakdown.length === 0 ? (
             <div className="p-8 text-center">
-              <KeenIcon icon="cross-circle" className="text-4xl text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No revenue data available</p>
+              <KeenIcon
+                icon="cross-circle"
+                className="mx-auto mb-4 text-4xl text-muted-foreground/70"
+              />
+              <p className="text-muted-foreground">No revenue data available</p>
             </div>
           ) : (
-            <div className="overflow-x-auto w-full">
+            <div className="w-full overflow-x-auto">
               <Table className="w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="px-4">Gateway</TableHead>
-                    <TableHead className="hidden sm:table-cell px-4 text-center">Transactions</TableHead>
+                    <TableHead className="hidden sm:table-cell px-4 text-center">
+                      Transactions
+                    </TableHead>
                     <TableHead className="hidden md:table-cell px-4 text-center">Revenue</TableHead>
                     <TableHead className="hidden lg:table-cell px-4 text-center">Rate</TableHead>
-                    <TableHead className="hidden sm:table-cell px-4 text-center">Commission</TableHead>
+                    <TableHead className="hidden sm:table-cell px-4 text-center">
+                      Commission
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -261,7 +256,7 @@ const CommissionsReportsTab = () => {
                       <TableCell className="hidden sm:table-cell px-4">
                         <div className="text-center">
                           <div className="font-semibold">{item.totalBookings}</div>
-                          <div className="text-xs text-gray-500">transactions</div>
+                          <div className="text-xs text-muted-foreground">transactions</div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell px-4">
@@ -278,7 +273,9 @@ const CommissionsReportsTab = () => {
                       </TableCell>
                       <TableCell className="hidden sm:table-cell px-4">
                         <div className="text-center">
-                          <div className="font-semibold text-success">{formatCurrency(item.commission)}</div>
+                          <div className="font-semibold text-success">
+                            {formatCurrency(item.commission)}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -294,5 +291,3 @@ const CommissionsReportsTab = () => {
 };
 
 export { CommissionsReportsTab };
-
-
