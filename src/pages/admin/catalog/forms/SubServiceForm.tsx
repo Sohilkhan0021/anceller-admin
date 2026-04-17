@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KeenIcon } from '@/components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,7 +108,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           currency: 'INR', // Currency is always INR
           duration_minutes: apiData.duration_minutes || apiData.estimated_duration_minutes || ''
           ,
-          info: apiData.info || apiData.meta_data?.info || ''
+          info: apiData.info || apiData.meta_data?.info || apiData.description || ''
         });
         
         // Set image preview if image exists (only if imageUrl is a non-empty string)
@@ -144,7 +144,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           currency: 'INR', // Currency is always INR
           duration_minutes: subServiceData.duration_minutes || subServiceData.estimated_duration_minutes || ''
           ,
-          info: subServiceData.info || subServiceData.meta_data?.info || ''
+          info: subServiceData.info || subServiceData.meta_data?.info || subServiceData.description || ''
         });
         
         // Set image preview
@@ -364,27 +364,9 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
     }
   };
 
-  const infoEditorRef = useRef<HTMLTextAreaElement | null>(null);
-  const insertInfoTag = (tag: 'p' | 'ul' | 'li' | 'strong') => {
-    const editor = infoEditorRef.current;
-    if (!editor) return;
-    const start = editor.selectionStart || 0;
-    const end = editor.selectionEnd || 0;
-    const selected = formData.info.slice(start, end);
-    let replacement = selected;
-
-    if (tag === 'p') replacement = `<p>${selected || 'Description'}</p>`;
-    if (tag === 'ul') replacement = `<ul>\n  <li>${selected || 'Point'}</li>\n</ul>`;
-    if (tag === 'li') replacement = `<li>${selected || 'Point'}</li>`;
-    if (tag === 'strong') replacement = `<strong>${selected || 'Important'}</strong>`;
-
-    const next = `${formData.info.slice(0, start)}${replacement}${formData.info.slice(end)}`;
-    handleInputChange('info', next);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <KeenIcon icon="category" className="text-primary" />
@@ -392,7 +374,7 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
           </DialogTitle>
         </DialogHeader>
 
-        <DialogBody>
+        <DialogBody className="max-h-none overflow-y-visible">
           {isLoadingDetails && subServiceId ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
@@ -542,24 +524,14 @@ const SubServiceForm = ({ isOpen, onClose, onSave, subServiceData, availableCate
             </div>
 
             <div>
-              <Label htmlFor="info">Sub-Service Info (HTML)</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('p')}>Paragraph</Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('ul')}>Bullet List</Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('li')}>List Item</Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => insertInfoTag('strong')}>Bold</Button>
-              </div>
+              <Label htmlFor="info">Sub-Service Info</Label>
               <Textarea
                 id="info"
-                ref={infoEditorRef}
                 value={formData.info}
                 onChange={(e) => handleInputChange('info', e.target.value)}
                 className="mt-2 min-h-[140px] font-mono text-xs"
-                placeholder="<p>Details...</p><ul><li>Point 1</li><li>Point 2</li></ul>"
+                placeholder="Enter sub-service details (text/bullets). This will be returned to app clients as `info`."
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                This content is returned to app clients as `info` in sub-service responses.
-              </p>
             </div>
 
             {/* Image Upload */}

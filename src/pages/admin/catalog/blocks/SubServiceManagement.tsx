@@ -69,6 +69,22 @@ interface ISubServiceManagementProps {
   onDeleteSubService?: (subServiceId: string) => void;
 }
 
+/** Keeps DB `description` in sync with admin "info" so user apps that read `description` see edits. */
+function descriptionFromSubServiceForm(data: {
+  info?: string | null;
+  description?: string | null;
+}): string | null {
+  if (data.info !== undefined && data.info !== null) {
+    const t = String(data.info).trim();
+    return t !== '' ? t : null;
+  }
+  if (data.description !== undefined && data.description !== null) {
+    const t = String(data.description).trim();
+    return t !== '' ? t : null;
+  }
+  return null;
+}
+
 const SubServiceManagement = ({
   categories = [],
   onCreateSubService
@@ -84,13 +100,12 @@ const SubServiceManagement = ({
   const [pageSize] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isDoesNotIncludeOpen, setIsDoesNotIncludeOpen] = useState(false);
-  const [doesNotIncludeSubService, setDoesNotIncludeSubService] = useState<
-    ISubService | null
-  >(null);
+  const [doesNotIncludeSubService, setDoesNotIncludeSubService] = useState<ISubService | null>(
+    null
+  );
   const [doesNotIncludeHtml, setDoesNotIncludeHtml] = useState<string>('');
   const [isDoesNotIncludeSubmitting, setIsDoesNotIncludeSubmitting] = useState(false);
   const doesNotIncludeUpdateFlagRef = useRef(false);
-  const doesNotIncludeEditorRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Fetch all services (categories) for dropdown in form (no pagination)
   const { services: allServices, isLoading: isLoadingServices } = useServices({
@@ -319,31 +334,19 @@ const SubServiceManagement = ({
 
   const openDoesNotIncludeEditor = (subService: ISubService) => {
     setDoesNotIncludeSubService(subService);
-    setDoesNotIncludeHtml(
+    const html =
       (subService as any).doesNotIncludeHtml ||
-        (subService as any).meta_data?.doesNotInclude_html ||
-        ''
-    );
+      (subService as any).meta_data?.doesNotInclude_html ||
+      '';
+    const fromArray = (() => {
+      const arr =
+        (subService as any).doesNotInclude || (subService as any).meta_data?.doesNotInclude;
+      return Array.isArray(arr) && arr.length ? arr.map((s: unknown) => String(s)).join('\n') : '';
+    })();
+    setDoesNotIncludeHtml(html.trim() !== '' ? html : fromArray);
     setIsDoesNotIncludeSubmitting(false);
     doesNotIncludeUpdateFlagRef.current = false;
     setIsDoesNotIncludeOpen(true);
-  };
-
-  const insertDoesNotIncludeTag = (tag: 'p' | 'ul' | 'li' | 'strong') => {
-    const editor = doesNotIncludeEditorRef.current;
-    if (!editor) return;
-    const start = editor.selectionStart || 0;
-    const end = editor.selectionEnd || 0;
-    const selected = doesNotIncludeHtml.slice(start, end);
-    let replacement = selected;
-
-    if (tag === 'p') replacement = `<p>${selected || 'Details'}</p>`;
-    if (tag === 'ul') replacement = `<ul>\n  <li>${selected || 'Point'}</li>\n</ul>`;
-    if (tag === 'li') replacement = `<li>${selected || 'Point'}</li>`;
-    if (tag === 'strong') replacement = `<strong>${selected || 'Important'}</strong>`;
-
-    const next = `${doesNotIncludeHtml.slice(0, start)}${replacement}${doesNotIncludeHtml.slice(end)}`;
-    setDoesNotIncludeHtml(next);
   };
 
   const handleSaveDoesNotInclude = () => {
@@ -364,7 +367,7 @@ const SubServiceManagement = ({
 
     updateSubService({
       subServiceId,
-      data: { doesNotIncludeHtml },
+      data: { doesNotIncludeHtml }
     });
   };
 
@@ -375,7 +378,11 @@ const SubServiceManagement = ({
         service_id:
           subService.serviceId || subService.service_id || (subService as any).service?.service_id,
         name: `${subService.name} (Copy)`,
-        description: (subService as any).description || '',
+        description:
+          (subService as any).description ||
+          (subService as any).info ||
+          (subService as any).meta_data?.info ||
+          '',
         is_active: false, // Clone as inactive by default
         sort_order:
           (subService.displayOrder ||
@@ -438,7 +445,7 @@ const SubServiceManagement = ({
       const updateData: any = {
         service_id: subServiceData.serviceId,
         name: subServiceData.name,
-        description: subServiceData.description || '',
+        description: descriptionFromSubServiceForm(subServiceData),
         is_active: subServiceData.status === 'active',
         sort_order: subServiceData.displayOrder || 1,
         base_price: subServiceData.base_price
@@ -527,7 +534,7 @@ const SubServiceManagement = ({
       const createData: any = {
         service_id: subServiceData.serviceId,
         name: subServiceData.name,
-        description: subServiceData.description || '',
+        description: descriptionFromSubServiceForm(subServiceData),
         is_active: subServiceData.status === 'active',
         sort_order: subServiceData.displayOrder || 1,
         base_price: subServiceData.base_price
@@ -586,7 +593,11 @@ const SubServiceManagement = ({
         is_active: checked,
         // Preserve all other fields
         name: subService.name,
-        description: (subService as any).description || '',
+        description:
+          (subService as any).description ||
+          (subService as any).info ||
+          (subService as any).meta_data?.info ||
+          '',
         service_id:
           subService.serviceId || subService.service_id || (subService as any).service?.service_id,
         base_price: (subService as any).base_price || (subService as any).basePrice || 0,
@@ -1153,44 +1164,16 @@ const SubServiceManagement = ({
 
           <DialogBody>
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertDoesNotIncludeTag('ul')}
-                >
-                  Bullet List
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertDoesNotIncludeTag('li')}
-                >
-                  List Item
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => insertDoesNotIncludeTag('strong')}
-                >
-                  Bold
-                </Button>
-              </div>
-
               <Textarea
-                ref={doesNotIncludeEditorRef}
                 value={doesNotIncludeHtml}
                 onChange={(e) => setDoesNotIncludeHtml(e.target.value)}
-                className="min-h-[140px] font-mono text-xs"
-                placeholder="<ul><li>Point 1</li><li>Point 2</li></ul>"
+                className="min-h-[160px] text-sm"
+                placeholder={`One item per line (plain text). Example:\nHeavy furniture\nWall drilling`}
               />
 
               <p className="text-xs text-muted-foreground">
-                This content is parsed into a `doesNotInclude` array and returned in
-                `services/categories/:category_id`.
+                Each non-empty line becomes one entry in the does-not-include list for the customer
+                app. Existing HTML lists are still supported if present.
               </p>
             </div>
           </DialogBody>
