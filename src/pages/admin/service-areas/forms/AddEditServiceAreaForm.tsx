@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -131,6 +131,8 @@ const AddEditServiceAreaForm = ({
   };
 
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const reverseGeocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleFetchCoordinates = async () => {
     const parts = [
@@ -173,6 +175,46 @@ const AddEditServiceAreaForm = ({
     }
   };
 
+  const fetchLocationDetails = async (lat: number, lng: number) => {
+    try {
+      setIsReverseGeocoding(true);
+      const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+        params: {
+          format: 'jsonv2',
+          lat,
+          lon: lng,
+          addressdetails: 1
+        }
+      });
+
+      const address = response?.data?.address || {};
+      const resolvedCity =
+        address.city || address.town || address.village || address.municipality || address.county || '';
+      const resolvedState = address.state || address.region || address.state_district || '';
+      const resolvedArea =
+        address.suburb ||
+        address.neighbourhood ||
+        address.city_district ||
+        address.road ||
+        response?.data?.name ||
+        '';
+
+      setFormState(
+        (prev) =>
+          ({
+            ...prev,
+            area_name: resolvedArea || (prev as any).area_name || '',
+            city: resolvedCity || (prev as any).city || '',
+            state: resolvedState || (prev as any).state || ''
+          }) as any
+      );
+    } catch (err) {
+      console.error('Failed to reverse geocode service area location', err);
+    } finally {
+      setIsReverseGeocoding(false);
+    }
+  };
+
   const centerLat = (formState as any).center_latitude;
   const centerLng = (formState as any).center_longitude;
   const hasCenter = typeof centerLat === 'number' && typeof centerLng === 'number';
@@ -180,7 +222,10 @@ const AddEditServiceAreaForm = ({
   const radiusKm = Number(formState.radius_km || 10);
   const circleAnimationKey = `${mapCenter[0]}-${mapCenter[1]}-${radiusKm}`;
 
-  const handleMapPick = (coords: { lat: number; lng: number }) => {
+  const handleMapPick = (
+    coords: { lat: number; lng: number },
+    options?: { autoFillDetails?: boolean }
+  ) => {
     setFormState(
       (prev) =>
         ({
@@ -189,7 +234,28 @@ const AddEditServiceAreaForm = ({
           center_longitude: Number(coords.lng.toFixed(6))
         }) as any
     );
+
+    if (reverseGeocodeTimerRef.current) {
+      clearTimeout(reverseGeocodeTimerRef.current);
+      reverseGeocodeTimerRef.current = null;
+    }
+
+    if (options?.autoFillDetails === false) {
+      return;
+    }
+
+    reverseGeocodeTimerRef.current = setTimeout(() => {
+      fetchLocationDetails(Number(coords.lat.toFixed(6)), Number(coords.lng.toFixed(6)));
+    }, 2000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (reverseGeocodeTimerRef.current) {
+        clearTimeout(reverseGeocodeTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleRadiusChange = (value: number) => {
     const nextRadius = Math.max(1, Math.min(50, value || 1));
@@ -289,7 +355,10 @@ const AddEditServiceAreaForm = ({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      handleMapPick({ lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] })
+                      handleMapPick(
+                        { lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] },
+                        { autoFillDetails: false }
+                      )
                     }
                   >
                     Reset to India
@@ -358,7 +427,7 @@ const AddEditServiceAreaForm = ({
                 </div>
                 <div className="flex items-center justify-between rounded-md bg-surface-1 px-3 py-2 text-xs text-muted-foreground">
                   <span>Click map to place center pin</span>
-                  <span>{radiusKm} km coverage</span>
+                  <span>{isReverseGeocoding ? 'Auto-filling location...' : `${radiusKm} km coverage`}</span>
                 </div>
               </div>
             </div>

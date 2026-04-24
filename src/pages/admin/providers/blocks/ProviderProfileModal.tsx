@@ -138,6 +138,9 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
   const [rejectDocumentReason, setRejectDocumentReason] = useState('');
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [loadingDocumentId, setLoadingDocumentId] = useState<string | null>(null);
+  const [loadingDocumentAction, setLoadingDocumentAction] = useState<'approve' | 'reject' | null>(
+    null
+  );
   const [isOnboardingActionLoading, setIsOnboardingActionLoading] = useState(false);
   const [trainingScheduledDate, setTrainingScheduledDate] = useState('');
   const [trainingScheduledTime, setTrainingScheduledTime] = useState('');
@@ -189,11 +192,13 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     onSuccess: (data) => {
       toast.success((data as any).message || 'KYC document updated successfully');
       setLoadingDocumentId(null);
+      setLoadingDocumentAction(null);
       refetch();
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update KYC document');
       setLoadingDocumentId(null);
+      setLoadingDocumentAction(null);
     }
   });
 
@@ -523,6 +528,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     }
 
     setLoadingDocumentId(documentId);
+    setLoadingDocumentAction('approve');
     try {
       verifyKycMutation.mutate({
         documentId,
@@ -533,6 +539,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     } catch (error) {
       console.error('[APPROVE] Error calling mutation:', error);
       setLoadingDocumentId(null);
+      setLoadingDocumentAction(null);
     }
   };
 
@@ -552,6 +559,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     }
 
     setLoadingDocumentId(selectedDocumentId);
+    setLoadingDocumentAction('reject');
     try {
       verifyKycMutation.mutate({
         documentId: selectedDocumentId,
@@ -566,6 +574,7 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
     } catch (error) {
       console.error('[REJECT DOCUMENT] Error calling mutation:', error);
       setLoadingDocumentId(null);
+      setLoadingDocumentAction(null);
     }
   };
 
@@ -1392,7 +1401,8 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                         disabled={loadingDocumentId !== null}
                                       >
                                         <KeenIcon icon="check" className="me-1" />
-                                        {loadingDocumentId === doc.document_id
+                                        {loadingDocumentId === doc.document_id &&
+                                        loadingDocumentAction === 'approve'
                                           ? 'Approving...'
                                           : 'Approve'}
                                       </Button>
@@ -1403,7 +1413,8 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
                                         disabled={loadingDocumentId !== null}
                                       >
                                         <KeenIcon icon="cross" className="me-1" />
-                                        {loadingDocumentId === doc.document_id
+                                        {loadingDocumentId === doc.document_id &&
+                                        loadingDocumentAction === 'reject'
                                           ? 'Rejecting...'
                                           : 'Reject'}
                                       </Button>
@@ -1944,9 +1955,14 @@ const ProviderProfileModal = ({ provider, isOpen, onClose }: IProviderProfileMod
             <Button
               variant="destructive"
               onClick={handleConfirmRejectDocument}
-              disabled={!rejectDocumentReason.trim() || verifyKycMutation.isLoading}
+              disabled={
+                !rejectDocumentReason.trim() ||
+                (loadingDocumentAction === 'reject' && verifyKycMutation.isLoading)
+              }
             >
-              {verifyKycMutation.isLoading ? 'Rejecting...' : 'Reject Document'}
+              {loadingDocumentAction === 'reject' && verifyKycMutation.isLoading
+                ? 'Rejecting...'
+                : 'Reject Document'}
             </Button>
           </DialogFooter>
         </DialogContent>
